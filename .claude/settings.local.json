@@ -10,7 +10,13 @@
       "Bash(git push:*)",
       "Bash(gh --version:*)",
       "Bash(gh repo create:*)",
-      "Bash(git remote:*)"
+      "Bash(git remote:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nFix: Downgrade eslint-config-next to match Next.js 14.2.0\n\n- Changed eslint-config-next from ^16.0.3 to 14.2.0\n- Resolves peer dependency conflict with eslint@^8.56.0\n- Fixes Vercel deployment error\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git filter-branch:*)",
+      "Bash(git stash:*)",
+      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []

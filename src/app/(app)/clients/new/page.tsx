@@ -108,7 +108,7 @@ export default function NewClientPage() {
           <p className="mt-2 text-gray-600">Enter client information</p>
         </div>
         <Button variant="outline" onClick={() => router.back()}>
-          ê Back
+          Back
         </Button>
       </div>
 

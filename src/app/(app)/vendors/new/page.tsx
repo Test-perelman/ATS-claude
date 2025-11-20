@@ -116,7 +116,7 @@ export default function NewVendorPage() {
           <p className="mt-2 text-gray-600">Enter vendor information</p>
         </div>
         <Button variant="outline" onClick={() => router.back()}>
-          ê Back
+          Back
         </Button>
       </div>
 

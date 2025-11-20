@@ -4,9 +4,6 @@ const nextConfig = {
   images: {
     domains: ['awujhuncfghjshggkqyo.supabase.co'],
   },
-  experimental: {
-    serverActions: true,
-  },
 }
 
 module.exports = nextConfig
