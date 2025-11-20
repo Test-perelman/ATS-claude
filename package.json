@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "db:setup": "node scripts/setup-database.js",
-    "db:seed": "node scripts/seed-data.js"
+    "db:seed": "node scripts/seed-data.js",
+    "db:seed-mock": "node scripts/seed-mock-data.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",

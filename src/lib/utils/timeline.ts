@@ -278,8 +278,81 @@ export async function getVendorTimeline(vendorId: string): Promise<TimelineItem[
     );
   }
 
-  // Activities, notes, attachments (similar pattern)
-  // ... (abbreviated for brevity, follows same pattern as candidate)
+  // Activities
+  const { data: activities } = await supabase
+    .from('activities')
+    .select('*, created_by_user:users(username, email)')
+    .eq('entity_type', 'vendor')
+    .eq('entity_id', vendorId)
+    .order('created_at', { ascending: false });
+
+  if (activities) {
+    timeline.push(
+      ...activities.map((activity: any) => ({
+        id: activity.activity_id,
+        type: 'activity',
+        title: activity.activity_title,
+        description: activity.activity_description || '',
+        timestamp: activity.created_at,
+        icon: 'activity',
+        color: 'green',
+        metadata: activity.metadata,
+        user: activity.created_by_user,
+      }))
+    );
+  }
+
+  // Notes
+  const { data: notes } = await supabase
+    .from('notes')
+    .select('*, created_by_user:users(username, email)')
+    .eq('entity_type', 'vendor')
+    .eq('entity_id', vendorId)
+    .order('created_at', { ascending: false });
+
+  if (notes) {
+    timeline.push(
+      ...notes.map((note: any) => ({
+        id: note.note_id,
+        type: 'note',
+        title: `Note: ${note.note_type}`,
+        description: note.note_text,
+        timestamp: note.created_at,
+        icon: 'note',
+        color: note.is_pinned ? 'yellow' : 'gray',
+        metadata: { noteType: note.note_type, isPinned: note.is_pinned },
+        user: note.created_by_user,
+      }))
+    );
+  }
+
+  // Attachments
+  const { data: attachments } = await supabase
+    .from('attachments')
+    .select('*, uploaded_by_user:users(username, email)')
+    .eq('entity_type', 'vendor')
+    .eq('entity_id', vendorId)
+    .order('uploaded_at', { ascending: false });
+
+  if (attachments) {
+    timeline.push(
+      ...attachments.map((attachment: any) => ({
+        id: attachment.attachment_id,
+        type: 'attachment',
+        title: 'File Uploaded',
+        description: `Uploaded ${attachment.file_name}`,
+        timestamp: attachment.uploaded_at,
+        icon: 'file',
+        color: 'gray',
+        metadata: {
+          fileName: attachment.file_name,
+          fileType: attachment.file_type,
+          fileSize: attachment.file_size,
+        },
+        user: attachment.uploaded_by_user,
+      }))
+    );
+  }
 
   timeline.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
@@ -292,8 +365,132 @@ export async function getVendorTimeline(vendorId: string): Promise<TimelineItem[
 export async function getClientTimeline(clientId: string): Promise<TimelineItem[]> {
   const timeline: TimelineItem[] = [];
 
-  // Similar implementation to candidate timeline
-  // ... (abbreviated for brevity)
+  // Audit logs
+  const { data: auditLogs } = await supabase
+    .from('audit_log')
+    .select('*, performed_by_user:users(username, email)')
+    .eq('entity_name', 'clients')
+    .eq('entity_id', clientId)
+    .order('performed_at', { ascending: false });
+
+  if (auditLogs) {
+    timeline.push(
+      ...auditLogs.map((log: any) => ({
+        id: log.audit_id,
+        type: 'audit',
+        title: `${log.action} Action`,
+        description: `${log.action} client record`,
+        timestamp: log.performed_at,
+        icon: 'history',
+        color: 'blue',
+        user: log.performed_by_user,
+      }))
+    );
+  }
+
+  // Activities
+  const { data: activities } = await supabase
+    .from('activities')
+    .select('*, created_by_user:users(username, email)')
+    .eq('entity_type', 'client')
+    .eq('entity_id', clientId)
+    .order('created_at', { ascending: false });
+
+  if (activities) {
+    timeline.push(
+      ...activities.map((activity: any) => ({
+        id: activity.activity_id,
+        type: 'activity',
+        title: activity.activity_title,
+        description: activity.activity_description || '',
+        timestamp: activity.created_at,
+        icon: 'activity',
+        color: 'green',
+        metadata: activity.metadata,
+        user: activity.created_by_user,
+      }))
+    );
+  }
+
+  // Notes
+  const { data: notes } = await supabase
+    .from('notes')
+    .select('*, created_by_user:users(username, email)')
+    .eq('entity_type', 'client')
+    .eq('entity_id', clientId)
+    .order('created_at', { ascending: false });
+
+  if (notes) {
+    timeline.push(
+      ...notes.map((note: any) => ({
+        id: note.note_id,
+        type: 'note',
+        title: `Note: ${note.note_type}`,
+        description: note.note_text,
+        timestamp: note.created_at,
+        icon: 'note',
+        color: note.is_pinned ? 'yellow' : 'gray',
+        metadata: { noteType: note.note_type, isPinned: note.is_pinned },
+        user: note.created_by_user,
+      }))
+    );
+  }
+
+  // Attachments
+  const { data: attachments } = await supabase
+    .from('attachments')
+    .select('*, uploaded_by_user:users(username, email)')
+    .eq('entity_type', 'client')
+    .eq('entity_id', clientId)
+    .order('uploaded_at', { ascending: false });
+
+  if (attachments) {
+    timeline.push(
+      ...attachments.map((attachment: any) => ({
+        id: attachment.attachment_id,
+        type: 'attachment',
+        title: 'File Uploaded',
+        description: `Uploaded ${attachment.file_name}`,
+        timestamp: attachment.uploaded_at,
+        icon: 'file',
+        color: 'gray',
+        metadata: {
+          fileName: attachment.file_name,
+          fileType: attachment.file_type,
+          fileSize: attachment.file_size,
+        },
+        user: attachment.uploaded_by_user,
+      }))
+    );
+  }
+
+  // Job Requirements for this client
+  const { data: jobRequirements } = await supabase
+    .from('job_requirements')
+    .select('*')
+    .eq('client_id', clientId)
+    .order('created_at', { ascending: false });
+
+  if (jobRequirements) {
+    timeline.push(
+      ...jobRequirements.map((job: any) => ({
+        id: job.job_id,
+        type: 'job_requirement',
+        title: 'New Job Requirement',
+        description: `Job posted: ${job.job_title}`,
+        timestamp: job.created_at,
+        icon: 'briefcase',
+        color: 'purple',
+        metadata: {
+          jobTitle: job.job_title,
+          status: job.status,
+          priority: job.priority,
+        },
+      }))
+    );
+  }
+
+  timeline.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   return timeline;
 }
@@ -431,6 +628,144 @@ export async function getProjectTimeline(projectId: string): Promise<TimelineIte
           invoiceNumber: invoice.invoice_number,
           amount: invoice.invoice_amount,
           status: invoice.status,
+        },
+      }))
+    );
+  }
+
+  timeline.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+  return timeline;
+}
+
+/**
+ * Get timeline for job requirements
+ */
+export async function getJobRequirementTimeline(jobId: string): Promise<TimelineItem[]> {
+  const timeline: TimelineItem[] = [];
+
+  // Audit logs
+  const { data: auditLogs } = await supabase
+    .from('audit_log')
+    .select('*, performed_by_user:users(username, email)')
+    .eq('entity_name', 'job_requirements')
+    .eq('entity_id', jobId)
+    .order('performed_at', { ascending: false });
+
+  if (auditLogs) {
+    timeline.push(
+      ...auditLogs.map((log: any) => ({
+        id: log.audit_id,
+        type: 'audit',
+        title: `${log.action} Action`,
+        description: `${log.action} job requirement record`,
+        timestamp: log.performed_at,
+        icon: 'history',
+        color: 'blue',
+        user: log.performed_by_user,
+      }))
+    );
+  }
+
+  // Activities
+  const { data: activities } = await supabase
+    .from('activities')
+    .select('*, created_by_user:users(username, email)')
+    .eq('entity_type', 'job_requirement')
+    .eq('entity_id', jobId)
+    .order('created_at', { ascending: false });
+
+  if (activities) {
+    timeline.push(
+      ...activities.map((activity: any) => ({
+        id: activity.activity_id,
+        type: 'activity',
+        title: activity.activity_title,
+        description: activity.activity_description || '',
+        timestamp: activity.created_at,
+        icon: 'activity',
+        color: 'green',
+        metadata: activity.metadata,
+        user: activity.created_by_user,
+      }))
+    );
+  }
+
+  // Notes
+  const { data: notes } = await supabase
+    .from('notes')
+    .select('*, created_by_user:users(username, email)')
+    .eq('entity_type', 'job_requirement')
+    .eq('entity_id', jobId)
+    .order('created_at', { ascending: false });
+
+  if (notes) {
+    timeline.push(
+      ...notes.map((note: any) => ({
+        id: note.note_id,
+        type: 'note',
+        title: `Note: ${note.note_type}`,
+        description: note.note_text,
+        timestamp: note.created_at,
+        icon: 'note',
+        color: note.is_pinned ? 'yellow' : 'gray',
+        metadata: { noteType: note.note_type, isPinned: note.is_pinned },
+        user: note.created_by_user,
+      }))
+    );
+  }
+
+  // Attachments
+  const { data: attachments } = await supabase
+    .from('attachments')
+    .select('*, uploaded_by_user:users(username, email)')
+    .eq('entity_type', 'job_requirement')
+    .eq('entity_id', jobId)
+    .order('uploaded_at', { ascending: false });
+
+  if (attachments) {
+    timeline.push(
+      ...attachments.map((attachment: any) => ({
+        id: attachment.attachment_id,
+        type: 'attachment',
+        title: 'File Uploaded',
+        description: `Uploaded ${attachment.file_name}`,
+        timestamp: attachment.uploaded_at,
+        icon: 'file',
+        color: 'gray',
+        metadata: {
+          fileName: attachment.file_name,
+          fileType: attachment.file_type,
+          fileSize: attachment.file_size,
+        },
+        user: attachment.uploaded_by_user,
+      }))
+    );
+  }
+
+  // Submissions for this job
+  const { data: submissions } = await supabase
+    .from('submissions')
+    .select(`
+      *,
+      candidate:candidates(first_name, last_name)
+    `)
+    .eq('job_id', jobId)
+    .order('submitted_at', { ascending: false });
+
+  if (submissions) {
+    timeline.push(
+      ...submissions.map((submission: any) => ({
+        id: submission.submission_id,
+        type: 'submission',
+        title: 'Candidate Submitted',
+        description: `${submission.candidate?.first_name} ${submission.candidate?.last_name} submitted - Status: ${submission.submission_status}`,
+        timestamp: submission.submitted_at,
+        icon: 'user-check',
+        color: 'purple',
+        metadata: {
+          candidateId: submission.candidate_id,
+          status: submission.submission_status,
         },
       }))
     );

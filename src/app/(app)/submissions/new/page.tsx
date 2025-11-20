@@ -1,0 +1,312 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Textarea } from '@/components/ui/Textarea';
+import { createSubmission } from '@/lib/api/submissions';
+import { getCandidates } from '@/lib/api/candidates';
+import { getJobRequirements } from '@/lib/api/requirements';
+
+export default function NewSubmissionPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [loading, setLoading] = useState(false);
+  const [candidates, setCandidates] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<any[]>([]);
+  const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
+  const [selectedJob, setSelectedJob] = useState<any>(null);
+
+  // Form state
+  const [formData, setFormData] = useState({
+    candidate_id: searchParams?.get('candidate_id') || '',
+    job_id: searchParams?.get('job_id') || '',
+    submission_status: 'submitted',
+    bill_rate_offered: '',
+    pay_rate_offered: '',
+    margin: '',
+    notes: '',
+  });
+
+  useEffect(() => {
+    loadCandidates();
+    loadJobs();
+  }, []);
+
+  useEffect(() => {
+    if (formData.candidate_id) {
+      const candidate = candidates.find(c => c.candidate_id === formData.candidate_id);
+      setSelectedCandidate(candidate);
+
+      // Auto-fill pay rate from candidate's hourly rate
+      if (candidate && candidate.hourly_pay_rate && !formData.pay_rate_offered) {
+        setFormData(prev => ({
+          ...prev,
+          pay_rate_offered: candidate.hourly_pay_rate.toString()
+        }));
+      }
+    }
+  }, [formData.candidate_id, candidates]);
+
+  useEffect(() => {
+    if (formData.job_id) {
+      const job = jobs.find(j => j.job_id === formData.job_id);
+      setSelectedJob(job);
+    }
+  }, [formData.job_id, jobs]);
+
+  useEffect(() => {
+    // Calculate margin when rates change
+    if (formData.bill_rate_offered && formData.pay_rate_offered) {
+      const billRate = parseFloat(formData.bill_rate_offered);
+      const payRate = parseFloat(formData.pay_rate_offered);
+      if (!isNaN(billRate) && !isNaN(payRate)) {
+        const margin = billRate - payRate;
+        setFormData(prev => ({ ...prev, margin: margin.toFixed(2) }));
+      }
+    }
+  }, [formData.bill_rate_offered, formData.pay_rate_offered]);
+
+  async function loadCandidates() {
+    const { data } = await getCandidates({ isActive: true });
+    setCandidates(data || []);
+  }
+
+  async function loadJobs() {
+    const { data } = await getJobRequirements({ status: 'open' });
+    setJobs(data || []);
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Prepare data for insertion
+      const submissionData: any = {
+        candidate_id: formData.candidate_id,
+        job_id: formData.job_id,
+        submission_status: formData.submission_status,
+        bill_rate_offered: formData.bill_rate_offered ? parseFloat(formData.bill_rate_offered) : null,
+        pay_rate_offered: formData.pay_rate_offered ? parseFloat(formData.pay_rate_offered) : null,
+        margin: formData.margin ? parseFloat(formData.margin) : null,
+        notes: formData.notes || null,
+        submitted_at: new Date().toISOString(),
+      };
+
+      const result = await createSubmission(submissionData);
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      if (result.data) {
+        // Redirect to submission detail page
+        router.push(`/submissions/${result.data.submission_id}`);
+      }
+    } catch (error: any) {
+      console.error('Error creating submission:', error);
+      alert('Error creating submission: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">New Submission</h1>
+          <p className="mt-2 text-gray-600">Submit a candidate for a job requirement</p>
+        </div>
+        <Button variant="outline" onClick={() => router.back()}>
+          Back
+        </Button>
+      </div>
+
+      {/* Form */}
+      <form onSubmit={handleSubmit}>
+        <div className="space-y-6">
+          {/* Candidate & Job Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Candidate & Job</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Select
+                    label="Candidate"
+                    name="candidate_id"
+                    value={formData.candidate_id}
+                    onChange={handleChange}
+                    required
+                    options={[
+                      { value: '', label: 'Select Candidate' },
+                      ...candidates.map(candidate => ({
+                        value: candidate.candidate_id,
+                        label: `${candidate.first_name} ${candidate.last_name} - ${candidate.skills_primary || 'N/A'}`
+                      }))
+                    ]}
+                  />
+                  {selectedCandidate && (
+                    <div className="mt-2 p-3 bg-gray-50 rounded text-sm">
+                      <div className="font-medium">{selectedCandidate.first_name} {selectedCandidate.last_name}</div>
+                      <div className="text-gray-600 text-xs mt-1">
+                        {selectedCandidate.email_address}
+                      </div>
+                      <div className="text-gray-600 text-xs">
+                        Skills: {selectedCandidate.skills_primary || 'N/A'}
+                      </div>
+                      <div className="text-gray-600 text-xs">
+                        Experience: {selectedCandidate.total_experience_years} years
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <Select
+                    label="Job Requirement"
+                    name="job_id"
+                    value={formData.job_id}
+                    onChange={handleChange}
+                    required
+                    options={[
+                      { value: '', label: 'Select Job' },
+                      ...jobs.map(job => ({
+                        value: job.job_id,
+                        label: `${job.job_title} - ${job.client?.client_name || 'N/A'}`
+                      }))
+                    ]}
+                  />
+                  {selectedJob && (
+                    <div className="mt-2 p-3 bg-gray-50 rounded text-sm">
+                      <div className="font-medium">{selectedJob.job_title}</div>
+                      <div className="text-gray-600 text-xs mt-1">
+                        Client: {selectedJob.client?.client_name || 'N/A'}
+                      </div>
+                      <div className="text-gray-600 text-xs">
+                        Location: {selectedJob.location || 'N/A'} • {selectedJob.work_mode || 'N/A'}
+                      </div>
+                      {selectedJob.bill_rate_range_min && selectedJob.bill_rate_range_max && (
+                        <div className="text-gray-600 text-xs">
+                          Rate: ${selectedJob.bill_rate_range_min}-${selectedJob.bill_rate_range_max}/hr
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Rates & Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Rates & Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Bill Rate ($/hr)"
+                  name="bill_rate_offered"
+                  type="number"
+                  step="0.01"
+                  value={formData.bill_rate_offered}
+                  onChange={handleChange}
+                  required
+                  placeholder="85.00"
+                />
+                <Input
+                  label="Pay Rate ($/hr)"
+                  name="pay_rate_offered"
+                  type="number"
+                  step="0.01"
+                  value={formData.pay_rate_offered}
+                  onChange={handleChange}
+                  required
+                  placeholder="60.00"
+                />
+                <Input
+                  label="Margin ($/hr)"
+                  name="margin"
+                  type="number"
+                  step="0.01"
+                  value={formData.margin}
+                  onChange={handleChange}
+                  disabled
+                  placeholder="Calculated automatically"
+                />
+                <Select
+                  label="Initial Status"
+                  name="submission_status"
+                  value={formData.submission_status}
+                  onChange={handleChange}
+                  required
+                  options={[
+                    { value: 'submitted', label: 'Submitted' },
+                    { value: 'screening', label: 'Screening' },
+                    { value: 'shortlisted', label: 'Shortlisted' },
+                  ]}
+                />
+              </div>
+
+              {formData.bill_rate_offered && formData.pay_rate_offered && formData.margin && (
+                <div className="mt-4 p-4 bg-blue-50 rounded">
+                  <div className="text-sm font-medium text-blue-900">Margin Calculation</div>
+                  <div className="text-xs text-blue-700 mt-2">
+                    Bill Rate: ${formData.bill_rate_offered}/hr - Pay Rate: ${formData.pay_rate_offered}/hr =
+                    Margin: ${formData.margin}/hr (
+                    {((parseFloat(formData.margin) / parseFloat(formData.bill_rate_offered)) * 100).toFixed(2)}%)
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Notes */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Notes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Textarea
+                label="Submission Notes"
+                name="notes"
+                value={formData.notes}
+                onChange={handleChange}
+                placeholder="Add any notes about this submission..."
+                rows={4}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Creating...' : 'Create Submission'}
+            </Button>
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+}
