@@ -6,7 +6,11 @@
       "Bash(npm run dev:*)",
       "Bash(timeout:*)",
       "Bash(npm install)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(git push:*)",
+      "Bash(gh --version:*)",
+      "Bash(gh repo create:*)",
+      "Bash(git remote:*)"
     ],
     "deny": [],
     "ask": []
