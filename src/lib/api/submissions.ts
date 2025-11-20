@@ -1,5 +1,10 @@
 import { supabase } from '@/lib/supabase/client';
 import { createAuditLog, createActivity } from '@/lib/utils/audit';
+import type { Database } from '@/types/database';
+
+type Submission = Database['public']['Tables']['submissions']['Row'];
+type SubmissionInsert = Database['public']['Tables']['submissions']['Insert'];
+type SubmissionUpdate = Database['public']['Tables']['submissions']['Update'];
 
 /**
  * Get all submissions with optional filters
@@ -91,15 +96,17 @@ export async function getSubmissionById(submissionId: string) {
  * Create a new submission
  */
 export async function createSubmission(
-  submissionData: any,
+  submissionData: SubmissionInsert,
   userId?: string
 ) {
+  const insertData: SubmissionInsert = {
+    ...submissionData,
+    submitted_by_user_id: userId || null,
+  };
+
   const result = await supabase
     .from('submissions')
-    .insert([{
-      ...submissionData,
-      submitted_by_user_id: userId,
-    }])
+    .insert(insertData)
     .select()
     .single();
 
@@ -112,9 +119,9 @@ export async function createSubmission(
     await createAuditLog({
       entityName: 'submissions',
       entityId: result.data.submission_id,
-      action: 'created',
-      changes: submissionData,
-      performedBy: userId,
+      action: 'CREATE',
+      newValue: submissionData,
+      userId,
     });
 
     // Create activity
@@ -124,7 +131,7 @@ export async function createSubmission(
       activityType: 'created',
       activityTitle: 'Submission Created',
       activityDescription: `Candidate submitted for job requirement`,
-      createdBy: userId,
+      userId,
     });
   }
 
@@ -136,7 +143,7 @@ export async function createSubmission(
  */
 export async function updateSubmission(
   submissionId: string,
-  updates: any,
+  updates: SubmissionUpdate,
   userId?: string
 ) {
   const result = await supabase
@@ -155,9 +162,9 @@ export async function updateSubmission(
     await createAuditLog({
       entityName: 'submissions',
       entityId: submissionId,
-      action: 'updated',
-      changes: updates,
-      performedBy: userId,
+      action: 'UPDATE',
+      newValue: updates,
+      userId,
     });
 
     // Create activity for status changes
@@ -168,7 +175,7 @@ export async function updateSubmission(
         activityType: 'status_changed',
         activityTitle: 'Status Updated',
         activityDescription: `Submission status changed to ${updates.submission_status}`,
-        createdBy: userId,
+        userId,
       });
     }
   }
@@ -194,9 +201,8 @@ export async function deleteSubmission(submissionId: string, userId?: string) {
     await createAuditLog({
       entityName: 'submissions',
       entityId: submissionId,
-      action: 'deleted',
-      changes: {},
-      performedBy: userId,
+      action: 'DELETE',
+      userId,
     });
   }
 

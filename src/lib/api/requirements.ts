@@ -1,5 +1,10 @@
 import { supabase } from '@/lib/supabase/client';
 import { createAuditLog, createActivity } from '@/lib/utils/audit';
+import type { Database } from '@/types/database';
+
+type JobRequirement = Database['public']['Tables']['job_requirements']['Row'];
+type JobRequirementInsert = Database['public']['Tables']['job_requirements']['Insert'];
+type JobRequirementUpdate = Database['public']['Tables']['job_requirements']['Update'];
 
 /**
  * Get all job requirements with optional filters
@@ -87,13 +92,13 @@ async function checkDuplicateJobRequirement(jobTitle: string, clientId?: string,
  * Create a new job requirement
  */
 export async function createJobRequirement(
-  jobData: any,
+  jobData: JobRequirementInsert,
   userId?: string,
   options?: { skipDuplicateCheck?: boolean }
 ) {
   // Check for duplicates
   if (!options?.skipDuplicateCheck && jobData.job_title) {
-    const duplicates = await checkDuplicateJobRequirement(jobData.job_title, jobData.client_id);
+    const duplicates = await checkDuplicateJobRequirement(jobData.job_title, jobData.client_id || undefined);
     if (duplicates.length > 0) {
       return {
         data: null,
@@ -104,9 +109,15 @@ export async function createJobRequirement(
     }
   }
 
+  const insertData: JobRequirementInsert = {
+    ...jobData,
+    created_by: userId || null,
+    updated_by: userId || null,
+  };
+
   const result = await supabase
     .from('job_requirements')
-    .insert([{ ...jobData, created_by: userId, updated_by: userId }])
+    .insert(insertData)
     .select()
     .single();
 
@@ -119,9 +130,9 @@ export async function createJobRequirement(
     await createAuditLog({
       entityName: 'job_requirements',
       entityId: result.data.job_id,
-      action: 'created',
-      changes: jobData,
-      performedBy: userId,
+      action: 'CREATE',
+      newValue: jobData,
+      userId,
     });
 
     // Create activity
@@ -131,7 +142,7 @@ export async function createJobRequirement(
       activityType: 'created',
       activityTitle: 'Job Requirement Created',
       activityDescription: `Job requirement "${jobData.job_title}" was created`,
-      createdBy: userId,
+      userId,
     });
   }
 
@@ -143,13 +154,13 @@ export async function createJobRequirement(
  */
 export async function updateJobRequirement(
   jobId: string,
-  updates: any,
+  updates: JobRequirementUpdate,
   userId?: string,
   options?: { skipDuplicateCheck?: boolean }
 ) {
   // Check for duplicates if job title is being changed
   if (!options?.skipDuplicateCheck && updates.job_title) {
-    const duplicates = await checkDuplicateJobRequirement(updates.job_title, updates.client_id, jobId);
+    const duplicates = await checkDuplicateJobRequirement(updates.job_title, updates.client_id || undefined, jobId);
     if (duplicates.length > 0) {
       return {
         data: null,
@@ -162,7 +173,7 @@ export async function updateJobRequirement(
 
   const result = await supabase
     .from('job_requirements')
-    .update({ ...updates, updated_by: userId })
+    .update({ ...updates, updated_by: userId || null })
     .eq('job_id', jobId)
     .select()
     .single();
@@ -176,9 +187,9 @@ export async function updateJobRequirement(
     await createAuditLog({
       entityName: 'job_requirements',
       entityId: jobId,
-      action: 'updated',
-      changes: updates,
-      performedBy: userId,
+      action: 'UPDATE',
+      newValue: updates,
+      userId,
     });
 
     // Create activity
@@ -188,7 +199,7 @@ export async function updateJobRequirement(
       activityType: 'updated',
       activityTitle: 'Job Requirement Updated',
       activityDescription: 'Job requirement information was updated',
-      createdBy: userId,
+      userId,
     });
   }
 
@@ -213,9 +224,8 @@ export async function deleteJobRequirement(jobId: string, userId?: string) {
     await createAuditLog({
       entityName: 'job_requirements',
       entityId: jobId,
-      action: 'deleted',
-      changes: {},
-      performedBy: userId,
+      action: 'DELETE',
+      userId,
     });
   }
 

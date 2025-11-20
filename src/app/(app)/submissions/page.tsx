@@ -69,13 +69,13 @@ export default function SubmissionsPage() {
         </div>
         <div className="flex gap-2">
           <Button
-            variant={viewMode === 'pipeline' ? 'default' : 'outline'}
+            variant={viewMode === 'pipeline' ? 'primary' : 'outline'}
             onClick={() => setViewMode('pipeline')}
           >
             Pipeline View
           </Button>
           <Button
-            variant={viewMode === 'table' ? 'default' : 'outline'}
+            variant={viewMode === 'table' ? 'primary' : 'outline'}
             onClick={() => setViewMode('table')}
           >
             Table View
