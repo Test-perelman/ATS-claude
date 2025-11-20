@@ -91,20 +91,20 @@ export default function NewJobRequirementPage() {
       // Check for duplicates
       if (result.duplicate && result.matches && result.matches.length > 0) {
         const confirmed = window.confirm(
-          `A similar job requirement "${result.matches[0].job_title}" already exists. Do you want to create anyway?`
+          `A similar job requirement "${(result.matches as any)[0].job_title}" already exists. Do you want to create anyway?`
         );
 
         if (confirmed) {
           // Create with duplicate check skipped
           const forceResult = await createJobRequirement(jobData, undefined, { skipDuplicateCheck: true });
           if (forceResult.error) throw forceResult.error;
-          if (forceResult.data) {
-            router.push(`/requirements/${forceResult.data.job_id}`);
+          if ((forceResult as any).data) {
+            router.push(`/requirements/${((forceResult as any).data as any).job_id}`);
           }
         }
-      } else if (result.data) {
+      } else if ((result as any).data) {
         // Redirect to job detail page
-        router.push(`/requirements/${result.data.job_id}`);
+        router.push(`/requirements/${((result as any).data as any).job_id}`);
       }
     } catch (error: any) {
       console.error('Error creating job requirement:', error);

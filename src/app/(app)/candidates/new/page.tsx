@@ -92,14 +92,14 @@ export default function NewCandidatePage() {
 
       const { data, error } = await supabase
         .from('candidates')
-        .insert([candidateData])
+        .insert(candidateData as any)
         .select()
         .single();
 
       if (error) throw error;
 
       // Redirect to candidate detail page
-      router.push(`/candidates/${data.candidate_id}`);
+      router.push(`/candidates/${(data as any)?.candidate_id}`);
     } catch (error: any) {
       console.error('Error creating candidate:', error);
       alert('Error creating candidate: ' + error.message);

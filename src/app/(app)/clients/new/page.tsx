@@ -76,7 +76,7 @@ export default function NewClientPage() {
       // Check for duplicates
       if (result.duplicate && result.matches && result.matches.length > 0) {
         const confirmed = window.confirm(
-          `A similar client "${result.matches[0].client_name}" already exists. Do you want to create anyway?`
+          `A similar client \"${(result.matches as any)[0].client_name}\" already exists. Do you want to create anyway?`
         );
 
         if (confirmed) {
@@ -84,12 +84,12 @@ export default function NewClientPage() {
           const forceResult = await createClient(clientData, undefined, { skipDuplicateCheck: true });
           if (forceResult.error) throw forceResult.error;
           if (forceResult.data) {
-            router.push(`/clients/${forceResult.data.client_id}`);
+            router.push(`/clients/${(forceResult.data as any).client_id}`);
           }
         }
       } else if (result.data) {
         // Redirect to client detail page
-        router.push(`/clients/${result.data.client_id}`);
+        router.push(`/clients/${(result.data as any).client_id}`);
       }
     } catch (error: any) {
       console.error('Error creating client:', error);

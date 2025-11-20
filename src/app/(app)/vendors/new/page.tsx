@@ -84,7 +84,7 @@ export default function NewVendorPage() {
       // Check for duplicates
       if (result.duplicate && result.matches && result.matches.length > 0) {
         const confirmed = window.confirm(
-          `A similar vendor "${result.matches[0].vendor_name}" already exists. Do you want to create anyway?`
+          `A similar vendor "${(result.matches as any)[0].vendor_name}" already exists. Do you want to create anyway?`
         );
 
         if (confirmed) {
@@ -92,12 +92,12 @@ export default function NewVendorPage() {
           const forceResult = await createVendor(vendorData, undefined, { skipDuplicateCheck: true });
           if (forceResult.error) throw forceResult.error;
           if (forceResult.data) {
-            router.push(`/vendors/${forceResult.data.vendor_id}`);
+            router.push(`/vendors/${(forceResult.data as any).vendor_id}`);
           }
         }
       } else if (result.data) {
         // Redirect to vendor detail page
-        router.push(`/vendors/${result.data.vendor_id}`);
+        router.push(`/vendors/${(result.data as any).vendor_id}`);
       }
     } catch (error: any) {
       console.error('Error creating vendor:', error);

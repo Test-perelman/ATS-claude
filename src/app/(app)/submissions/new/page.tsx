@@ -71,7 +71,7 @@ export default function NewSubmissionPage() {
   }, [formData.bill_rate_offered, formData.pay_rate_offered]);
 
   async function loadCandidates() {
-    const { data } = await getCandidates({ isActive: true });
+    const { data } = await getCandidates();
     setCandidates(data || []);
   }
 
@@ -108,9 +108,9 @@ export default function NewSubmissionPage() {
         throw result.error;
       }
 
-      if (result.data) {
+      if ((result as any).data) {
         // Redirect to submission detail page
-        router.push(`/submissions/${result.data.submission_id}`);
+        router.push(`/submissions/${((result as any).data as any).submission_id}`);
       }
     } catch (error: any) {
       console.error('Error creating submission:', error);
