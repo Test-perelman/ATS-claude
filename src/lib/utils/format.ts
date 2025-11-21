@@ -28,6 +28,18 @@ export function formatDate(date: string | null | undefined, formatStr = 'MMM d, 
 }
 
 /**
+ * Format date and time
+ */
+export function formatDateTime(date: string | null | undefined): string {
+  if (!date) return '-';
+  try {
+    return format(parseISO(date), 'MMM d, yyyy h:mm a');
+  } catch {
+    return '-';
+  }
+}
+
+/**
  * Format relative time
  */
 export function formatRelativeTime(date: string | null | undefined): string {
