@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -9,7 +9,7 @@ import { Select } from '@/components/ui/Select';
 import { createInterview } from '@/lib/api/interviews';
 import { getSubmissions } from '@/lib/api/submissions';
 
-export default function NewInterviewPage() {
+function NewInterviewForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const submissionId = searchParams.get('submission_id');
@@ -182,5 +182,13 @@ export default function NewInterviewPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function NewInterviewPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <NewInterviewForm />
+    </Suspense>
   );
 }
