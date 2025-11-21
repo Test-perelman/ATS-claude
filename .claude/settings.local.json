@@ -24,7 +24,8 @@
       "Bash(npx kill-port:*)",
       "Bash(npx tsc:*)",
       "Bash(npm run build:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npx next build:*)"
     ],
     "deny": [],
     "ask": []
