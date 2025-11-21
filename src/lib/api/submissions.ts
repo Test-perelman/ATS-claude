@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client';
+import { supabase, typedInsert, typedUpdate } from '@/lib/supabase/client';
 import { createAuditLog, createActivity } from '@/lib/utils/audit';
 import type { Database } from '@/types/database';
 
@@ -104,13 +104,9 @@ export async function createSubmission(
     submitted_by_user_id: userId || null,
   };
 
-  const result = await supabase
-    .from('submissions')
-    .insert(insertData)
-    .select()
-    .single();
+  const result = await typedInsert('submissions', insertData);
 
-  if (result.error) {
+  if (result.error || !result.data) {
     return { data: null, error: result.error };
   }
 
@@ -146,12 +142,7 @@ export async function updateSubmission(
   updates: SubmissionUpdate,
   userId?: string
 ) {
-  const result = await supabase
-    .from('submissions')
-    .update(updates)
-    .eq('submission_id', submissionId)
-    .select()
-    .single();
+  const result = await typedUpdate('submissions', 'submission_id', submissionId, updates);
 
   if (result.error) {
     return { data: null, error: result.error };

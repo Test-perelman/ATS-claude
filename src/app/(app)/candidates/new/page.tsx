@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
-import { supabase } from '@/lib/supabase/client';
+import { supabase, typedInsert } from '@/lib/supabase/client';
+import type { Database } from '@/types/database';
 
 export default function NewCandidatePage() {
   const router = useRouter();
@@ -68,8 +69,8 @@ export default function NewCandidatePage() {
     setLoading(true);
 
     try {
-      // Prepare data for insertion
-      const candidateData: any = {
+      // Prepare data for insertion with proper typing
+      const candidateData: Database['public']['Tables']['candidates']['Insert'] = {
         first_name: formData.first_name,
         last_name: formData.last_name,
         email_address: formData.email_address || null,
@@ -86,15 +87,11 @@ export default function NewCandidatePage() {
         hourly_pay_rate: formData.hourly_pay_rate ? parseFloat(formData.hourly_pay_rate) : null,
         salary_annual: formData.salary_annual ? parseFloat(formData.salary_annual) : null,
         bench_status: formData.bench_status,
-        bench_added_date: new Date().toISOString().split('T')[0],
+        bench_added_date: formData.bench_status === 'on_bench' ? new Date().toISOString().split('T')[0] : null,
         notes_internal: formData.notes_internal || null,
       };
 
-      const { data, error } = await supabase
-        .from('candidates')
-        .insert(candidateData as any)
-        .select()
-        .single();
+      const { data, error } = await typedInsert('candidates', candidateData);
 
       if (error) throw error;
 

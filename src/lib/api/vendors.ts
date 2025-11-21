@@ -2,7 +2,7 @@
  * Vendor API Functions
  */
 
-import { supabase } from '@/lib/supabase/client';
+import { supabase, typedInsert, typedUpdate } from '@/lib/supabase/client';
 import { findDuplicateVendors, mergeEntityData } from '@/lib/utils/deduplication';
 import { createAuditLog, createActivity } from '@/lib/utils/audit';
 import type { Database } from '@/types/database';
@@ -100,15 +100,11 @@ export async function createVendor(
     }
 
     // Create new vendor
-    const { data, error } = await supabase
-        .from('vendors')
-        .insert({
-            ...vendorData,
-            created_by: userId || null,
-            updated_by: userId || null,
-        })
-        .select()
-        .single();
+    const { data, error } = await typedInsert('vendors', {
+        ...vendorData,
+        created_by: userId || null,
+        updated_by: userId || null,
+    });
 
     if (data && !error) {
         // Create audit log
@@ -146,15 +142,10 @@ export async function updateVendor(
     const { data: oldData } = await getVendorById(vendorId);
 
     // Update vendor
-    const { data, error } = await supabase
-        .from('vendors')
-        .update({
-            ...updates,
-            updated_by: userId || null,
-        })
-        .eq('vendor_id', vendorId)
-        .select()
-        .single();
+    const { data, error } = await typedUpdate('vendors', 'vendor_id', vendorId, {
+        ...updates,
+        updated_by: userId || null,
+    });
 
     if (data && !error) {
         // Create audit log
@@ -168,13 +159,14 @@ export async function updateVendor(
         });
 
         // Create activity for significant changes
-        if (updates.tier_level && updates.tier_level !== oldData?.tier_level) {
+        const oldVendor = oldData as Vendor | null;
+        if (updates.tier_level && updates.tier_level !== oldVendor?.tier_level) {
             await createActivity({
                 entityType: 'vendor',
                 entityId: vendorId,
                 activityType: 'status_change',
                 activityTitle: 'Vendor Tier Updated',
-                activityDescription: `Tier changed from ${oldData?.tier_level} to ${updates.tier_level}`,
+                activityDescription: `Tier changed from ${oldVendor?.tier_level} to ${updates.tier_level}`,
                 userId,
             });
         }

@@ -3,7 +3,8 @@
  * Role-based access control (RBAC)
  */
 
-import { supabase } from '@/lib/supabase/client';
+import { supabase, typedUpsert } from '@/lib/supabase/client';
+import type { Database } from '@/types/database';
 
 export interface Permission {
   permission_id: string;
@@ -47,12 +48,17 @@ export async function hasPermission(userId: string, permissionKey: string): Prom
     .eq('user_id', userId)
     .single();
 
-  if (userError || !user || !user.role_id) {
+  if (userError || !user) {
+    return false;
+  }
+
+  const userData = user as Database['public']['Tables']['users']['Row'];
+  if (!userData.role_id) {
     return false;
   }
 
   // Get role permissions
-  const permissions = await getRolePermissions(user.role_id);
+  const permissions = await getRolePermissions(userData.role_id);
 
   return permissions.includes(permissionKey);
 }
@@ -70,11 +76,16 @@ export async function hasAnyPermission(
     .eq('user_id', userId)
     .single();
 
-  if (userError || !user || !user.role_id) {
+  if (userError || !user) {
     return false;
   }
 
-  const permissions = await getRolePermissions(user.role_id);
+  const userData = user as Database['public']['Tables']['users']['Row'];
+  if (!userData.role_id) {
+    return false;
+  }
+
+  const permissions = await getRolePermissions(userData.role_id);
 
   return permissionKeys.some((key) => permissions.includes(key));
 }
@@ -92,11 +103,16 @@ export async function hasAllPermissions(
     .eq('user_id', userId)
     .single();
 
-  if (userError || !user || !user.role_id) {
+  if (userError || !user) {
     return false;
   }
 
-  const permissions = await getRolePermissions(user.role_id);
+  const userData = user as Database['public']['Tables']['users']['Row'];
+  if (!userData.role_id) {
+    return false;
+  }
+
+  const permissions = await getRolePermissions(userData.role_id);
 
   return permissionKeys.every((key) => permissions.includes(key));
 }
@@ -130,14 +146,15 @@ export async function isSuperAdmin(userId: string): Promise<boolean> {
  * Assign permission to role
  */
 export async function assignPermissionToRole(roleId: string, permissionId: string) {
-  const { data, error } = await supabase.from('role_permissions').upsert(
-    {
-      role_id: roleId,
-      permission_id: permissionId,
-      allowed: true,
-    },
-    { onConflict: 'role_id,permission_id' }
-  );
+  const payload: Database['public']['Tables']['role_permissions']['Insert'] = {
+    role_id: roleId,
+    permission_id: permissionId,
+    allowed: true,
+  };
+
+  const { data, error } = await typedUpsert('role_permissions', payload, {
+    onConflict: 'role_id,permission_id'
+  });
 
   return { data, error };
 }
@@ -169,8 +186,9 @@ export async function getAllPermissionsGrouped() {
   }
 
   const grouped: Record<string, Permission[]> = {};
+  const permissions = data as Permission[];
 
-  data.forEach((permission) => {
+  permissions.forEach((permission) => {
     const module = permission.module_name || 'Other';
     if (!grouped[module]) {
       grouped[module] = [];

@@ -2,7 +2,7 @@
  * Client API Functions
  */
 
-import { supabase } from '@/lib/supabase/client';
+import { supabase, typedInsert, typedUpdate } from '@/lib/supabase/client';
 import { findDuplicateClients, mergeEntityData } from '@/lib/utils/deduplication';
 import { createAuditLog, createActivity } from '@/lib/utils/audit';
 import type { Database } from '@/types/database';
@@ -100,15 +100,11 @@ export async function createClient(
     }
 
     // Create new client
-    const { data, error } = await supabase
-        .from('clients')
-        .insert({
-            ...clientData,
-            created_by: userId || null,
-            updated_by: userId || null,
-        })
-        .select()
-        .single();
+    const { data, error } = await typedInsert('clients', {
+        ...clientData,
+        created_by: userId || null,
+        updated_by: userId || null,
+    });
 
     if (data && !error) {
         // Create audit log
@@ -146,15 +142,10 @@ export async function updateClient(
     const { data: oldData } = await getClientById(clientId);
 
     // Update client
-    const { data, error } = await supabase
-        .from('clients')
-        .update({
-            ...updates,
-            updated_by: userId || null,
-        })
-        .eq('client_id', clientId)
-        .select()
-        .single();
+    const { data, error } = await typedUpdate('clients', 'client_id', clientId, {
+        ...updates,
+        updated_by: userId || null,
+    });
 
     if (data && !error) {
         // Create audit log
@@ -168,7 +159,8 @@ export async function updateClient(
         });
 
         // Create activity for significant changes
-        if (updates.is_active !== undefined && updates.is_active !== oldData?.is_active) {
+        const oldClient = oldData as Client | null;
+        if (updates.is_active !== undefined && updates.is_active !== oldClient?.is_active) {
             await createActivity({
                 entityType: 'client',
                 entityId: clientId,

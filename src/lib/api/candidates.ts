@@ -2,7 +2,7 @@
  * Candidate API Functions
  */
 
-import { supabase } from '@/lib/supabase/client';
+import { supabase, typedInsert, typedUpdate } from '@/lib/supabase/client';
 import { findDuplicateCandidates, mergeCandidateData } from '@/lib/utils/deduplication';
 import { createAuditLog, createActivity } from '@/lib/utils/audit';
 import type { Database } from '@/types/database';
@@ -112,15 +112,11 @@ export async function createCandidate(
   }
 
   // Create new candidate
-  const { data, error } = await supabase
-    .from('candidates')
-    .insert({
-      ...candidateData,
-      created_by: userId || null,
-      updated_by: userId || null,
-    })
-    .select()
-    .single();
+  const { data, error } = await typedInsert('candidates', {
+    ...candidateData,
+    created_by: userId || null,
+    updated_by: userId || null,
+  });
 
   if (data && !error) {
     // Create audit log
@@ -158,15 +154,10 @@ export async function updateCandidate(
   const { data: oldData } = await getCandidateById(candidateId);
 
   // Update candidate
-  const { data, error } = await supabase
-    .from('candidates')
-    .update({
-      ...updates,
-      updated_by: userId || null,
-    })
-    .eq('candidate_id', candidateId)
-    .select()
-    .single();
+  const { data, error } = await typedUpdate('candidates', 'candidate_id', candidateId, {
+    ...updates,
+    updated_by: userId || null,
+  });
 
   if (data && !error) {
     // Create audit log
@@ -180,13 +171,14 @@ export async function updateCandidate(
     });
 
     // Create activity for significant changes
-    if (updates.bench_status && updates.bench_status !== oldData?.bench_status) {
+    const oldCandidate = oldData as Candidate | null;
+    if (updates.bench_status && updates.bench_status !== oldCandidate?.bench_status) {
       await createActivity({
         entityType: 'candidate',
         entityId: candidateId,
         activityType: 'status_change',
         activityTitle: 'Bench Status Updated',
-        activityDescription: `Status changed from ${oldData?.bench_status} to ${updates.bench_status}`,
+        activityDescription: `Status changed from ${oldCandidate?.bench_status} to ${updates.bench_status}`,
         userId,
       });
     }
@@ -277,7 +269,7 @@ export async function addToBench(
 
   if (!error) {
     // Add to bench history
-    await supabase.from('bench_history').insert({
+    await typedInsert('bench_history', {
       candidate_id: candidateId,
       bench_added_date: new Date().toISOString().split('T')[0],
       notes: notes || null,
@@ -326,13 +318,11 @@ export async function removeFromBench(
       .single();
 
     if (benchHistory) {
-      await supabase
-        .from('bench_history')
-        .update({
-          bench_removed_date: new Date().toISOString().split('T')[0],
-          reason_bench_out: reason,
-        })
-        .eq('bench_id', benchHistory.bench_id);
+      const history = benchHistory as Database['public']['Tables']['bench_history']['Row'];
+      await typedUpdate('bench_history', 'bench_id', history.bench_id, {
+        bench_removed_date: new Date().toISOString().split('T')[0],
+        reason_bench_out: reason,
+      });
     }
 
     // Create activity

@@ -3,7 +3,7 @@
  * Automatically tracks all changes to entities
  */
 
-import { supabase } from '@/lib/supabase/client';
+import { supabase, typedInsert } from '@/lib/supabase/client';
 
 export type AuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'VIEW';
 
@@ -42,7 +42,7 @@ export async function createAuditLog({
     });
   }
 
-  const { data, error } = await supabase.from('audit_log').insert({
+  const { data, error } = await typedInsert('audit_log', {
     entity_name: entityName,
     entity_id: entityId,
     action,
@@ -60,6 +60,8 @@ export async function createAuditLog({
 
   return { data, error };
 }
+
+
 
 /**
  * Get audit logs for an entity
@@ -154,7 +156,7 @@ export async function createActivity({
   metadata?: any;
   userId?: string;
 }) {
-  const { data, error } = await supabase.from('activities').insert({
+  const { data, error } = await typedInsert('activities', {
     entity_type: entityType,
     entity_id: entityId,
     activity_type: activityType,

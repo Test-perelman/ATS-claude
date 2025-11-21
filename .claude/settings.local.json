@@ -16,7 +16,13 @@
       "Bash(git filter-branch:*)",
       "Bash(git stash:*)",
       "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(tasklist /FI \"IMAGENAME eq node.exe\")",
+      "Bash(taskkill:*)",
+      "Bash(npx kill-port:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

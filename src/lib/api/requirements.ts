@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase/client';
+import { supabase, typedInsert, typedUpdate } from '@/lib/supabase/client';
 import { createAuditLog, createActivity } from '@/lib/utils/audit';
 import type { Database } from '@/types/database';
 
@@ -115,13 +115,9 @@ export async function createJobRequirement(
     updated_by: userId || null,
   };
 
-  const result = await supabase
-    .from('job_requirements')
-    .insert(insertData)
-    .select()
-    .single();
+  const result = await typedInsert('job_requirements', insertData);
 
-  if (result.error) {
+  if (result.error || !result.data) {
     return { data: null, error: result.error };
   }
 
@@ -171,12 +167,10 @@ export async function updateJobRequirement(
     }
   }
 
-  const result = await supabase
-    .from('job_requirements')
-    .update({ ...updates, updated_by: userId || null })
-    .eq('job_id', jobId)
-    .select()
-    .single();
+  const result = await typedUpdate('job_requirements', 'job_id', jobId, {
+    ...updates,
+    updated_by: userId || null,
+  });
 
   if (result.error) {
     return { data: null, error: result.error };
@@ -257,6 +251,9 @@ export async function getMatchingCandidates(jobId: string) {
     return { data: [], error: null };
   }
 
+  // Type assertion for the job data (Supabase returns complex nested types from joins)
+  const jobData = job as JobRequirement;
+
   // Search for candidates with matching skills
   let query = supabase
     .from('candidates')
@@ -264,8 +261,8 @@ export async function getMatchingCandidates(jobId: string) {
     .eq('bench_status', 'available');
 
   // If skills are specified, search for them
-  if (job.skills_required) {
-    const skills = job.skills_required.split(',').map((s: string) => s.trim());
+  if (jobData.skills_required) {
+    const skills = jobData.skills_required.split(',').map((s: string) => s.trim());
     const skillQuery = skills.map((skill: string) =>
       `skills_primary.ilike.%${skill}%,skills_secondary.ilike.%${skill}%`
     ).join(',');
