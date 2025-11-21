@@ -22,7 +22,8 @@
       "Bash(tasklist /FI \"IMAGENAME eq node.exe\")",
       "Bash(taskkill:*)",
       "Bash(npx kill-port:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

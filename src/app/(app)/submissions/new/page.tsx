@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -11,7 +11,7 @@ import { createSubmission } from '@/lib/api/submissions';
 import { getCandidates } from '@/lib/api/candidates';
 import { getJobRequirements } from '@/lib/api/requirements';
 
-export default function NewSubmissionPage() {
+function NewSubmissionForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
@@ -308,5 +308,13 @@ export default function NewSubmissionPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function NewSubmissionPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <NewSubmissionForm />
+    </Suspense>
   );
 }
