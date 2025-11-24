@@ -29,14 +29,13 @@ export async function adminSignUp(data: {
 
     // Step 2: Create team
     const serverClient = createServerClient();
-    const { data: teamData, error: teamError } = await serverClient
-      .from('teams')
+    const { data: teamData, error: teamError } = await (serverClient.from('teams') as any)
       .insert({
         team_name: data.teamName || data.companyName,
         company_name: data.companyName,
         subscription_tier: data.subscriptionTier || 'basic',
         is_active: true,
-      } as Database['public']['Tables']['teams']['Insert'])
+      })
       .select()
       .single();
 
@@ -59,26 +58,24 @@ export async function adminSignUp(data: {
 
     if (roleError || !roleData) {
       // Create Admin role if it doesn't exist
-      const { data: newRole, error: newRoleError } = await serverClient
-        .from('roles')
+      const { data: newRole, error: newRoleError } = await (serverClient.from('roles') as any)
         .insert({
           role_name: 'Admin',
           role_description: 'Team administrator with full access',
-        } as Database['public']['Tables']['roles']['Insert'])
+        })
         .select('role_id')
         .single();
 
       if (newRoleError || !newRole) {
         return { error: 'Failed to create admin role' };
       }
-      roleId = newRole.role_id;
+      roleId = (newRole as any).role_id;
     } else {
-      roleId = roleData.role_id;
+      roleId = (roleData as any).role_id;
     }
 
     // Step 4: Create user record with team_id
-    const { data: userData, error: userError } = await serverClient
-      .from('users')
+    const { data: userData, error: userError } = await (serverClient.from('users') as any)
       .insert({
         user_id: userId,
         username: data.email.split('@')[0],
@@ -86,7 +83,7 @@ export async function adminSignUp(data: {
         team_id: teamId,
         role_id: roleId,
         status: 'active',
-      } as Database['public']['Tables']['users']['Insert'])
+      })
       .select()
       .single();
 
@@ -135,7 +132,8 @@ export async function adminSignIn(email: string, password: string) {
     }
 
     // Check if user has team_id assigned
-    if (!userData.team_id) {
+    const userTeamId = (userData as any).team_id;
+    if (!userTeamId) {
       return { error: 'User is not assigned to a team' };
     }
 
@@ -185,7 +183,7 @@ export async function getCurrentUser() {
  */
 export async function getCurrentUserTeamId(): Promise<string | null> {
   const user = await getCurrentUser();
-  return user?.team_id || null;
+  return (user as any)?.team_id || null;
 }
 
 /**
@@ -218,8 +216,7 @@ export async function requestTeamAccess(data: {
   try {
     const { data: authUser } = await supabase.auth.getUser();
 
-    const { data: requestData, error } = await supabase
-      .from('team_access_requests')
+    const { data: requestData, error } = await (supabase.from('team_access_requests') as any)
       .insert({
         email: data.email,
         first_name: data.firstName,
@@ -229,7 +226,7 @@ export async function requestTeamAccess(data: {
         requested_team_id: data.requestedTeamId,
         auth_user_id: authUser?.user?.id,
         status: 'pending',
-      } as Database['public']['Tables']['team_access_requests']['Insert'])
+      })
       .select()
       .single();
 
@@ -262,17 +259,18 @@ export async function checkTeamAccess(): Promise<{
     }
 
     // User has team_id assigned
-    if (user.team_id) {
+    const userTeamId = (user as any).team_id;
+    if (userTeamId) {
       const { data: teamData } = await supabase
         .from('teams')
         .select('team_id, team_name')
-        .eq('team_id', user.team_id)
+        .eq('team_id', userTeamId)
         .single();
 
       return {
         hasAccess: true,
-        teamId: user.team_id,
-        teamName: teamData?.team_name,
+        teamId: userTeamId,
+        teamName: (teamData as any)?.team_name,
       };
     }
 
@@ -280,13 +278,13 @@ export async function checkTeamAccess(): Promise<{
     const { data: requestData } = await supabase
       .from('team_access_requests')
       .select('status')
-      .eq('auth_user_id', user.user_id)
+      .eq('auth_user_id', (user as any).user_id)
       .single();
 
     if (requestData) {
       return {
         hasAccess: false,
-        requestStatus: requestData.status as 'pending' | 'approved' | 'rejected',
+        requestStatus: (requestData as any).status as 'pending' | 'approved' | 'rejected',
       };
     }
 
@@ -325,13 +323,15 @@ export async function approveAccessRequest(
       .eq('user_id', approvedByUserId)
       .single();
 
-    if (!approver || approver.team_id !== request.requested_team_id) {
+    const approverTeamId = (approver as any)?.team_id;
+    const requestedTeamId = (request as any)?.requested_team_id;
+
+    if (!approver || approverTeamId !== requestedTeamId) {
       return { error: 'Not authorized to approve this request' };
     }
 
     // Update access request status
-    const { error: updateError } = await serverClient
-      .from('team_access_requests')
+    const { error: updateError } = await (serverClient.from('team_access_requests') as any)
       .update({
         status: 'approved',
         reviewed_by: approvedByUserId,
@@ -344,23 +344,24 @@ export async function approveAccessRequest(
     }
 
     // Create user record with team_id
-    if (request.auth_user_id) {
-      const { error: userError } = await serverClient
-        .from('users')
+    const authUserId = (request as any).auth_user_id;
+    const requestEmail = (request as any).email;
+    if (authUserId) {
+      const { error: userError } = await (serverClient.from('users') as any)
         .insert({
-          user_id: request.auth_user_id,
-          username: request.email.split('@')[0],
-          email: request.email,
-          team_id: request.requested_team_id,
+          user_id: authUserId,
+          username: requestEmail.split('@')[0],
+          email: requestEmail,
+          team_id: requestedTeamId,
           status: 'active',
-        } as Database['public']['Tables']['users']['Insert']);
+        });
 
       if (userError) {
         // Check if user already exists (might be duplicate)
         const { data: existingUser } = await serverClient
           .from('users')
           .select('user_id')
-          .eq('user_id', request.auth_user_id)
+          .eq('user_id', authUserId)
           .single();
 
         if (!existingUser) {
@@ -404,13 +405,15 @@ export async function rejectAccessRequest(
       .eq('user_id', rejectedByUserId)
       .single();
 
-    if (!rejector || rejector.team_id !== request.requested_team_id) {
+    const rejectorTeamId = (rejector as any)?.team_id;
+    const requestTeamId = (request as any)?.requested_team_id;
+
+    if (!rejector || rejectorTeamId !== requestTeamId) {
       return { error: 'Not authorized to reject this request' };
     }
 
     // Update access request status
-    const { error: updateError } = await serverClient
-      .from('team_access_requests')
+    const { error: updateError } = await (serverClient.from('team_access_requests') as any)
       .update({
         status: 'rejected',
         reviewed_by: rejectedByUserId,

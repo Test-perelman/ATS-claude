@@ -1,11 +1,14 @@
-import { supabase, createServerClient } from '@/lib/supabase/client';
+import { supabase, createServerClient, typedUpdate } from '@/lib/supabase/client';
 import { getCurrentUserTeamId } from '@/lib/supabase/auth';
 import type { Database } from '@/types/database';
 
 /**
  * Get current user's team
  */
-export async function getTeam() {
+export async function getTeam(): Promise<
+  | { data: Database['public']['Tables']['teams']['Row']; error?: never }
+  | { data?: never; error: string }
+> {
   try {
     const teamId = await getCurrentUserTeamId();
 
@@ -33,12 +36,7 @@ export async function getTeam() {
 /**
  * Update team information
  */
-export async function updateTeam(updates: {
-  team_name?: string;
-  company_name?: string;
-  description?: string;
-  subscription_tier?: string;
-}) {
+export async function updateTeam(updates: Database['public']['Tables']['teams']['Update']) {
   try {
     const teamId = await getCurrentUserTeamId();
 
@@ -46,12 +44,7 @@ export async function updateTeam(updates: {
       return { error: 'User not associated with a team' };
     }
 
-    const { data, error } = await supabase
-      .from('teams')
-      .update(updates)
-      .eq('team_id', teamId)
-      .select()
-      .single();
+    const { data, error } = await typedUpdate('teams', 'team_id', teamId, updates);
 
     if (error) {
       return { error: error.message };
@@ -140,18 +133,22 @@ export async function updateTeamMember(
     }
 
     // Verify target user is in the same team
-    const { data: targetUser } = await supabase
+    const { data: targetUser, error: fetchError } = await supabase
       .from('users')
       .select('team_id')
       .eq('user_id', userId)
       .single();
 
-    if (!targetUser || targetUser.team_id !== teamId) {
+    if (fetchError || !targetUser) {
       return { error: 'User not found in your team' };
     }
 
-    const { data, error } = await supabase
-      .from('users')
+    const userTeamId = (targetUser as { team_id: string | null }).team_id;
+    if (userTeamId !== teamId) {
+      return { error: 'User not found in your team' };
+    }
+
+    const { data, error } = await (supabase.from('users') as any)
       .update(updates)
       .eq('user_id', userId)
       .eq('team_id', teamId)
@@ -286,13 +283,13 @@ export async function approveAccessRequest(requestId: string, teamId: string) {
       return { error: 'Access request not found' };
     }
 
-    if (!request.auth_user_id) {
+    const authUserId = (request as any).auth_user_id;
+    if (!authUserId) {
       return { error: 'Auth user ID not found' };
     }
 
     // Update request status
-    const { error: updateError } = await serverClient
-      .from('team_access_requests')
+    const { error: updateError } = await (serverClient.from('team_access_requests') as any)
       .update({
         status: 'approved',
         reviewed_at: new Date().toISOString(),
@@ -304,15 +301,15 @@ export async function approveAccessRequest(requestId: string, teamId: string) {
     }
 
     // Create user record with team_id
-    const { error: userError } = await serverClient
-      .from('users')
+    const requestEmail = (request as any).email;
+    const { error: userError } = await (serverClient.from('users') as any)
       .insert({
-        user_id: request.auth_user_id,
-        username: request.email.split('@')[0],
-        email: request.email,
+        user_id: authUserId,
+        username: requestEmail.split('@')[0],
+        email: requestEmail,
         team_id: teamId,
         status: 'active',
-      } as Database['public']['Tables']['users']['Insert']);
+      });
 
     if (userError) {
       return { error: 'Failed to create user record' };
@@ -345,8 +342,7 @@ export async function rejectAccessRequest(requestId: string, teamId: string) {
     }
 
     // Update request status
-    const { error: updateError } = await serverClient
-      .from('team_access_requests')
+    const { error: updateError } = await (serverClient.from('team_access_requests') as any)
       .update({
         status: 'rejected',
         reviewed_at: new Date().toISOString(),

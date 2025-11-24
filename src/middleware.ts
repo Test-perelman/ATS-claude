@@ -1,4 +1,4 @@
-import { createServerClient, createClient } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Routes that don't require authentication

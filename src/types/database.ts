@@ -14,6 +14,41 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      teams: {
+        Row: {
+          team_id: string
+          team_name: string
+          company_name: string | null
+          description: string | null
+          subscription_tier: string
+          max_users: number
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          team_id?: string
+          team_name: string
+          company_name?: string | null
+          description?: string | null
+          subscription_tier?: string
+          max_users?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          team_id?: string
+          team_name?: string
+          company_name?: string | null
+          description?: string | null
+          subscription_tier?: string
+          max_users?: number
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
       users: {
         Row: {
           user_id: string
@@ -22,6 +57,7 @@ export interface Database {
           email: string
           phone: string | null
           role_id: string | null
+          team_id: string | null
           status: string
           last_login: string | null
           created_at: string
@@ -34,6 +70,7 @@ export interface Database {
           email: string
           phone?: string | null
           role_id?: string | null
+          team_id?: string | null
           status?: string
           last_login?: string | null
           created_at?: string
@@ -46,6 +83,7 @@ export interface Database {
           email?: string
           phone?: string | null
           role_id?: string | null
+          team_id?: string | null
           status?: string
           last_login?: string | null
           created_at?: string

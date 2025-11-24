@@ -28,17 +28,23 @@ export default function TeamSettingsPage() {
       setLoading(true);
       const result = await getTeam();
 
-      if ('error' in result && result.error) {
-        setError(result.error);
+      if ('error' in result) {
+        setError(result.error || 'Failed to load team');
         return;
       }
 
-      setTeamData(result.data);
+      if (!result.data) {
+        setError('No team data found');
+        return;
+      }
+
+      const teamData = result.data;
+      setTeamData(teamData);
       setFormData({
-        team_name: result.data.team_name || '',
-        company_name: result.data.company_name || '',
-        description: result.data.description || '',
-        subscription_tier: result.data.subscription_tier || 'basic',
+        team_name: teamData.team_name || '',
+        company_name: teamData.company_name || '',
+        description: teamData.description || '',
+        subscription_tier: teamData.subscription_tier || 'basic',
       });
     } catch (err) {
       setError('Failed to load team information');
