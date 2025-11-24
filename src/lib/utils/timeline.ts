@@ -19,6 +19,8 @@ export interface TimelineItem {
     username: string;
     email: string;
   };
+  navigationUrl?: string;
+  navigationLabel?: string;
 }
 
 /**
@@ -122,6 +124,8 @@ export async function getCandidateTimeline(candidateId: string): Promise<Timelin
           payRate: submission.pay_rate_offered,
         },
         user: submission.submitted_by,
+        navigationUrl: `/submissions/${submission.submission_id}`,
+        navigationLabel: 'View submission',
       }))
     );
   }
@@ -149,6 +153,8 @@ export async function getCandidateTimeline(candidateId: string): Promise<Timelin
           result: interview.result,
           rating: interview.rating,
         },
+        navigationUrl: interview.submission?.job_id ? `/requirements/${interview.submission.job_id}` : undefined,
+        navigationLabel: 'View job requirement',
       }))
     );
   }
@@ -176,6 +182,8 @@ export async function getCandidateTimeline(candidateId: string): Promise<Timelin
           payRate: project.pay_rate_final,
           endDate: project.end_date,
         },
+        navigationUrl: `/projects/${project.project_id}`,
+        navigationLabel: 'View project',
       }))
     );
   }
@@ -486,6 +494,8 @@ export async function getClientTimeline(clientId: string): Promise<TimelineItem[
           status: job.status,
           priority: job.priority,
         },
+        navigationUrl: `/requirements/${job.job_id}`,
+        navigationLabel: 'View job requirement',
       }))
     );
   }
@@ -603,6 +613,8 @@ export async function getProjectTimeline(projectId: string): Promise<TimelineIte
           hours: timesheet.hours_worked,
           approved: timesheet.approved_by_client,
         },
+        navigationUrl: `/timesheets/${timesheet.timesheet_id}`,
+        navigationLabel: 'View timesheet',
       }))
     );
   }
@@ -629,6 +641,8 @@ export async function getProjectTimeline(projectId: string): Promise<TimelineIte
           amount: invoice.invoice_amount,
           status: invoice.status,
         },
+        navigationUrl: `/invoices/${invoice.invoice_id}`,
+        navigationLabel: 'View invoice',
       }))
     );
   }
@@ -767,6 +781,8 @@ export async function getJobRequirementTimeline(jobId: string): Promise<Timeline
           candidateId: submission.candidate_id,
           status: submission.submission_status,
         },
+        navigationUrl: `/submissions/${submission.submission_id}`,
+        navigationLabel: 'View submission',
       }))
     );
   }

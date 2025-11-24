@@ -16,6 +16,18 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- USERS & AUTHENTICATION
 -- ============================================
 
+-- Teams Table (Multi-tenant support)
+CREATE TABLE IF NOT EXISTS teams (
+  team_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  team_name TEXT NOT NULL,
+  company_name TEXT,
+  description TEXT,
+  subscription_tier TEXT DEFAULT 'basic' CHECK (subscription_tier IN ('basic', 'professional', 'enterprise')),
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Roles Table
 CREATE TABLE IF NOT EXISTS roles (
   role_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -52,6 +64,7 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT UNIQUE NOT NULL,
   phone TEXT,
   role_id UUID REFERENCES roles(role_id),
+  team_id UUID NOT NULL REFERENCES teams(team_id) ON DELETE CASCADE,
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended')),
   last_login TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { formatRelativeTime, formatDate } from '@/lib/utils/format';
 import type { TimelineItem } from '@/lib/utils/timeline';
 
@@ -41,7 +42,19 @@ export const Timeline: React.FC<TimelineProps> = ({ items }) => {
                 </div>
                 <div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{item.title}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {item.navigationUrl ? (
+                        <Link
+                          href={item.navigationUrl}
+                          className="text-blue-600 hover:underline"
+                          title={item.navigationLabel || 'Navigate to record'}
+                        >
+                          {item.title}
+                        </Link>
+                      ) : (
+                        item.title
+                      )}
+                    </p>
                     <p className="mt-0.5 text-sm text-gray-500">{item.description}</p>
                     {item.user && (
                       <p className="mt-1 text-xs text-gray-400">
