@@ -1,17 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { adminSignIn } from '@/lib/supabase/auth';
 
-export default function AdminLoginPage() {
-  const router = useRouter();
+function AdminLoginContent() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -25,6 +25,15 @@ export default function AdminLoginPage() {
       return () => clearTimeout(timeout);
     }
   }, [searchParams]);
+
+  // Handle redirect after successful login
+  useEffect(() => {
+    if (redirectUrl) {
+      console.log('useEffect: Performing redirect to:', redirectUrl);
+      // Use window.location for full page reload to ensure session cookies propagate to middleware
+      window.location.href = redirectUrl;
+    }
+  }, [redirectUrl]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -46,16 +55,26 @@ export default function AdminLoginPage() {
         return;
       }
 
+      console.log('Starting login with email:', formData.email);
       const result = await adminSignIn(formData.email, formData.password);
+      console.log('Login result:', result);
 
       if ('error' in result && result.error) {
+        console.error('Login failed with error:', result.error);
         setError(result.error);
         setLoading(false);
         return;
       }
 
-      // Success - redirect to dashboard
-      router.push('/dashboard');
+      // Success - redirect to appropriate page
+      // If user has team, go to dashboard; otherwise go to access-request
+      const hasTeam = (result as any).user?.team_id;
+      console.log('Login successful. User:', (result as any).user);
+      console.log('Has team:', hasTeam);
+      const url = hasTeam ? '/dashboard' : '/access-request';
+      console.log('Setting redirect URL to:', url);
+      setLoading(false);
+      setRedirectUrl(url);
     } catch (err) {
       setError('An unexpected error occurred');
       console.error('Login error:', err);
@@ -132,5 +151,13 @@ export default function AdminLoginPage() {
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={<div className="text-center text-gray-600">Loading...</div>}>
+      <AdminLoginContent />
+    </Suspense>
   );
 }

@@ -117,8 +117,12 @@ export async function adminSignIn(email: string, password: string) {
     });
 
     if (authError || !authData.user) {
-      return { error: authError?.message || 'Invalid credentials' };
+      const errorMsg = authError?.message || 'Invalid credentials';
+      console.error('Auth error:', errorMsg);
+      return { error: errorMsg };
     }
+
+    console.log('Auth successful, userId:', authData.user.id);
 
     // Get user record with team_id
     const { data: userData, error: userError } = await supabase
@@ -127,14 +131,28 @@ export async function adminSignIn(email: string, password: string) {
       .eq('user_id', authData.user.id)
       .single();
 
-    if (userError || !userData) {
-      return { error: 'User not found' };
+    if (userError) {
+      console.error('User fetch error:', userError);
+      return { error: userError?.message || 'Failed to fetch user data' };
     }
+
+    if (!userData) {
+      console.error('No user data found for userId:', authData.user.id);
+      return { error: 'User not found in database' };
+    }
+
+    console.log('User data retrieved:', userData);
 
     // Check if user has team_id assigned
     const userTeamId = (userData as any).team_id;
     if (!userTeamId) {
-      return { error: 'User is not assigned to a team' };
+      console.warn('User has no team_id assigned. Allowing login to access-request page');
+      // Allow login but user will be redirected to access-request page by middleware
+      return {
+        success: true,
+        user: userData,
+        authUser: authData.user,
+      };
     }
 
     return {
@@ -144,7 +162,7 @@ export async function adminSignIn(email: string, password: string) {
     };
   } catch (error) {
     console.error('Admin signin error:', error);
-    return { error: 'An unexpected error occurred' };
+    return { error: 'An unexpected error occurred: ' + String(error) };
   }
 }
 
