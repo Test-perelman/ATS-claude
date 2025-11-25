@@ -1,7 +1,6 @@
 'use client';
 
-import { Sidebar } from '@/components/layout/Sidebar';
-import { Header } from '@/components/layout/Header';
+import { TopNavigation } from '@/components/layout/TopNavigation';
 
 export default function AppLayout({
   children,
@@ -9,14 +8,11 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
-          {children}
-        </main>
-      </div>
+    <div className="flex h-screen flex-col overflow-hidden">
+      <TopNavigation />
+      <main className="flex-1 overflow-y-auto bg-purple-50 p-6">
+        {children}
+      </main>
     </div>
   );
 }

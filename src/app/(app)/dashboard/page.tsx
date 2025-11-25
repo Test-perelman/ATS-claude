@@ -22,8 +22,8 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Page Title */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-2 text-gray-600">Welcome to Perelman ATS</p>
+        <h1 className="text-3xl font-bold text-purple-900">Dashboard</h1>
+        <p className="mt-2 text-purple-600">Welcome to Perelman ATS</p>
       </div>
 
       {/* Stats Grid */}
@@ -33,8 +33,8 @@ export default function DashboardPage() {
             <CardContent className="pt-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                  <p className="mt-2 text-3xl font-bold text-gray-900">{stat.value}</p>
+                  <p className="text-sm font-medium text-purple-600">{stat.title}</p>
+                  <p className="mt-2 text-3xl font-bold text-purple-900">{stat.value}</p>
                   <p className="mt-1 text-sm text-green-600">{stat.change}</p>
                 </div>
                 <div className="text-4xl">{stat.icon}</div>
@@ -55,13 +55,13 @@ export default function DashboardPage() {
               {recentActivity.map((activity) => (
                 <div key={activity.id} className="flex items-start space-x-3">
                   <div className="flex-shrink-0">
-                    <div className="h-2 w-2 mt-2 rounded-full bg-blue-600"></div>
+                    <div className="h-2 w-2 mt-2 rounded-full bg-cyan-500"></div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                    <p className="text-sm text-gray-500">{activity.name}</p>
+                    <p className="text-sm font-medium text-purple-900">{activity.action}</p>
+                    <p className="text-sm text-purple-600">{activity.name}</p>
                   </div>
-                  <div className="flex-shrink-0 text-xs text-gray-400">
+                  <div className="flex-shrink-0 text-xs text-purple-500">
                     {activity.time}
                   </div>
                 </div>
@@ -77,21 +77,21 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
-              <button className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-6 hover:border-blue-500 hover:bg-blue-50 transition-colors">
+              <button className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-purple-300 p-6 hover:border-cyan-500 hover:bg-cyan-50 transition-colors">
                 <span className="text-3xl mb-2">➕</span>
-                <span className="text-sm font-medium">Add Candidate</span>
+                <span className="text-sm font-medium text-purple-900">Add Candidate</span>
               </button>
-              <button className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-6 hover:border-blue-500 hover:bg-blue-50 transition-colors">
+              <button className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-purple-300 p-6 hover:border-cyan-500 hover:bg-cyan-50 transition-colors">
                 <span className="text-3xl mb-2">📤</span>
-                <span className="text-sm font-medium">New Submission</span>
+                <span className="text-sm font-medium text-purple-900">New Submission</span>
               </button>
-              <button className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-6 hover:border-blue-500 hover:bg-blue-50 transition-colors">
+              <button className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-purple-300 p-6 hover:border-cyan-500 hover:bg-cyan-50 transition-colors">
                 <span className="text-3xl mb-2">📅</span>
-                <span className="text-sm font-medium">Schedule Interview</span>
+                <span className="text-sm font-medium text-purple-900">Schedule Interview</span>
               </button>
-              <button className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-6 hover:border-blue-500 hover:bg-blue-50 transition-colors">
+              <button className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-purple-300 p-6 hover:border-cyan-500 hover:bg-cyan-50 transition-colors">
                 <span className="text-3xl mb-2">💼</span>
-                <span className="text-sm font-medium">New Project</span>
+                <span className="text-sm font-medium text-purple-900">New Project</span>
               </button>
             </div>
           </CardContent>

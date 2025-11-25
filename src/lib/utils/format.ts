@@ -96,40 +96,40 @@ export function truncateText(text: string | null | undefined, maxLength: number)
 export function getStatusColor(status: string): string {
   const statusColors: Record<string, string> = {
     // Submission status
-    submitted: 'bg-blue-100 text-blue-800',
-    screening: 'bg-yellow-100 text-yellow-800',
-    shortlisted: 'bg-purple-100 text-purple-800',
+    submitted: 'bg-cyan-100 text-cyan-800',
+    screening: 'bg-amber-100 text-amber-800',
+    shortlisted: 'bg-amber-100 text-amber-800',
     rejected: 'bg-red-100 text-red-800',
-    interview_scheduled: 'bg-indigo-100 text-indigo-800',
+    interview_scheduled: 'bg-cyan-100 text-cyan-800',
     offered: 'bg-green-100 text-green-800',
     accepted: 'bg-green-100 text-green-800',
     declined: 'bg-red-100 text-red-800',
-    withdrawn: 'bg-gray-100 text-gray-800',
+    withdrawn: 'bg-purple-100 text-purple-800',
 
     // Project status
     active: 'bg-green-100 text-green-800',
-    completed: 'bg-blue-100 text-blue-800',
+    completed: 'bg-cyan-100 text-cyan-800',
     terminated: 'bg-red-100 text-red-800',
-    on_hold: 'bg-yellow-100 text-yellow-800',
+    on_hold: 'bg-amber-100 text-amber-800',
 
     // Invoice status
-    draft: 'bg-gray-100 text-gray-800',
-    sent: 'bg-blue-100 text-blue-800',
+    draft: 'bg-purple-100 text-purple-800',
+    sent: 'bg-cyan-100 text-cyan-800',
     paid: 'bg-green-100 text-green-800',
     overdue: 'bg-red-100 text-red-800',
-    cancelled: 'bg-gray-100 text-gray-800',
+    cancelled: 'bg-purple-100 text-purple-800',
 
     // Bench status
     available: 'bg-green-100 text-green-800',
-    on_bench: 'bg-yellow-100 text-yellow-800',
-    placed: 'bg-blue-100 text-blue-800',
-    inactive: 'bg-gray-100 text-gray-800',
+    on_bench: 'bg-amber-100 text-amber-800',
+    placed: 'bg-cyan-100 text-cyan-800',
+    inactive: 'bg-purple-100 text-purple-800',
 
     // Job status
     open: 'bg-green-100 text-green-800',
     closed: 'bg-red-100 text-red-800',
-    filled: 'bg-blue-100 text-blue-800',
+    filled: 'bg-cyan-100 text-cyan-800',
   };
 
-  return statusColors[status.toLowerCase()] || 'bg-gray-100 text-gray-800';
+  return statusColors[status.toLowerCase()] || 'bg-purple-100 text-purple-800';
 }

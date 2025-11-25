@@ -84,7 +84,7 @@ function AdminLoginContent() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">Admin Login</h2>
+      <h2 className="text-2xl font-bold text-purple-900 mb-6">Admin Login</h2>
 
       {success && (
         <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
@@ -101,7 +101,7 @@ function AdminLoginContent() {
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Email */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-purple-900 mb-1">
             Email Address
           </label>
           <input
@@ -109,7 +109,7 @@ function AdminLoginContent() {
             name="email"
             value={formData.email}
             onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-purple-900 placeholder-purple-400"
             placeholder="you@example.com"
             disabled={loading}
             autoComplete="email"
@@ -118,7 +118,7 @@ function AdminLoginContent() {
 
         {/* Password */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-purple-900 mb-1">
             Password
           </label>
           <input
@@ -126,7 +126,7 @@ function AdminLoginContent() {
             name="password"
             value={formData.password}
             onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-purple-900 placeholder-purple-400"
             placeholder="Your password"
             disabled={loading}
             autoComplete="current-password"
@@ -137,16 +137,17 @@ function AdminLoginContent() {
         <Button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-lg transition-colors"
+          className="w-full"
+          variant="primary"
         >
           {loading ? 'Signing in...' : 'Sign In'}
         </Button>
       </form>
 
       {/* Sign up link */}
-      <p className="text-center text-gray-600 text-sm mt-6">
+      <p className="text-center text-purple-600 text-sm mt-6">
         Don't have an account?{' '}
-        <Link href="/admin/signup" className="text-blue-600 hover:underline font-medium">
+        <Link href="/admin/signup" className="text-amber-600 hover:underline font-medium">
           Create one
         </Link>
       </p>

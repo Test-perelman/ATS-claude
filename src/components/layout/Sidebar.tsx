@@ -33,9 +33,9 @@ export const Sidebar: React.FC = () => {
   const pathname = usePathname();
 
   return (
-    <div className="flex h-screen w-64 flex-col bg-gray-900 text-white">
+    <div className="flex h-screen w-64 flex-col bg-purple-900 text-white">
       {/* Logo */}
-      <div className="flex h-16 items-center justify-center border-b border-gray-800">
+      <div className="flex h-16 items-center justify-center border-b border-purple-800">
         <h1 className="text-xl font-bold">Perelman ATS</h1>
       </div>
 
@@ -52,8 +52,8 @@ export const Sidebar: React.FC = () => {
                   className={cn(
                     'flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                     isActive
-                      ? 'bg-gray-800 text-white'
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                      ? 'bg-purple-700 text-white'
+                      : 'text-purple-100 hover:bg-purple-800 hover:text-white'
                   )}
                 >
                   <span className="text-lg">{item.icon}</span>
@@ -66,14 +66,14 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       {/* User Info */}
-      <div className="border-t border-gray-800 p-4">
+      <div className="border-t border-purple-800 p-4">
         <div className="flex items-center space-x-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600">
-            <span className="text-sm font-medium">U</span>
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500">
+            <span className="text-sm font-medium text-purple-900 font-bold">U</span>
           </div>
           <div className="flex-1">
             <p className="text-sm font-medium">User</p>
-            <p className="text-xs text-gray-400">Super Admin</p>
+            <p className="text-xs text-purple-300">Super Admin</p>
           </div>
         </div>
       </div>

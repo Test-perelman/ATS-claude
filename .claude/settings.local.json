@@ -31,7 +31,8 @@
       "Bash(npm install:*)",
       "Bash(git rm:*)",
       "Bash(del nul:*)",
-      "Bash(.gitignore)"
+      "Bash(.gitignore)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
