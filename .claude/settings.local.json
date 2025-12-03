@@ -32,7 +32,8 @@
       "Bash(git rm:*)",
       "Bash(del nul:*)",
       "Bash(.gitignore)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(tree -L 3 \"d:\\Perelman-ATS-claude\\src\")"
     ],
     "deny": [],
     "ask": []

@@ -97,11 +97,13 @@ export async function getSubmissionById(submissionId: string) {
  */
 export async function createSubmission(
   submissionData: SubmissionInsert,
-  userId?: string
+  userId?: string,
+  teamId?: string
 ) {
   const insertData: SubmissionInsert = {
     ...submissionData,
     submitted_by_user_id: userId || null,
+    team_id: teamId || null,
   };
 
   const result = await typedInsert('submissions', insertData);

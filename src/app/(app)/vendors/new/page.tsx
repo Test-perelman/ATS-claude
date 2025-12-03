@@ -8,9 +8,11 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { createVendor } from '@/lib/api/vendors';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function NewVendorPage() {
   const router = useRouter();
+  const { user, teamId } = useAuth();
   const [loading, setLoading] = useState(false);
 
   // Form state
@@ -52,6 +54,10 @@ export default function NewVendorPage() {
     setLoading(true);
 
     try {
+      if (!teamId || !user?.user_id) {
+        throw new Error('User or team information not available');
+      }
+
       // Prepare data for insertion
       const vendorData: any = {
         vendor_name: formData.vendor_name,
@@ -75,7 +81,7 @@ export default function NewVendorPage() {
         is_active: formData.is_active,
       };
 
-      const result = await createVendor(vendorData);
+      const result = await createVendor(vendorData, user.user_id, teamId);
 
       if (result.error) {
         throw result.error;
@@ -89,7 +95,7 @@ export default function NewVendorPage() {
 
         if (confirmed) {
           // Create with duplicate check skipped
-          const forceResult = await createVendor(vendorData, undefined, { skipDuplicateCheck: true });
+          const forceResult = await createVendor(vendorData, user.user_id, teamId, { skipDuplicateCheck: true });
           if (forceResult.error) throw forceResult.error;
           if (forceResult.data) {
             router.push(`/vendors/${(forceResult.data as any).vendor_id}`);

@@ -14,6 +14,7 @@ interface AuditLogParams {
   oldValue?: any;
   newValue?: any;
   userId?: string;
+  teamId?: string;
   ipAddress?: string;
   userAgent?: string;
 }
@@ -28,6 +29,7 @@ export async function createAuditLog({
   oldValue,
   newValue,
   userId,
+  teamId,
   ipAddress,
   userAgent,
 }: AuditLogParams) {
@@ -50,6 +52,7 @@ export async function createAuditLog({
     new_value_json: newValue || null,
     changed_fields: changedFields.length > 0 ? changedFields : null,
     performed_by_user_id: userId || null,
+    team_id: teamId || null,
     ip_address: ipAddress || null,
     user_agent: userAgent || null,
   });
@@ -147,6 +150,7 @@ export async function createActivity({
   activityDescription,
   metadata,
   userId,
+  teamId,
 }: {
   entityType: string;
   entityId: string;
@@ -155,6 +159,7 @@ export async function createActivity({
   activityDescription?: string;
   metadata?: any;
   userId?: string;
+  teamId?: string;
 }) {
   const { data, error } = await typedInsert('activities', {
     entity_type: entityType,
@@ -164,6 +169,7 @@ export async function createActivity({
     activity_description: activityDescription || null,
     metadata: metadata || null,
     created_by: userId || null,
+    team_id: teamId || null,
   });
 
   return { data, error };

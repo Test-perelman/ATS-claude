@@ -8,9 +8,11 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { createInterview } from '@/lib/api/interviews';
 import { getSubmissions } from '@/lib/api/submissions';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 function NewInterviewForm() {
   const router = useRouter();
+  const { user, teamId } = useAuth();
   const searchParams = useSearchParams();
   const submissionId = searchParams.get('submission_id');
 
@@ -38,15 +40,24 @@ function NewInterviewForm() {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await createInterview(formData);
+    try {
+      if (!teamId || !user?.user_id) {
+        throw new Error('User or team information not available');
+      }
 
-    if (error) {
-      alert('Error creating interview: ' + error.message);
+      const { error } = await createInterview(formData, user.user_id, teamId);
+
+      if (error) {
+        alert('Error creating interview: ' + error.message);
+        setLoading(false);
+        return;
+      }
+
+      router.push('/interviews');
+    } catch (error: any) {
+      alert('Error: ' + error.message);
       setLoading(false);
-      return;
     }
-
-    router.push('/interviews');
   }
 
   const submissionOptions = submissions.map((sub) => ({

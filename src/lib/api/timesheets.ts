@@ -52,8 +52,8 @@ export async function getTimesheetById(id: string) {
     .single();
 }
 
-export async function createTimesheet(data: any, userId?: string) {
-  const result = await typedInsert('timesheets', { ...data, created_by: userId });
+export async function createTimesheet(data: any, userId?: string, teamId?: string) {
+  const result = await typedInsert('timesheets', { ...data, created_by: userId, team_id: teamId || null });
 
   if (result.data && userId) {
     await createActivity({

@@ -42,8 +42,8 @@ export async function getImmigrationById(id: string) {
     .single();
 }
 
-export async function createImmigrationRecord(data: any, userId?: string) {
-  const result = await typedInsert('immigration', { ...data, created_by: userId });
+export async function createImmigrationRecord(data: any, userId?: string, teamId?: string) {
+  const result = await typedInsert('immigration', { ...data, created_by: userId, team_id: teamId || null });
 
   if (result.data && userId) {
     await createActivity({

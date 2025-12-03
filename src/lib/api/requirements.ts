@@ -94,6 +94,7 @@ async function checkDuplicateJobRequirement(jobTitle: string, clientId?: string,
 export async function createJobRequirement(
   jobData: JobRequirementInsert,
   userId?: string,
+  teamId?: string,
   options?: { skipDuplicateCheck?: boolean }
 ) {
   // Check for duplicates
@@ -113,6 +114,7 @@ export async function createJobRequirement(
     ...jobData,
     created_by: userId || null,
     updated_by: userId || null,
+    team_id: teamId || null,
   };
 
   const result = await typedInsert('job_requirements', insertData);

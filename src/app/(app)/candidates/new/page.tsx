@@ -7,11 +7,14 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
-import { supabase, typedInsert } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
+import { createCandidate } from '@/lib/api/candidates';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import type { Database } from '@/types/database';
 
 export default function NewCandidatePage() {
   const router = useRouter();
+  const { user, teamId } = useAuth();
   const [loading, setLoading] = useState(false);
   const [visaStatuses, setVisaStatuses] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -69,6 +72,10 @@ export default function NewCandidatePage() {
     setLoading(true);
 
     try {
+      if (!teamId || !user?.user_id) {
+        throw new Error('User or team information not available');
+      }
+
       // Prepare data for insertion with proper typing
       const candidateData: Database['public']['Tables']['candidates']['Insert'] = {
         first_name: formData.first_name,
@@ -89,14 +96,15 @@ export default function NewCandidatePage() {
         bench_status: formData.bench_status,
         bench_added_date: formData.bench_status === 'on_bench' ? new Date().toISOString().split('T')[0] : null,
         notes_internal: formData.notes_internal || null,
+        team_id: teamId,
       };
 
-      const { data, error } = await typedInsert('candidates', candidateData);
+      const { data, error } = await createCandidate(candidateData, user.user_id);
 
       if (error) throw error;
 
       // Redirect to candidate detail page
-      router.push(`/candidates/${(data as any)?.candidate_id}`);
+      router.push(`/candidates/${data?.candidate_id}`);
     } catch (error: any) {
       console.error('Error creating candidate:', error);
       alert('Error creating candidate: ' + error.message);

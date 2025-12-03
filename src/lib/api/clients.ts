@@ -77,6 +77,7 @@ export async function getClientById(clientId: string) {
 export async function createClient(
     clientData: ClientInsert,
     userId?: string,
+    teamId?: string,
     options?: { skipDuplicateCheck?: boolean }
 ) {
     // Check for duplicates unless explicitly skipped
@@ -104,6 +105,7 @@ export async function createClient(
         ...clientData,
         created_by: userId || null,
         updated_by: userId || null,
+        team_id: teamId || null,
     });
 
     if (data && !error) {

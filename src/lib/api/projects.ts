@@ -49,8 +49,8 @@ export async function getProjectById(id: string) {
     .single();
 }
 
-export async function createProject(data: any, userId?: string) {
-  const result = await typedInsert('projects', { ...data, created_by: userId });
+export async function createProject(data: any, userId?: string, teamId?: string) {
+  const result = await typedInsert('projects', { ...data, created_by: userId, team_id: teamId || null });
 
   if (result.data && userId) {
     await createActivity({

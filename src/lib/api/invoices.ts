@@ -52,8 +52,8 @@ export async function getInvoiceById(id: string) {
     .single();
 }
 
-export async function createInvoice(data: any, userId?: string) {
-  const result = await typedInsert('invoices', { ...data, created_by: userId });
+export async function createInvoice(data: any, userId?: string, teamId?: string) {
+  const result = await typedInsert('invoices', { ...data, created_by: userId, team_id: teamId || null });
 
   if (result.data && userId) {
     await createActivity({

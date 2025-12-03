@@ -10,9 +10,11 @@ import { Textarea } from '@/components/ui/Textarea';
 import { createSubmission } from '@/lib/api/submissions';
 import { getCandidates } from '@/lib/api/candidates';
 import { getJobRequirements } from '@/lib/api/requirements';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 function NewSubmissionForm() {
   const router = useRouter();
+  const { user, teamId } = useAuth();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [candidates, setCandidates] = useState<any[]>([]);
@@ -90,6 +92,10 @@ function NewSubmissionForm() {
     setLoading(true);
 
     try {
+      if (!teamId || !user?.user_id) {
+        throw new Error('User or team information not available');
+      }
+
       // Prepare data for insertion
       const submissionData: any = {
         candidate_id: formData.candidate_id,
@@ -102,7 +108,7 @@ function NewSubmissionForm() {
         submitted_at: new Date().toISOString(),
       };
 
-      const result = await createSubmission(submissionData);
+      const result = await createSubmission(submissionData, user.user_id, teamId);
 
       if (result.error) {
         throw result.error;

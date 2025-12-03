@@ -10,9 +10,11 @@ import { Textarea } from '@/components/ui/Textarea';
 import { createJobRequirement } from '@/lib/api/requirements';
 import { getClients } from '@/lib/api/clients';
 import { getVendors } from '@/lib/api/vendors';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function NewJobRequirementPage() {
   const router = useRouter();
+  const { user, teamId } = useAuth();
   const [loading, setLoading] = useState(false);
   const [clients, setClients] = useState<any[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
@@ -62,6 +64,10 @@ export default function NewJobRequirementPage() {
     setLoading(true);
 
     try {
+      if (!teamId || !user?.user_id) {
+        throw new Error('User or team information not available');
+      }
+
       // Prepare data for insertion
       const jobData: any = {
         job_title: formData.job_title,
@@ -82,7 +88,7 @@ export default function NewJobRequirementPage() {
         notes: formData.notes || null,
       };
 
-      const result = await createJobRequirement(jobData);
+      const result = await createJobRequirement(jobData, user.user_id, teamId);
 
       if (result.error) {
         throw result.error;
@@ -96,7 +102,7 @@ export default function NewJobRequirementPage() {
 
         if (confirmed) {
           // Create with duplicate check skipped
-          const forceResult = await createJobRequirement(jobData, undefined, { skipDuplicateCheck: true });
+          const forceResult = await createJobRequirement(jobData, user.user_id, teamId, { skipDuplicateCheck: true });
           if (forceResult.error) throw forceResult.error;
           if ((forceResult as any).data) {
             router.push(`/requirements/${((forceResult as any).data as any).job_id}`);

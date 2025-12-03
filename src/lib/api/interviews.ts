@@ -54,8 +54,8 @@ export async function getInterviewById(id: string) {
     .single();
 }
 
-export async function createInterview(data: any, userId?: string) {
-  const result = await typedInsert('interviews', { ...data, created_by: userId });
+export async function createInterview(data: any, userId?: string, teamId?: string) {
+  const result = await typedInsert('interviews', { ...data, created_by: userId, team_id: teamId || null });
 
   if (result.data && userId) {
     await createActivity({

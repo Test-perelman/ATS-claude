@@ -77,6 +77,7 @@ export async function getVendorById(vendorId: string) {
 export async function createVendor(
     vendorData: VendorInsert,
     userId?: string,
+    teamId?: string,
     options?: { skipDuplicateCheck?: boolean }
 ) {
     // Check for duplicates unless explicitly skipped
@@ -104,6 +105,7 @@ export async function createVendor(
         ...vendorData,
         created_by: userId || null,
         updated_by: userId || null,
+        team_id: teamId || null,
     });
 
     if (data && !error) {

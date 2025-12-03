@@ -126,6 +126,7 @@ export async function createCandidate(
       action: 'CREATE',
       newValue: data,
       userId,
+      teamId: data.team_id || undefined,
     });
 
     // Create activity
@@ -136,6 +137,7 @@ export async function createCandidate(
       activityTitle: 'Candidate Created',
       activityDescription: `${data.first_name} ${data.last_name} was added to the system`,
       userId,
+      teamId: data.team_id || undefined,
     });
   }
 
