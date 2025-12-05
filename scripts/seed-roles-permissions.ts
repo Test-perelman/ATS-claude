@@ -6,6 +6,7 @@
  */
 
 import { createServerClient } from '@/lib/supabase/client';
+import type { Database } from '@/types/database';
 
 const serverClient = createServerClient();
 
@@ -200,15 +201,17 @@ async function seedRolesAndPermissions() {
           console.log(`  ✓ Permission already exists: ${perm.key}`);
         } else {
           // Create new permission
-          const { data: newPerm, error } = await serverClient
-            .from('permissions')
-            .insert({
-              permission_key: perm.key,
-              permission_description: perm.description,
-              module_name: module,
-            })
-            .select('permission_id')
-            .single();
+          const { data: newPerm, error } = await (
+            serverClient
+              .from('permissions')
+              .insert({
+                permission_key: perm.key,
+                permission_description: perm.description,
+                module_name: module,
+              } as Database['public']['Tables']['permissions']['Insert'])
+              .select('permission_id')
+              .single()
+          );
 
           if (error) {
             console.error(`  ✗ Failed to create ${perm.key}:`, error.message);
@@ -238,14 +241,16 @@ async function seedRolesAndPermissions() {
         console.log(`  ✓ Role already exists: ${role.name}`);
       } else {
         // Create new role
-        const { data: newRole, error } = await serverClient
-          .from('roles')
-          .insert({
-            role_name: role.name,
-            role_description: role.description,
-          })
-          .select('role_id')
-          .single();
+        const { data: newRole, error } = await (
+          serverClient
+            .from('roles')
+            .insert({
+              role_name: role.name,
+              role_description: role.description,
+            } as Database['public']['Tables']['roles']['Insert'])
+            .select('role_id')
+            .single()
+        );
 
         if (error) {
           console.error(`  ✗ Failed to create ${role.name}:`, error.message);
@@ -269,13 +274,15 @@ async function seedRolesAndPermissions() {
             .single();
 
           if (!exists) {
-            const { error } = await serverClient
-              .from('role_permissions')
-              .insert({
-                role_id: roleId,
-                permission_id: permId,
-                allowed: true,
-              });
+            const { error } = await (
+              serverClient
+                .from('role_permissions')
+                .insert({
+                  role_id: roleId,
+                  permission_id: permId,
+                  allowed: true,
+                } as Database['public']['Tables']['role_permissions']['Insert'])
+            );
 
             if (!error) {
               console.log(`    ✓ Assigned permission to ${role.name}`);
@@ -300,13 +307,15 @@ async function seedRolesAndPermissions() {
             .single();
 
           if (!exists) {
-            const { error } = await serverClient
-              .from('role_permissions')
-              .insert({
-                role_id: roleId,
-                permission_id: permId,
-                allowed: true,
-              });
+            const { error } = await (
+              serverClient
+                .from('role_permissions')
+                .insert({
+                  role_id: roleId,
+                  permission_id: permId,
+                  allowed: true,
+                } as Database['public']['Tables']['role_permissions']['Insert'])
+            );
 
             if (!error) {
               console.log(`    ✓ Assigned ${permKey} to ${role.name}`);
