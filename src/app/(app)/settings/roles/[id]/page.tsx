@@ -60,15 +60,15 @@ export default function RoleEditorPage() {
           return;
         }
 
-        const roleData = roleResult.role as Role;
+        const roleData = roleResult.data.role as Role;
         setRole(roleData);
         setRoleName(roleData.role_name);
         setRoleDescription(roleData.role_description || '');
 
         // Set selected permissions
         const selectedPerms = new Set<string>();
-        if (roleResult.permissions) {
-          (roleResult.permissions as any[]).forEach((rp) => {
+        if (roleResult.data.permissions) {
+          (roleResult.data.permissions as any[]).forEach((rp) => {
             selectedPerms.add(rp.permission?.permission_id || '');
           });
         }

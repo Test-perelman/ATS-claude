@@ -12,6 +12,11 @@ type Client = Database['public']['Tables']['clients']['Row'];
 type ClientInsert = Database['public']['Tables']['clients']['Insert'];
 type ClientUpdate = Database['public']['Tables']['clients']['Update'];
 
+type CreateClientResponse =
+  | { data: Client; error?: never; duplicate: false }
+  | { data?: never; error: string; duplicate?: false }
+  | { data?: never; error?: never; duplicate: true; matches: any[]; matchType?: string };
+
 /**
  * Get all clients with filters
  */
@@ -96,7 +101,7 @@ export async function createClient(
     userId?: string,
     teamId?: string,
     options?: { skipDuplicateCheck?: boolean }
-): Promise<ApiResponse<Client> | { data?: never; error?: never; duplicate: true; matches: any[]; matchType?: string }> {
+): Promise<CreateClientResponse> {
     try {
         // Check for duplicates unless explicitly skipped
         if (!options?.skipDuplicateCheck) {
@@ -151,7 +156,7 @@ export async function createClient(
             userId,
         });
 
-        return { data };
+        return { data, duplicate: false };
     } catch (error) {
         return { error: 'Failed to create client' };
     }
@@ -225,8 +230,12 @@ export async function mergeClient(
         // Get existing client
         const result = await getClientById(existingClientId);
 
-        if ('error' in result) {
+        if ('error' in result && result.error) {
             return { error: result.error };
+        }
+
+        if (!('data' in result) || !result.data) {
+            return { error: 'Failed to retrieve client' };
         }
 
         // Merge data

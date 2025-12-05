@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           // Fetch and cache user's permissions
-          if (user.role_id) {
+          if ((user as any).role_id) {
             userPermissions = await getRolePermissions((user as any).role_id.role_id);
           }
 

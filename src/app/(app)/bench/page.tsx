@@ -20,10 +20,15 @@ export default function BenchPage() {
 
   async function loadBenchCandidates() {
     setLoading(true);
-    const { data } = await getCandidates({
+    const result = await getCandidates({
       benchStatus: benchStatusFilter || undefined,
     });
-    setCandidates(data || []);
+    if ('error' in result) {
+      console.error('Error loading candidates:', result.error);
+      setCandidates([]);
+    } else {
+      setCandidates(result.data.data || []);
+    }
     setLoading(false);
   }
 

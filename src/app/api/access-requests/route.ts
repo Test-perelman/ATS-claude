@@ -34,11 +34,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
+    if (!('data' in result) || !result.data) {
+      return NextResponse.json({ error: 'Failed to create access request' }, { status: 400 });
+    }
+
     return NextResponse.json(
       {
         success: true,
         message: 'Access request submitted successfully',
-        data: result.request,
+        data: result.data.request,
       },
       { status: 201 }
     );

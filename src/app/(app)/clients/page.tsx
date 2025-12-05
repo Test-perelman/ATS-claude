@@ -23,12 +23,17 @@ export default function ClientsPage() {
 
   async function loadClients() {
     setLoading(true);
-    const { data } = await getClients({
+    const result = await getClients({
       search: search || undefined,
       industry: industryFilter || undefined,
       isActive: statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined,
     });
-    setClients(data || []);
+    if ('error' in result) {
+      console.error('Error loading clients:', result.error);
+      setClients([]);
+    } else {
+      setClients(result.data.clients || []);
+    }
     setLoading(false);
   }
 

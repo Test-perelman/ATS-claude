@@ -314,6 +314,7 @@ export interface Database {
           updated_at: string
           created_by: string | null
           updated_by: string | null
+          team_id: string | null
         }
         Insert: {
           vendor_id?: string
@@ -333,6 +334,7 @@ export interface Database {
           updated_at?: string
           created_by?: string | null
           updated_by?: string | null
+          team_id?: string | null
         }
         Update: {
           vendor_id?: string
@@ -352,6 +354,7 @@ export interface Database {
           updated_at?: string
           created_by?: string | null
           updated_by?: string | null
+          team_id?: string | null
         }
       }
       clients: {
@@ -376,6 +379,7 @@ export interface Database {
           updated_at: string
           created_by: string | null
           updated_by: string | null
+          team_id: string | null
         }
         Insert: {
           client_id?: string
@@ -398,6 +402,7 @@ export interface Database {
           updated_at?: string
           created_by?: string | null
           updated_by?: string | null
+          team_id?: string | null
         }
         Update: {
           client_id?: string
@@ -420,6 +425,7 @@ export interface Database {
           updated_at?: string
           created_by?: string | null
           updated_by?: string | null
+          team_id?: string | null
         }
       }
       job_requirements: {
@@ -445,6 +451,7 @@ export interface Database {
           updated_at: string
           created_by: string | null
           updated_by: string | null
+          team_id: string | null
         }
         Insert: {
           job_id?: string
@@ -468,6 +475,7 @@ export interface Database {
           updated_at?: string
           created_by?: string | null
           updated_by?: string | null
+          team_id?: string | null
         }
         Update: {
           job_id?: string
@@ -491,6 +499,7 @@ export interface Database {
           updated_at?: string
           created_by?: string | null
           updated_by?: string | null
+          team_id?: string | null
         }
       }
       submissions: {
@@ -510,6 +519,7 @@ export interface Database {
           rejection_reason: string | null
           created_at: string
           updated_at: string
+          team_id: string | null
         }
         Insert: {
           submission_id?: string
@@ -527,6 +537,7 @@ export interface Database {
           rejection_reason?: string | null
           created_at?: string
           updated_at?: string
+          team_id?: string | null
         }
         Update: {
           submission_id?: string
@@ -544,6 +555,7 @@ export interface Database {
           rejection_reason?: string | null
           created_at?: string
           updated_at?: string
+          team_id?: string | null
         }
       }
       interviews: {
@@ -562,6 +574,8 @@ export interface Database {
           team_id: string | null
           created_at: string
           updated_at: string
+          created_by: string | null
+          updated_by: string | null
         }
         Insert: {
           interview_id?: string
@@ -578,6 +592,8 @@ export interface Database {
           team_id?: string | null
           created_at?: string
           updated_at?: string
+          created_by?: string | null
+          updated_by?: string | null
         }
         Update: {
           interview_id?: string
@@ -594,6 +610,8 @@ export interface Database {
           team_id?: string | null
           created_at?: string
           updated_at?: string
+          created_by?: string | null
+          updated_by?: string | null
         }
       }
       projects: {
@@ -700,6 +718,8 @@ export interface Database {
           team_id: string | null
           created_at: string
           updated_at: string
+          created_by: string | null
+          updated_by: string | null
         }
         Insert: {
           timesheet_id?: string
@@ -718,6 +738,8 @@ export interface Database {
           team_id?: string | null
           created_at?: string
           updated_at?: string
+          created_by?: string | null
+          updated_by?: string | null
         }
         Update: {
           timesheet_id?: string
@@ -736,6 +758,8 @@ export interface Database {
           team_id?: string | null
           created_at?: string
           updated_at?: string
+          created_by?: string | null
+          updated_by?: string | null
         }
       }
       invoices: {
@@ -811,6 +835,8 @@ export interface Database {
           team_id: string | null
           created_at: string
           updated_at: string
+          created_by: string | null
+          updated_by: string | null
         }
         Insert: {
           immigration_id?: string
@@ -828,6 +854,8 @@ export interface Database {
           team_id?: string | null
           created_at?: string
           updated_at?: string
+          created_by?: string | null
+          updated_by?: string | null
         }
         Update: {
           immigration_id?: string
@@ -845,6 +873,8 @@ export interface Database {
           team_id?: string | null
           created_at?: string
           updated_at?: string
+          created_by?: string | null
+          updated_by?: string | null
         }
       }
       attachments: {
@@ -933,6 +963,7 @@ export interface Database {
           ip_address: string | null
           user_agent: string | null
           performed_at: string
+          team_id: string | null
         }
         Insert: {
           audit_id?: string
@@ -946,6 +977,7 @@ export interface Database {
           ip_address?: string | null
           user_agent?: string | null
           performed_at?: string
+          team_id?: string | null
         }
         Update: {
           audit_id?: string
@@ -959,6 +991,7 @@ export interface Database {
           ip_address?: string | null
           user_agent?: string | null
           performed_at?: string
+          team_id?: string | null
         }
       }
       notes: {
@@ -1033,6 +1066,7 @@ export interface Database {
           metadata: Json | null
           created_by: string | null
           created_at: string
+          team_id: string | null
         }
         Insert: {
           activity_id?: string
@@ -1044,6 +1078,7 @@ export interface Database {
           metadata?: Json | null
           created_by?: string | null
           created_at?: string
+          team_id?: string | null
         }
         Update: {
           activity_id?: string
@@ -1055,6 +1090,7 @@ export interface Database {
           metadata?: Json | null
           created_by?: string | null
           created_at?: string
+          team_id?: string | null
         }
       }
       notifications: {
@@ -1092,6 +1128,50 @@ export interface Database {
           entity_id?: string | null
           is_read?: boolean
           read_at?: string | null
+          created_at?: string
+        }
+      }
+      team_access_requests: {
+        Row: {
+          request_id: string
+          email: string
+          first_name: string
+          last_name: string
+          company_email: string
+          reason: string | null
+          requested_team_id: string | null
+          auth_user_id: string | null
+          status: string
+          reviewed_by: string | null
+          reviewed_at: string | null
+          created_at: string
+        }
+        Insert: {
+          request_id?: string
+          email: string
+          first_name: string
+          last_name: string
+          company_email: string
+          reason?: string | null
+          requested_team_id?: string | null
+          auth_user_id?: string | null
+          status?: string
+          reviewed_by?: string | null
+          reviewed_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          request_id?: string
+          email?: string
+          first_name?: string
+          last_name?: string
+          company_email?: string
+          reason?: string | null
+          requested_team_id?: string | null
+          auth_user_id?: string | null
+          status?: string
+          reviewed_by?: string | null
+          reviewed_at?: string | null
           created_at?: string
         }
       }

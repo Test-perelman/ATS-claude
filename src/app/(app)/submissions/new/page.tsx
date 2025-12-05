@@ -73,13 +73,23 @@ function NewSubmissionForm() {
   }, [formData.bill_rate_offered, formData.pay_rate_offered]);
 
   async function loadCandidates() {
-    const { data } = await getCandidates();
-    setCandidates(data || []);
+    const result = await getCandidates();
+    if ('error' in result) {
+      console.error('Error loading candidates:', result.error);
+      setCandidates([]);
+    } else {
+      setCandidates(result.data.data || []);
+    }
   }
 
   async function loadJobs() {
-    const { data } = await getJobRequirements({ status: 'open' });
-    setJobs(data || []);
+    const result = await getJobRequirements({ status: 'open' });
+    if ('error' in result) {
+      console.error('Error loading jobs:', result.error);
+      setJobs([]);
+    } else {
+      setJobs(result.data || []);
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {

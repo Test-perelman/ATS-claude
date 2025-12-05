@@ -22,11 +22,16 @@ export default function CandidatesPage() {
 
   async function loadCandidates() {
     setLoading(true);
-    const { data } = await getCandidates({
+    const result = await getCandidates({
       search: search || undefined,
       benchStatus: benchFilter || undefined,
     });
-    setCandidates(data || []);
+    if ('error' in result) {
+      console.error('Error loading candidates:', result.error);
+      setCandidates([]);
+    } else {
+      setCandidates(result.data.data || []);
+    }
     setLoading(false);
   }
 

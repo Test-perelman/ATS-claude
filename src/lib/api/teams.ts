@@ -48,6 +48,10 @@ export async function updateTeam(updates: Database['public']['Tables']['teams'][
       return { error: error.message };
     }
 
+    if (!data) {
+      return { error: 'Failed to update team' };
+    }
+
     return { data };
   } catch (error) {
     console.error('Update team error:', error);

@@ -45,13 +45,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
+    if (!('data' in result) || !result.data) {
+      return NextResponse.json({ error: 'Failed to create admin account' }, { status: 400 });
+    }
+
     return NextResponse.json(
       {
         success: true,
         message: 'Admin account created successfully',
         data: {
-          user: result.user,
-          team: result.team,
+          user: result.data.user,
+          team: result.data.team,
         },
       },
       { status: 201 }

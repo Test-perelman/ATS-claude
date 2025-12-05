@@ -46,8 +46,13 @@ export default function SubmissionDetailPage() {
 
   async function loadSubmission() {
     setLoading(true);
-    const { data } = await getSubmissionById(submissionId);
-    setSubmission(data);
+    const result = await getSubmissionById(submissionId);
+    if ('error' in result) {
+      console.error('Error loading submission:', result.error);
+      setSubmission(null);
+    } else {
+      setSubmission(result.data);
+    }
     setLoading(false);
   }
 
@@ -57,8 +62,13 @@ export default function SubmissionDetailPage() {
   }
 
   async function loadInterviews() {
-    const { data } = await getSubmissionInterviews(submissionId);
-    setInterviews(data || []);
+    const result = await getSubmissionInterviews(submissionId);
+    if ('error' in result) {
+      console.error('Error loading interviews:', result.error);
+      setInterviews([]);
+    } else {
+      setInterviews(result.data || []);
+    }
   }
 
   async function handleStatusChange(newStatus: string) {
@@ -73,8 +83,8 @@ export default function SubmissionDetailPage() {
     setUpdating(true);
     const result = await updateSubmissionStatus(submissionId, newStatus);
 
-    if (result.error) {
-      alert('Error updating status: ' + result.error.message);
+    if ('error' in result) {
+      alert('Error updating status: ' + result.error);
     } else {
       await loadSubmission();
       await loadTimeline();

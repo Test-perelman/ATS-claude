@@ -23,12 +23,17 @@ export default function VendorsPage() {
 
   async function loadVendors() {
     setLoading(true);
-    const { data } = await getVendors({
+    const result = await getVendors({
       search: search || undefined,
       tierLevel: tierFilter || undefined,
       isActive: statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined,
     });
-    setVendors(data || []);
+    if ('error' in result) {
+      console.error('Error loading vendors:', result.error);
+      setVendors([]);
+    } else {
+      setVendors(result.data.vendors || []);
+    }
     setLoading(false);
   }
 

@@ -12,6 +12,11 @@ type Vendor = Database['public']['Tables']['vendors']['Row'];
 type VendorInsert = Database['public']['Tables']['vendors']['Insert'];
 type VendorUpdate = Database['public']['Tables']['vendors']['Update'];
 
+type CreateVendorResponse =
+  | { data: Vendor; error?: never; duplicate: false }
+  | { data?: never; error: string; duplicate?: false }
+  | { data?: never; error?: never; duplicate: true; matches: any[]; matchType?: string };
+
 /**
  * Get all vendors with filters
  */
@@ -96,7 +101,7 @@ export async function createVendor(
     userId?: string,
     teamId?: string,
     options?: { skipDuplicateCheck?: boolean }
-): Promise<ApiResponse<Vendor> | { data?: never; error?: never; duplicate: true; matches: any[]; matchType?: string }> {
+): Promise<CreateVendorResponse> {
     try {
         // Check for duplicates unless explicitly skipped
         if (!options?.skipDuplicateCheck) {
@@ -151,7 +156,7 @@ export async function createVendor(
             userId,
         });
 
-        return { data };
+        return { data, duplicate: false };
     } catch (error) {
         return { error: 'Failed to create vendor' };
     }
@@ -225,8 +230,12 @@ export async function mergeVendor(
         // Get existing vendor
         const result = await getVendorById(existingVendorId);
 
-        if ('error' in result) {
+        if ('error' in result && result.error) {
             return { error: result.error };
+        }
+
+        if (!('data' in result) || !result.data) {
+            return { error: 'Failed to retrieve vendor' };
         }
 
         // Merge data

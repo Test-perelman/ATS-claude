@@ -90,8 +90,7 @@ export async function createRole(name: string, description?: string): Promise<Ap
     const serverClient = createServerClient();
 
     // Create the role
-    const { data, error } = await serverClient
-      .from('roles')
+    const { data, error } = await (serverClient.from('roles') as any)
       .insert({
         role_name: name,
         role_description: description || null,
@@ -125,8 +124,7 @@ export async function updateRole(
   try {
     const serverClient = createServerClient();
 
-    const { data, error } = await serverClient
-      .from('roles')
+    const { data, error } = await (serverClient.from('roles') as any)
       .update(updates)
       .eq('role_id', roleId)
       .select()
@@ -256,8 +254,7 @@ export async function assignPermissionToRole(roleId: string, permissionId: strin
   try {
     const serverClient = createServerClient();
 
-    const { data, error } = await serverClient
-      .from('role_permissions')
+    const { data, error } = await (serverClient.from('role_permissions') as any)
       .upsert({
         role_id: roleId,
         permission_id: permissionId,
@@ -314,8 +311,7 @@ export async function assignPermissionsToRole(
     const serverClient = createServerClient();
 
     // First, remove all existing permissions for this role
-    await serverClient
-      .from('role_permissions')
+    await (serverClient.from('role_permissions') as any)
       .delete()
       .eq('role_id', roleId);
 
@@ -326,8 +322,7 @@ export async function assignPermissionsToRole(
       allowed: true,
     }));
 
-    const { data, error } = await serverClient
-      .from('role_permissions')
+    const { data, error } = await (serverClient.from('role_permissions') as any)
       .insert(inserts)
       .select();
 
@@ -387,8 +382,7 @@ export async function createRoleFromTemplate(
     const serverClient = createServerClient();
 
     // Create new role
-    const { data: newRole, error: roleError } = await serverClient
-      .from('roles')
+    const { data: newRole, error: roleError } = await (serverClient.from('roles') as any)
       .insert({
         role_name: name,
         role_description: description || null,
@@ -409,7 +403,7 @@ export async function createRoleFromTemplate(
 
     if (permError) {
       // Delete the role we just created
-      await serverClient.from('roles').delete().eq('role_id', (newRole as any).role_id);
+      await (serverClient.from('roles') as any).delete().eq('role_id', (newRole as any).role_id);
       return { error: 'Failed to copy permissions from template' };
     }
 
@@ -421,13 +415,12 @@ export async function createRoleFromTemplate(
         allowed: true,
       }));
 
-      const { error: insertError } = await serverClient
-        .from('role_permissions')
+      const { error: insertError } = await (serverClient.from('role_permissions') as any)
         .insert(inserts);
 
       if (insertError) {
         // Delete the role we just created
-        await serverClient.from('roles').delete().eq('role_id', (newRole as any).role_id);
+        await (serverClient.from('roles') as any).delete().eq('role_id', (newRole as any).role_id);
         return { error: 'Failed to assign permissions to role' };
       }
     }

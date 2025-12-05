@@ -32,8 +32,13 @@ function NewInterviewForm() {
   }, []);
 
   async function loadSubmissions() {
-    const { data } = await getSubmissions({});
-    setSubmissions(data || []);
+    const result = await getSubmissions({});
+    if ('error' in result) {
+      console.error('Error loading submissions:', result.error);
+      setSubmissions([]);
+    } else {
+      setSubmissions(result.data || []);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -45,10 +50,10 @@ function NewInterviewForm() {
         throw new Error('User or team information not available');
       }
 
-      const { error } = await createInterview(formData, user.user_id, teamId);
+      const result = await createInterview(formData, user.user_id, teamId);
 
-      if (error) {
-        alert('Error creating interview: ' + error.message);
+      if ('error' in result) {
+        alert('Error creating interview: ' + result.error);
         setLoading(false);
         return;
       }

@@ -45,13 +45,23 @@ export default function NewJobRequirementPage() {
   }, []);
 
   async function loadClients() {
-    const { data } = await getClients();
-    setClients(data || []);
+    const result = await getClients();
+    if ('error' in result) {
+      console.error('Error loading clients:', result.error);
+      setClients([]);
+    } else {
+      setClients(result.data.clients || []);
+    }
   }
 
   async function loadVendors() {
-    const { data } = await getVendors();
-    setVendors(data || []);
+    const result = await getVendors();
+    if ('error' in result) {
+      console.error('Error loading vendors:', result.error);
+      setVendors([]);
+    } else {
+      setVendors(result.data.vendors || []);
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {

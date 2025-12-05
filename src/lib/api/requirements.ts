@@ -7,6 +7,11 @@ type JobRequirement = Database['public']['Tables']['job_requirements']['Row'];
 type JobRequirementInsert = Database['public']['Tables']['job_requirements']['Insert'];
 type JobRequirementUpdate = Database['public']['Tables']['job_requirements']['Update'];
 
+type CreateJobRequirementResponse =
+  | { data: JobRequirement; error?: never; duplicate: false }
+  | { data?: never; error: string; duplicate?: false }
+  | { data?: never; error?: never; duplicate: true; matches: any[] };
+
 /**
  * Get all job requirements with optional filters
  */
@@ -121,7 +126,7 @@ export async function createJobRequirement(
   userId?: string,
   teamId?: string,
   options?: { skipDuplicateCheck?: boolean }
-): Promise<ApiResponse<JobRequirement> | { data?: never; error?: never; duplicate: true; matches: any[] }> {
+): Promise<CreateJobRequirementResponse> {
   try {
     // Check for duplicates
     if (!options?.skipDuplicateCheck && jobData.job_title) {
@@ -172,7 +177,7 @@ export async function createJobRequirement(
       });
     }
 
-    return { data: result.data };
+    return { data: result.data, duplicate: false };
   } catch (error) {
     return { error: 'Failed to create job requirement' };
   }
@@ -301,8 +306,12 @@ export async function getMatchingCandidates(jobId: string): Promise<ApiArrayResp
     // Get the job requirement
     const jobResult = await getJobRequirementById(jobId);
 
-    if ('error' in jobResult) {
+    if ('error' in jobResult && jobResult.error) {
       return { error: jobResult.error };
+    }
+
+    if (!('data' in jobResult) || !jobResult.data) {
+      return { error: 'Failed to retrieve job requirement' };
     }
 
     const job = jobResult.data;
@@ -331,7 +340,7 @@ export async function getMatchingCandidates(jobId: string): Promise<ApiArrayResp
     const { data, error } = await query.limit(20);
 
     if (error) {
-      return { error: error.message };
+      return { error: error.message || 'Failed to fetch matching candidates' };
     }
 
     return { data: data || [] };
