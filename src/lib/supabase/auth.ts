@@ -37,20 +37,27 @@ export async function adminSignUp(data: {
   subscriptionTier?: 'basic' | 'professional' | 'enterprise';
 }): Promise<ApiResponse<AdminSignUpResponse>> {
   try {
-    // Step 1: Create Supabase Auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // Use server client for all operations since this runs in an API route
+    const serverClient = createServerClient();
+
+    // Step 1: Create Supabase Auth user using admin API
+    console.log('Step 1: Creating auth user...');
+    const { data: authData, error: authError } = await serverClient.auth.admin.createUser({
       email: data.email,
       password: data.password,
+      email_confirm: true, // Auto-confirm email for admin signup
     });
 
     if (authError || !authData.user) {
+      console.error('Auth user creation failed:', authError);
       return { error: authError?.message || 'Failed to create auth user' };
     }
 
     const userId = authData.user.id;
+    console.log('Auth user created:', userId);
 
     // Step 2: Create team
-    const serverClient = createServerClient();
+    console.log('Step 2: Creating team...');
     const { data: teamData, error: teamError } = await (serverClient.from('teams') as any)
       .insert({
         team_name: data.teamName || data.companyName,
@@ -62,14 +69,17 @@ export async function adminSignUp(data: {
       .single();
 
     if (teamError || !teamData) {
+      console.error('Team creation failed:', teamError);
       // Clean up auth user if team creation fails
-      await supabase.auth.admin.deleteUser(userId);
+      await serverClient.auth.admin.deleteUser(userId);
       return { error: teamError?.message || 'Failed to create team' };
     }
 
     const teamId = teamData.team_id;
+    console.log('Team created:', teamId);
 
     // Step 3: Get or create "Admin" role
+    console.log('Step 3: Getting/creating Admin role...');
     let { data: roleData, error: roleError } = await serverClient
       .from('roles')
       .select('role_id')
@@ -80,6 +90,7 @@ export async function adminSignUp(data: {
 
     if (roleError || !roleData) {
       // Create Admin role if it doesn't exist
+      console.log('Admin role not found, creating...');
       const { data: newRole, error: newRoleError } = await (serverClient.from('roles') as any)
         .insert({
           role_name: 'Admin',
@@ -89,14 +100,20 @@ export async function adminSignUp(data: {
         .single();
 
       if (newRoleError || !newRole) {
+        console.error('Admin role creation failed:', newRoleError);
+        // Clean up
+        await serverClient.auth.admin.deleteUser(userId);
+        await serverClient.from('teams').delete().eq('team_id', teamId);
         return { error: 'Failed to create admin role' };
       }
       roleId = (newRole as any).role_id;
     } else {
       roleId = (roleData as any).role_id;
     }
+    console.log('Admin role ID:', roleId);
 
     // Step 4: Create user record with team_id
+    console.log('Step 4: Creating user record...');
     const { data: userData, error: userError } = await (serverClient.from('users') as any)
       .insert({
         user_id: userId,
@@ -110,11 +127,13 @@ export async function adminSignUp(data: {
       .single();
 
     if (userError || !userData) {
+      console.error('User record creation failed:', userError);
       // Clean up
-      await supabase.auth.admin.deleteUser(userId);
+      await serverClient.auth.admin.deleteUser(userId);
       await serverClient.from('teams').delete().eq('team_id', teamId);
       return { error: userError?.message || 'Failed to create user' };
     }
+    console.log('User record created successfully');
 
     return {
       data: {
@@ -124,7 +143,7 @@ export async function adminSignUp(data: {
     };
   } catch (error) {
     console.error('Admin signup error:', error);
-    return { error: 'An unexpected error occurred' };
+    return { error: 'An unexpected error occurred: ' + (error instanceof Error ? error.message : String(error)) };
   }
 }
 
