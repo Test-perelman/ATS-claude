@@ -191,6 +191,7 @@ export interface Database {
           notes_internal: string | null
           resume_master_file_id: string | null
           attachments_group_id: string | null
+          team_id: string | null
           created_at: string
           updated_at: string
           created_by: string | null
@@ -227,6 +228,7 @@ export interface Database {
           notes_internal?: string | null
           resume_master_file_id?: string | null
           attachments_group_id?: string | null
+          team_id?: string | null
           created_at?: string
           updated_at?: string
           created_by?: string | null
@@ -263,6 +265,7 @@ export interface Database {
           notes_internal?: string | null
           resume_master_file_id?: string | null
           attachments_group_id?: string | null
+          team_id?: string | null
           created_at?: string
           updated_at?: string
           created_by?: string | null
