@@ -53,7 +53,7 @@ export default function RolesPage() {
       const result = await getRoles();
 
       if ('error' in result) {
-        setError(result.error);
+        setError(result.error || 'Failed to load roles');
         return;
       }
 

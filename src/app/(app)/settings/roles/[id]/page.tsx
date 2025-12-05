@@ -56,7 +56,7 @@ export default function RoleEditorPage() {
         const roleResult = await getRoleById(roleId);
 
         if ('error' in roleResult) {
-          setError(roleResult.error);
+          setError(roleResult.error || 'Failed to load role');
           return;
         }
 
