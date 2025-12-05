@@ -559,6 +559,7 @@ export interface Database {
           result: string | null
           feedback_notes: string | null
           rating: number | null
+          team_id: string | null
           created_at: string
           updated_at: string
         }
@@ -574,6 +575,7 @@ export interface Database {
           result?: string | null
           feedback_notes?: string | null
           rating?: number | null
+          team_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -589,6 +591,7 @@ export interface Database {
           result?: string | null
           feedback_notes?: string | null
           rating?: number | null
+          team_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -616,6 +619,7 @@ export interface Database {
           status: string
           termination_reason: string | null
           notes: string | null
+          team_id: string | null
           created_at: string
           updated_at: string
           created_by: string | null
@@ -643,6 +647,7 @@ export interface Database {
           status?: string
           termination_reason?: string | null
           notes?: string | null
+          team_id?: string | null
           created_at?: string
           updated_at?: string
           created_by?: string | null
@@ -670,6 +675,7 @@ export interface Database {
           status?: string
           termination_reason?: string | null
           notes?: string | null
+          team_id?: string | null
           created_at?: string
           updated_at?: string
           created_by?: string | null
@@ -691,6 +697,7 @@ export interface Database {
           submitted_date: string | null
           invoice_generated: boolean
           notes: string | null
+          team_id: string | null
           created_at: string
           updated_at: string
         }
@@ -708,6 +715,7 @@ export interface Database {
           submitted_date?: string | null
           invoice_generated?: boolean
           notes?: string | null
+          team_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -725,6 +733,7 @@ export interface Database {
           submitted_date?: string | null
           invoice_generated?: boolean
           notes?: string | null
+          team_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -743,6 +752,7 @@ export interface Database {
           payment_amount: number | null
           status: string
           notes: string | null
+          team_id: string | null
           created_at: string
           updated_at: string
           created_by: string | null
@@ -760,6 +770,7 @@ export interface Database {
           payment_amount?: number | null
           status?: string
           notes?: string | null
+          team_id?: string | null
           created_at?: string
           updated_at?: string
           created_by?: string | null
@@ -777,6 +788,7 @@ export interface Database {
           payment_amount?: number | null
           status?: string
           notes?: string | null
+          team_id?: string | null
           created_at?: string
           updated_at?: string
           created_by?: string | null
@@ -796,6 +808,7 @@ export interface Database {
           worksite_address: string | null
           immigration_notes: string | null
           alert_before_days: number
+          team_id: string | null
           created_at: string
           updated_at: string
         }
@@ -812,6 +825,7 @@ export interface Database {
           worksite_address?: string | null
           immigration_notes?: string | null
           alert_before_days?: number
+          team_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -828,6 +842,7 @@ export interface Database {
           worksite_address?: string | null
           immigration_notes?: string | null
           alert_before_days?: number
+          team_id?: string | null
           created_at?: string
           updated_at?: string
         }
