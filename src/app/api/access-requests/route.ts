@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         message: 'Access request submitted successfully',
-        request: result.request,
+        data: result.request,
       },
       { status: 201 }
     );

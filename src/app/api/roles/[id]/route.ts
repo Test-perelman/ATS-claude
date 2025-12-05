@@ -34,7 +34,7 @@ export async function GET(
     }
 
     return NextResponse.json(
-      { success: true, ...result },
+      { success: true, data: result.data },
       { status: 200 }
     );
   } catch (error) {
@@ -138,8 +138,8 @@ export async function DELETE(
     ];
 
     // Fetch role to check its name
-    const { data: roleData } = await getRoleById(roleId);
-    if (roleData && builtInRoles.includes((roleData as any).role_name)) {
+    const roleResult = await getRoleById(roleId);
+    if ('data' in roleResult && roleResult.data && builtInRoles.includes((roleResult.data.role as any).role_name)) {
       return NextResponse.json(
         { error: 'Cannot delete built-in roles' },
         { status: 400 }

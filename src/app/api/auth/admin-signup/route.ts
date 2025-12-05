@@ -49,8 +49,10 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         message: 'Admin account created successfully',
-        user: result.user,
-        team: result.team,
+        data: {
+          user: result.user,
+          team: result.team,
+        },
       },
       { status: 201 }
     );

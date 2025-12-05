@@ -1,14 +1,12 @@
 import { supabase, createServerClient, typedUpdate } from '@/lib/supabase/client';
 import { getCurrentUserTeamId } from '@/lib/supabase/auth';
 import type { Database } from '@/types/database';
+import type { ApiResponse, ApiArrayResponse, ApiVoidResponse } from '@/types/api';
 
 /**
  * Get current user's team
  */
-export async function getTeam(): Promise<
-  | { data: Database['public']['Tables']['teams']['Row']; error?: never }
-  | { data?: never; error: string }
-> {
+export async function getTeam(): Promise<ApiResponse<Database['public']['Tables']['teams']['Row']>> {
   try {
     const teamId = await getCurrentUserTeamId();
 
@@ -36,7 +34,7 @@ export async function getTeam(): Promise<
 /**
  * Update team information
  */
-export async function updateTeam(updates: Database['public']['Tables']['teams']['Update']) {
+export async function updateTeam(updates: Database['public']['Tables']['teams']['Update']): Promise<ApiResponse<Database['public']['Tables']['teams']['Row']>> {
   try {
     const teamId = await getCurrentUserTeamId();
 
@@ -60,7 +58,7 @@ export async function updateTeam(updates: Database['public']['Tables']['teams'][
 /**
  * Get all team members
  */
-export async function getTeamMembers() {
+export async function getTeamMembers(): Promise<ApiArrayResponse<any>> {
   try {
     const teamId = await getCurrentUserTeamId();
 
@@ -88,7 +86,7 @@ export async function getTeamMembers() {
 /**
  * Get a single team member
  */
-export async function getTeamMember(userId: string) {
+export async function getTeamMember(userId: string): Promise<ApiResponse<Database['public']['Tables']['users']['Row']>> {
   try {
     const teamId = await getCurrentUserTeamId();
 
@@ -124,7 +122,7 @@ export async function updateTeamMember(
     role_id?: string;
     status?: string;
   }
-) {
+): Promise<ApiResponse<any>> {
   try {
     const teamId = await getCurrentUserTeamId();
 
@@ -169,7 +167,7 @@ export async function updateTeamMember(
 /**
  * Remove user from team (server-side only)
  */
-export async function removeTeamMember(userId: string, teamId: string) {
+export async function removeTeamMember(userId: string, teamId: string): Promise<ApiVoidResponse> {
   try {
     const serverClient = createServerClient();
 
@@ -195,7 +193,7 @@ export async function removeTeamMember(userId: string, teamId: string) {
       return { error: error.message };
     }
 
-    return { success: true };
+    return { data: true };
   } catch (error) {
     console.error('Remove team member error:', error);
     return { error: 'An unexpected error occurred' };
@@ -205,7 +203,7 @@ export async function removeTeamMember(userId: string, teamId: string) {
 /**
  * Get all pending access requests for team (admin only)
  */
-export async function getPendingAccessRequests() {
+export async function getPendingAccessRequests(): Promise<ApiArrayResponse<Database['public']['Tables']['team_access_requests']['Row']>> {
   try {
     const teamId = await getCurrentUserTeamId();
 
@@ -234,7 +232,7 @@ export async function getPendingAccessRequests() {
 /**
  * Get all access requests for team (admin only)
  */
-export async function getAccessRequests(status?: 'pending' | 'approved' | 'rejected') {
+export async function getAccessRequests(status?: 'pending' | 'approved' | 'rejected'): Promise<ApiArrayResponse<Database['public']['Tables']['team_access_requests']['Row']>> {
   try {
     const teamId = await getCurrentUserTeamId();
 
@@ -267,7 +265,7 @@ export async function getAccessRequests(status?: 'pending' | 'approved' | 'rejec
 /**
  * Server-side: Approve access request and create user
  */
-export async function approveAccessRequest(requestId: string, teamId: string) {
+export async function approveAccessRequest(requestId: string, teamId: string): Promise<ApiVoidResponse> {
   try {
     const serverClient = createServerClient();
 
@@ -315,7 +313,7 @@ export async function approveAccessRequest(requestId: string, teamId: string) {
       return { error: 'Failed to create user record' };
     }
 
-    return { success: true };
+    return { data: true };
   } catch (error) {
     console.error('Approve access request error:', error);
     return { error: 'An unexpected error occurred' };
@@ -325,7 +323,7 @@ export async function approveAccessRequest(requestId: string, teamId: string) {
 /**
  * Server-side: Reject access request
  */
-export async function rejectAccessRequest(requestId: string, teamId: string) {
+export async function rejectAccessRequest(requestId: string, teamId: string): Promise<ApiVoidResponse> {
   try {
     const serverClient = createServerClient();
 
@@ -353,7 +351,7 @@ export async function rejectAccessRequest(requestId: string, teamId: string) {
       return { error: 'Failed to reject request' };
     }
 
-    return { success: true };
+    return { data: true };
   } catch (error) {
     console.error('Reject access request error:', error);
     return { error: 'An unexpected error occurred' };

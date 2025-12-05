@@ -7,16 +7,24 @@ import { supabase, createServerClient } from '@/lib/supabase/client';
 import { getCurrentUserTeamId } from '@/lib/supabase/auth';
 import { isMasterAdmin } from '@/lib/utils/role-helpers';
 import type { Database } from '@/types/database';
+import type { ApiResponse, ApiArrayResponse, ApiVoidResponse } from '@/types/api';
 
 type Role = Database['public']['Tables']['roles']['Row'];
 type Permission = Database['public']['Tables']['permissions']['Row'];
 type RolePermission = Database['public']['Tables']['role_permissions']['Row'];
 
+type RoleWithPermissions = {
+  role: Role;
+  permissions: any[];
+};
+
+type GroupedPermissions = Record<string, Permission[]>;
+
 /**
  * Get all roles available in the system
  * Master Admin sees all roles, Local Admin sees all roles (but can only modify their own)
  */
-export async function getRoles() {
+export async function getRoles(): Promise<ApiArrayResponse<Role>> {
   try {
     const { data, error } = await supabase
       .from('roles')
@@ -38,7 +46,7 @@ export async function getRoles() {
 /**
  * Get a single role with all its permissions
  */
-export async function getRoleById(roleId: string) {
+export async function getRoleById(roleId: string): Promise<ApiResponse<RoleWithPermissions>> {
   try {
     const { data: role, error: roleError } = await supabase
       .from('roles')
@@ -63,13 +71,10 @@ export async function getRoleById(roleId: string) {
 
     if (permError) {
       console.error('Error fetching permissions:', permError);
-      return { role, permissions: [] };
+      return { data: { role: role as Role, permissions: [] } };
     }
 
-    return {
-      role: role as Role,
-      permissions: permissions as any[],
-    };
+    return { data: { role: role as Role, permissions: permissions as any[] } };
   } catch (error) {
     console.error('Get role error:', error);
     return { error: 'An unexpected error occurred' };
@@ -80,7 +85,7 @@ export async function getRoleById(roleId: string) {
  * Create a new role
  * Only Master Admin and Local Admin can create roles
  */
-export async function createRole(name: string, description?: string) {
+export async function createRole(name: string, description?: string): Promise<ApiResponse<Role>> {
   try {
     const serverClient = createServerClient();
 
@@ -116,7 +121,7 @@ export async function updateRole(
     role_name?: string;
     role_description?: string | null;
   }
-) {
+): Promise<ApiResponse<Role>> {
   try {
     const serverClient = createServerClient();
 
@@ -143,7 +148,7 @@ export async function updateRole(
  * Delete a role
  * Only Master Admin can delete roles
  */
-export async function deleteRole(roleId: string) {
+export async function deleteRole(roleId: string): Promise<ApiVoidResponse> {
   try {
     const serverClient = createServerClient();
 
@@ -178,7 +183,7 @@ export async function deleteRole(roleId: string) {
       return { error: error.message };
     }
 
-    return { success: true };
+    return { data: true };
   } catch (error) {
     console.error('Delete role error:', error);
     return { error: 'An unexpected error occurred' };
@@ -188,7 +193,7 @@ export async function deleteRole(roleId: string) {
 /**
  * Get all permissions grouped by module
  */
-export async function getAllPermissions() {
+export async function getAllPermissions(): Promise<ApiResponse<GroupedPermissions>> {
   try {
     const { data, error } = await supabase
       .from('permissions')
@@ -220,7 +225,7 @@ export async function getAllPermissions() {
 /**
  * Get permissions for a specific role
  */
-export async function getRolePermissions(roleId: string) {
+export async function getRolePermissions(roleId: string): Promise<ApiArrayResponse<any>> {
   try {
     const { data, error } = await supabase
       .from('role_permissions')
@@ -247,7 +252,7 @@ export async function getRolePermissions(roleId: string) {
 /**
  * Assign a permission to a role
  */
-export async function assignPermissionToRole(roleId: string, permissionId: string) {
+export async function assignPermissionToRole(roleId: string, permissionId: string): Promise<ApiArrayResponse<RolePermission>> {
   try {
     const serverClient = createServerClient();
 
@@ -275,7 +280,7 @@ export async function assignPermissionToRole(roleId: string, permissionId: strin
 /**
  * Revoke a permission from a role
  */
-export async function revokePermissionFromRole(roleId: string, permissionId: string) {
+export async function revokePermissionFromRole(roleId: string, permissionId: string): Promise<ApiVoidResponse> {
   try {
     const serverClient = createServerClient();
 
@@ -290,7 +295,7 @@ export async function revokePermissionFromRole(roleId: string, permissionId: str
       return { error: error.message };
     }
 
-    return { success: true };
+    return { data: true };
   } catch (error) {
     console.error('Revoke permission error:', error);
     return { error: 'An unexpected error occurred' };
@@ -304,7 +309,7 @@ export async function revokePermissionFromRole(roleId: string, permissionId: str
 export async function assignPermissionsToRole(
   roleId: string,
   permissionIds: string[]
-) {
+): Promise<ApiArrayResponse<RolePermission>> {
   try {
     const serverClient = createServerClient();
 
@@ -342,7 +347,7 @@ export async function assignPermissionsToRole(
  * Get role statistics
  * Returns count of users, permissions, etc.
  */
-export async function getRoleStats(roleId: string) {
+export async function getRoleStats(roleId: string): Promise<ApiResponse<{ userCount: number; permissionCount: number }>> {
   try {
     // Count users with this role
     const { count: userCount } = await supabase
@@ -358,12 +363,14 @@ export async function getRoleStats(roleId: string) {
       .eq('allowed', true);
 
     return {
-      userCount: userCount || 0,
-      permissionCount: permissionCount || 0,
+      data: {
+        userCount: userCount || 0,
+        permissionCount: permissionCount || 0,
+      },
     };
   } catch (error) {
     console.error('Get role stats error:', error);
-    return { userCount: 0, permissionCount: 0 };
+    return { error: 'Failed to fetch role statistics' };
   }
 }
 
@@ -375,7 +382,7 @@ export async function createRoleFromTemplate(
   name: string,
   templateRoleId: string,
   description?: string
-) {
+): Promise<ApiResponse<Role>> {
   try {
     const serverClient = createServerClient();
 

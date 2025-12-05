@@ -1,5 +1,27 @@
 import { supabase, createServerClient } from './client';
 import type { Database } from '@/types/database';
+import type { ApiResponse, ApiVoidResponse } from '@/types/api';
+
+type AdminSignUpResponse = {
+  user: any;
+  team: any;
+};
+
+type AdminSignInResponse = {
+  user: any;
+  authUser: any;
+};
+
+type RequestAccessResponse = {
+  request: any;
+};
+
+type CheckAccessResponse = {
+  hasAccess: boolean;
+  teamId?: string;
+  teamName?: string;
+  requestStatus?: 'pending' | 'approved' | 'rejected';
+};
 
 /**
  * Admin Sign Up
@@ -13,7 +35,7 @@ export async function adminSignUp(data: {
   companyName: string;
   teamName?: string;
   subscriptionTier?: 'basic' | 'professional' | 'enterprise';
-}) {
+}): Promise<ApiResponse<AdminSignUpResponse>> {
   try {
     // Step 1: Create Supabase Auth user
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -95,9 +117,10 @@ export async function adminSignUp(data: {
     }
 
     return {
-      success: true,
-      user: userData,
-      team: teamData,
+      data: {
+        user: userData,
+        team: teamData,
+      },
     };
   } catch (error) {
     console.error('Admin signup error:', error);
@@ -109,7 +132,7 @@ export async function adminSignUp(data: {
  * Admin Sign In
  * Authenticate admin user and return team_id
  */
-export async function adminSignIn(email: string, password: string) {
+export async function adminSignIn(email: string, password: string): Promise<ApiResponse<AdminSignInResponse>> {
   try {
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
@@ -149,16 +172,18 @@ export async function adminSignIn(email: string, password: string) {
       console.warn('User has no team_id assigned. Allowing login to access-request page');
       // Allow login but user will be redirected to access-request page by middleware
       return {
-        success: true,
-        user: userData,
-        authUser: authData.user,
+        data: {
+          user: userData,
+          authUser: authData.user,
+        },
       };
     }
 
     return {
-      success: true,
-      user: userData,
-      authUser: authData.user,
+      data: {
+        user: userData,
+        authUser: authData.user,
+      },
     };
   } catch (error) {
     console.error('Admin signin error:', error);
@@ -207,13 +232,13 @@ export async function getCurrentUserTeamId(): Promise<string | null> {
 /**
  * Sign out current user
  */
-export async function signOut() {
+export async function signOut(): Promise<ApiVoidResponse> {
   try {
     const { error } = await supabase.auth.signOut();
     if (error) {
       return { error: error.message };
     }
-    return { success: true };
+    return { data: true };
   } catch (error) {
     console.error('Sign out error:', error);
     return { error: 'An unexpected error occurred' };
@@ -230,7 +255,7 @@ export async function requestTeamAccess(data: {
   companyEmail: string;
   reason?: string;
   requestedTeamId?: string;
-}) {
+}): Promise<ApiResponse<RequestAccessResponse>> {
   try {
     const { data: authUser } = await supabase.auth.getUser();
 
@@ -252,7 +277,7 @@ export async function requestTeamAccess(data: {
       return { error: error?.message || 'Failed to create access request' };
     }
 
-    return { success: true, request: requestData };
+    return { data: { request: requestData } };
   } catch (error) {
     console.error('Request team access error:', error);
     return { error: 'An unexpected error occurred' };
@@ -263,12 +288,7 @@ export async function requestTeamAccess(data: {
  * Check if user has access to a team
  * Used to redirect users to access request form if they don't have team_id
  */
-export async function checkTeamAccess(): Promise<{
-  hasAccess: boolean;
-  teamId?: string;
-  teamName?: string;
-  requestStatus?: 'pending' | 'approved' | 'rejected';
-}> {
+export async function checkTeamAccess(): Promise<CheckAccessResponse> {
   try {
     const user = await getCurrentUser();
 
@@ -319,7 +339,7 @@ export async function checkTeamAccess(): Promise<{
 export async function approveAccessRequest(
   requestId: string,
   approvedByUserId: string
-) {
+): Promise<ApiVoidResponse> {
   try {
     const serverClient = createServerClient();
 
@@ -388,7 +408,7 @@ export async function approveAccessRequest(
       }
     }
 
-    return { success: true };
+    return { data: true };
   } catch (error) {
     console.error('Approve access request error:', error);
     return { error: 'An unexpected error occurred' };
@@ -401,7 +421,7 @@ export async function approveAccessRequest(
 export async function rejectAccessRequest(
   requestId: string,
   rejectedByUserId: string
-) {
+): Promise<ApiVoidResponse> {
   try {
     const serverClient = createServerClient();
 
@@ -443,7 +463,7 @@ export async function rejectAccessRequest(
       return { error: 'Failed to reject access request' };
     }
 
-    return { success: true };
+    return { data: true };
   } catch (error) {
     console.error('Reject access request error:', error);
     return { error: 'An unexpected error occurred' };

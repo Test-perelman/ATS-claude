@@ -6,6 +6,7 @@ import { supabase, typedInsert, typedUpdate } from '@/lib/supabase/client';
 import { findDuplicateClients, mergeEntityData } from '@/lib/utils/deduplication';
 import { createAuditLog, createActivity } from '@/lib/utils/audit';
 import type { Database } from '@/types/database';
+import type { ApiResponse, ApiVoidResponse } from '@/types/api';
 
 type Client = Database['public']['Tables']['clients']['Row'];
 type ClientInsert = Database['public']['Tables']['clients']['Insert'];
@@ -20,55 +21,71 @@ export async function getClients(filters?: {
     isActive?: boolean;
     limit?: number;
     offset?: number;
-}) {
-    let query = supabase
-        .from('clients')
-        .select('*', { count: 'exact' });
+}): Promise<ApiResponse<{ clients: Client[]; count: number | null }>> {
+    try {
+        let query = supabase
+            .from('clients')
+            .select('*', { count: 'exact' });
 
-    if (filters?.search) {
-        query = query.or(
-            `client_name.ilike.%${filters.search}%,primary_contact_name.ilike.%${filters.search}%,primary_contact_email.ilike.%${filters.search}%`
-        );
+        if (filters?.search) {
+            query = query.or(
+                `client_name.ilike.%${filters.search}%,primary_contact_name.ilike.%${filters.search}%,primary_contact_email.ilike.%${filters.search}%`
+            );
+        }
+
+        if (filters?.industry) {
+            query = query.eq('industry', filters.industry);
+        }
+
+        if (filters?.isActive !== undefined) {
+            query = query.eq('is_active', filters.isActive);
+        }
+
+        if (filters?.limit) {
+            query = query.limit(filters.limit);
+        }
+
+        if (filters?.offset) {
+            query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1);
+        }
+
+        query = query.order('created_at', { ascending: false });
+
+        const { data, error, count } = await query;
+
+        if (error) {
+            return { error: error.message };
+        }
+
+        return { data: { clients: data || [], count } };
+    } catch (error) {
+        return { error: 'Failed to fetch clients' };
     }
-
-    if (filters?.industry) {
-        query = query.eq('industry', filters.industry);
-    }
-
-    if (filters?.isActive !== undefined) {
-        query = query.eq('is_active', filters.isActive);
-    }
-
-    if (filters?.limit) {
-        query = query.limit(filters.limit);
-    }
-
-    if (filters?.offset) {
-        query = query.range(filters.offset, filters.offset + (filters.limit || 10) - 1);
-    }
-
-    query = query.order('created_at', { ascending: false });
-
-    const { data, error, count } = await query;
-
-    return { data, error, count };
 }
 
 /**
  * Get client by ID
  */
-export async function getClientById(clientId: string) {
-    const { data, error } = await supabase
-        .from('clients')
-        .select(`
-      *,
-      created_by_user:created_by(username),
-      updated_by_user:updated_by(username)
-    `)
-        .eq('client_id', clientId)
-        .single();
+export async function getClientById(clientId: string): Promise<ApiResponse<any>> {
+    try {
+        const { data, error } = await supabase
+            .from('clients')
+            .select(`
+          *,
+          created_by_user:created_by(username),
+          updated_by_user:updated_by(username)
+        `)
+            .eq('client_id', clientId)
+            .single();
 
-    return { data, error };
+        if (error) {
+            return { error: error.message };
+        }
+
+        return { data };
+    } catch (error) {
+        return { error: 'Failed to fetch client' };
+    }
 }
 
 /**
@@ -79,36 +96,42 @@ export async function createClient(
     userId?: string,
     teamId?: string,
     options?: { skipDuplicateCheck?: boolean }
-) {
-    // Check for duplicates unless explicitly skipped
-    if (!options?.skipDuplicateCheck) {
-        const duplicateCheck = await findDuplicateClients({
-            client_name: clientData.client_name,
-            primary_contact_email: clientData.primary_contact_email || undefined,
-            primary_contact_phone: clientData.primary_contact_phone || undefined,
+): Promise<ApiResponse<Client> | { data?: never; error?: never; duplicate: true; matches: any[]; matchType?: string }> {
+    try {
+        // Check for duplicates unless explicitly skipped
+        if (!options?.skipDuplicateCheck) {
+            const duplicateCheck = await findDuplicateClients({
+                client_name: clientData.client_name,
+                primary_contact_email: clientData.primary_contact_email || undefined,
+                primary_contact_phone: clientData.primary_contact_phone || undefined,
+            });
+
+            if (duplicateCheck.found && duplicateCheck.matches.length > 0) {
+                // Return duplicate info for user decision
+                return {
+                    duplicate: true,
+                    matches: duplicateCheck.matches,
+                    matchType: duplicateCheck.matchType,
+                };
+            }
+        }
+
+        // Create new client
+        const { data, error } = await typedInsert('clients', {
+            ...clientData,
+            created_by: userId || null,
+            updated_by: userId || null,
+            team_id: teamId || null,
         });
 
-        if (duplicateCheck.found && duplicateCheck.matches.length > 0) {
-            // Return duplicate info for user decision
-            return {
-                data: null,
-                error: null,
-                duplicate: true,
-                matches: duplicateCheck.matches,
-                matchType: duplicateCheck.matchType,
-            };
+        if (error) {
+            return { error: error.message };
         }
-    }
 
-    // Create new client
-    const { data, error } = await typedInsert('clients', {
-        ...clientData,
-        created_by: userId || null,
-        updated_by: userId || null,
-        team_id: teamId || null,
-    });
+        if (!data) {
+            return { error: 'Failed to create client' };
+        }
 
-    if (data && !error) {
         // Create audit log
         await createAuditLog({
             entityName: 'clients',
@@ -127,9 +150,11 @@ export async function createClient(
             activityDescription: `${data.client_name} was added to the system`,
             userId,
         });
-    }
 
-    return { data, error, duplicate: false };
+        return { data };
+    } catch (error) {
+        return { error: 'Failed to create client' };
+    }
 }
 
 /**
@@ -139,17 +164,26 @@ export async function updateClient(
     clientId: string,
     updates: ClientUpdate,
     userId?: string
-) {
-    // Get current data for audit log
-    const { data: oldData } = await getClientById(clientId);
+): Promise<ApiResponse<Client>> {
+    try {
+        // Get current data for audit log
+        const oldDataResult = await getClientById(clientId);
+        const oldData = 'data' in oldDataResult ? oldDataResult.data : null;
 
-    // Update client
-    const { data, error } = await typedUpdate('clients', 'client_id', clientId, {
-        ...updates,
-        updated_by: userId || null,
-    });
+        // Update client
+        const { data, error } = await typedUpdate('clients', 'client_id', clientId, {
+            ...updates,
+            updated_by: userId || null,
+        });
 
-    if (data && !error) {
+        if (error) {
+            return { error: error.message };
+        }
+
+        if (!data) {
+            return { error: 'Failed to update client' };
+        }
+
         // Create audit log
         await createAuditLog({
             entityName: 'clients',
@@ -172,9 +206,11 @@ export async function updateClient(
                 userId,
             });
         }
-    }
 
-    return { data, error };
+        return { data };
+    } catch (error) {
+        return { error: 'Failed to update client' };
+    }
 }
 
 /**
@@ -184,43 +220,56 @@ export async function mergeClient(
     existingClientId: string,
     newData: Partial<ClientInsert>,
     userId?: string
-) {
-    // Get existing client
-    const { data: existing } = await getClientById(existingClientId);
+): Promise<ApiResponse<Client>> {
+    try {
+        // Get existing client
+        const result = await getClientById(existingClientId);
 
-    if (!existing) {
-        return { data: null, error: { message: 'Client not found' } };
+        if ('error' in result) {
+            return { error: result.error };
+        }
+
+        // Merge data
+        const merged = mergeEntityData(result.data, newData);
+
+        // Update with merged data
+        return updateClient(existingClientId, merged, userId);
+    } catch (error) {
+        return { error: 'Failed to merge client' };
     }
-
-    // Merge data
-    const merged = mergeEntityData(existing, newData);
-
-    // Update with merged data
-    return updateClient(existingClientId, merged, userId);
 }
 
 /**
  * Delete a client
  */
-export async function deleteClient(clientId: string, userId?: string) {
-    // Get data for audit log
-    const { data: clientData } = await getClientById(clientId);
+export async function deleteClient(clientId: string, userId?: string): Promise<ApiVoidResponse> {
+    try {
+        // Get data for audit log
+        const result = await getClientById(clientId);
+        const clientData = 'data' in result ? result.data : null;
 
-    const { data, error } = await supabase
-        .from('clients')
-        .delete()
-        .eq('client_id', clientId);
+        const { error } = await supabase
+            .from('clients')
+            .delete()
+            .eq('client_id', clientId);
 
-    if (!error && clientData) {
-        // Create audit log
-        await createAuditLog({
-            entityName: 'clients',
-            entityId: clientId,
-            action: 'DELETE',
-            oldValue: clientData,
-            userId,
-        });
+        if (error) {
+            return { error: error.message };
+        }
+
+        if (clientData) {
+            // Create audit log
+            await createAuditLog({
+                entityName: 'clients',
+                entityId: clientId,
+                action: 'DELETE',
+                oldValue: clientData,
+                userId,
+            });
+        }
+
+        return { data: true };
+    } catch (error) {
+        return { error: 'Failed to delete client' };
     }
-
-    return { data, error };
 }
