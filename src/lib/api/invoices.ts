@@ -12,12 +12,21 @@ type InvoiceStats = {
   overdue: number;
 };
 
+/**
+ * Get all invoices with optional filters
+ * @param filters.teamId - Filter by team (for master admin)
+ * @param filters.userTeamId - Current user's team ID (for non-master admin filtering)
+ * @param filters.isMasterAdmin - Whether current user is master admin
+ */
 export async function getInvoices(filters?: {
   projectId?: string;
   clientId?: string;
   status?: string;
   fromDate?: string;
   toDate?: string;
+  teamId?: string;
+  userTeamId?: string;
+  isMasterAdmin?: boolean;
 }): Promise<ApiArrayResponse<Invoice>> {
   try {
     let query = supabase
@@ -25,9 +34,19 @@ export async function getInvoices(filters?: {
       .select(`
         *,
         project:projects(project_id, project_name, candidate:candidates(first_name, last_name)),
-        client:clients(client_id, client_name)
+        client:clients(client_id, client_name),
+        team:team_id(team_id, team_name, company_name)
       `)
       .order('invoice_date', { ascending: false });
+
+    // Team filtering logic
+    if (filters?.isMasterAdmin) {
+      if (filters?.teamId) {
+        query = query.eq('team_id', filters.teamId);
+      }
+    } else if (filters?.userTeamId) {
+      query = query.eq('team_id', filters.userTeamId);
+    }
 
     if (filters?.projectId) {
       query = query.eq('project_id', filters.projectId);

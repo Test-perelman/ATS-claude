@@ -7,19 +7,24 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
+import { TeamFilter } from '@/components/ui/TeamFilter';
+import { TeamBadge } from '@/components/ui/TeamBadge';
 import { getVendors } from '@/lib/api/vendors';
 import { formatDate, formatPhoneNumber } from '@/lib/utils/format';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function VendorsPage() {
+  const { isMasterAdmin, teamId } = useAuth();
   const [vendors, setVendors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [tierFilter, setTierFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [teamFilter, setTeamFilter] = useState('');
 
   useEffect(() => {
     loadVendors();
-  }, [search, tierFilter, statusFilter]);
+  }, [search, tierFilter, statusFilter, teamFilter, isMasterAdmin, teamId]);
 
   async function loadVendors() {
     setLoading(true);
@@ -27,6 +32,9 @@ export default function VendorsPage() {
       search: search || undefined,
       tierLevel: tierFilter || undefined,
       isActive: statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined,
+      teamId: teamFilter || undefined,
+      userTeamId: teamId || undefined,
+      isMasterAdmin,
     });
     if ('error' in result) {
       console.error('Error loading vendors:', result.error);
@@ -55,7 +63,7 @@ export default function VendorsPage() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
             <Input
               placeholder="Search by name, contact..."
               value={search}
@@ -82,8 +90,15 @@ export default function VendorsPage() {
                 { value: 'inactive', label: 'Inactive' },
               ]}
             />
+            {isMasterAdmin && (
+              <TeamFilter
+                value={teamFilter}
+                onChange={setTeamFilter}
+                allOptionLabel="All Companies"
+              />
+            )}
             <Button variant="outline" onClick={loadVendors}>
-              🔍 Search
+              Search
             </Button>
           </div>
         </CardContent>
@@ -113,6 +128,9 @@ export default function VendorsPage() {
                     <th className="px-4 py-3 text-left text-sm font-semibold">Tier</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Phone</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                    {isMasterAdmin && (
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Company</th>
+                    )}
                     <th className="px-4 py-3 text-left text-sm font-semibold">Added</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold">Actions</th>
                   </tr>
@@ -144,6 +162,14 @@ export default function VendorsPage() {
                           status={vendor.is_active ? 'active' : 'inactive'}
                         />
                       </td>
+                      {isMasterAdmin && (
+                        <td className="px-4 py-3">
+                          <TeamBadge
+                            teamName={vendor.team?.team_name}
+                            companyName={vendor.team?.company_name}
+                          />
+                        </td>
+                      )}
                       <td className="px-4 py-3 text-sm text-gray-500">
                         {formatDate(vendor.created_at)}
                       </td>

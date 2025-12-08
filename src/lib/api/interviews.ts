@@ -7,12 +7,21 @@ type Interview = Database['public']['Tables']['interviews']['Row'];
 type InterviewInsert = Database['public']['Tables']['interviews']['Insert'];
 type InterviewUpdate = Database['public']['Tables']['interviews']['Update'];
 
+/**
+ * Get all interviews with optional filters
+ * @param filters.teamId - Filter by team (for master admin)
+ * @param filters.userTeamId - Current user's team ID (for non-master admin filtering)
+ * @param filters.isMasterAdmin - Whether current user is master admin
+ */
 export async function getInterviews(filters?: {
   search?: string;
   submissionId?: string;
   result?: string;
   fromDate?: string;
   toDate?: string;
+  teamId?: string;
+  userTeamId?: string;
+  isMasterAdmin?: boolean;
 }): Promise<ApiArrayResponse<any>> {
   try {
     let query = supabase
@@ -23,9 +32,19 @@ export async function getInterviews(filters?: {
           submission_id,
           candidate:candidates(candidate_id, first_name, last_name, email_address),
           job:job_requirements(job_id, job_title, client:clients(client_name))
-        )
+        ),
+        team:team_id(team_id, team_name, company_name)
       `)
       .order('scheduled_time', { ascending: false });
+
+    // Team filtering logic
+    if (filters?.isMasterAdmin) {
+      if (filters?.teamId) {
+        query = query.eq('team_id', filters.teamId);
+      }
+    } else if (filters?.userTeamId) {
+      query = query.eq('team_id', filters.userTeamId);
+    }
 
     if (filters?.submissionId) {
       query = query.eq('submission_id', filters.submissionId);

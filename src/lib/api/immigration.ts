@@ -7,19 +7,38 @@ type Immigration = Database['public']['Tables']['immigration']['Row'];
 type ImmigrationInsert = Database['public']['Tables']['immigration']['Insert'];
 type ImmigrationUpdate = Database['public']['Tables']['immigration']['Update'];
 
+/**
+ * Get all immigration records with optional filters
+ * @param filters.teamId - Filter by team (for master admin)
+ * @param filters.userTeamId - Current user's team ID (for non-master admin filtering)
+ * @param filters.isMasterAdmin - Whether current user is master admin
+ */
 export async function getImmigrationRecords(filters?: {
   candidateId?: string;
   visaType?: string;
   expiringWithinDays?: number;
+  teamId?: string;
+  userTeamId?: string;
+  isMasterAdmin?: boolean;
 }): Promise<ApiArrayResponse<any>> {
   try {
     let query = supabase
       .from('immigration')
       .select(`
         *,
-        candidate:candidates(candidate_id, first_name, last_name, email_address)
+        candidate:candidates(candidate_id, first_name, last_name, email_address),
+        team:team_id(team_id, team_name, company_name)
       `)
       .order('visa_expiry_date', { ascending: true });
+
+    // Team filtering logic
+    if (filters?.isMasterAdmin) {
+      if (filters?.teamId) {
+        query = query.eq('team_id', filters.teamId);
+      }
+    } else if (filters?.userTeamId) {
+      query = query.eq('team_id', filters.userTeamId);
+    }
 
     if (filters?.candidateId) {
       query = query.eq('candidate_id', filters.candidateId);

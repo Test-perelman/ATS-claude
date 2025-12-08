@@ -14,6 +14,9 @@ type CreateJobRequirementResponse =
 
 /**
  * Get all job requirements with optional filters
+ * @param filters.teamId - Filter by team (for master admin)
+ * @param filters.userTeamId - Current user's team ID (for non-master admin filtering)
+ * @param filters.isMasterAdmin - Whether current user is master admin
  */
 export async function getJobRequirements(filters?: {
   search?: string;
@@ -21,6 +24,9 @@ export async function getJobRequirements(filters?: {
   clientId?: string;
   vendorId?: string;
   priority?: string;
+  teamId?: string;
+  userTeamId?: string;
+  isMasterAdmin?: boolean;
 }): Promise<ApiArrayResponse<any>> {
   try {
     let query = supabase
@@ -29,10 +35,20 @@ export async function getJobRequirements(filters?: {
         *,
         vendor:vendors(vendor_id, vendor_name),
         client:clients(client_id, client_name),
+        team:team_id(team_id, team_name, company_name),
         created_by_user:users!job_requirements_created_by_fkey(username, email),
         updated_by_user:users!job_requirements_updated_by_fkey(username, email)
       `)
       .order('created_at', { ascending: false });
+
+    // Team filtering logic
+    if (filters?.isMasterAdmin) {
+      if (filters?.teamId) {
+        query = query.eq('team_id', filters.teamId);
+      }
+    } else if (filters?.userTeamId) {
+      query = query.eq('team_id', filters.userTeamId);
+    }
 
     if (filters?.search) {
       query = query.or(`job_title.ilike.%${filters.search}%,job_description.ilike.%${filters.search}%,skills_required.ilike.%${filters.search}%`);

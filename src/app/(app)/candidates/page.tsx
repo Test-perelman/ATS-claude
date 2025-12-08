@@ -7,24 +7,32 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
+import { TeamFilter } from '@/components/ui/TeamFilter';
+import { TeamBadge } from '@/components/ui/TeamBadge';
 import { getCandidates } from '@/lib/api/candidates';
 import { formatDate, formatPhoneNumber } from '@/lib/utils/format';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function CandidatesPage() {
+  const { isMasterAdmin, teamId } = useAuth();
   const [candidates, setCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [benchFilter, setBenchFilter] = useState('');
+  const [teamFilter, setTeamFilter] = useState('');
 
   useEffect(() => {
     loadCandidates();
-  }, [search, benchFilter]);
+  }, [search, benchFilter, teamFilter, isMasterAdmin, teamId]);
 
   async function loadCandidates() {
     setLoading(true);
     const result = await getCandidates({
       search: search || undefined,
       benchStatus: benchFilter || undefined,
+      teamId: teamFilter || undefined,
+      userTeamId: teamId || undefined,
+      isMasterAdmin,
     });
     if ('error' in result) {
       console.error('Error loading candidates:', result.error);
@@ -53,7 +61,7 @@ export default function CandidatesPage() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <Input
               placeholder="Search by name, email, phone..."
               value={search}
@@ -70,8 +78,15 @@ export default function CandidatesPage() {
                 { value: 'inactive', label: 'Inactive' },
               ]}
             />
+            {isMasterAdmin && (
+              <TeamFilter
+                value={teamFilter}
+                onChange={setTeamFilter}
+                allOptionLabel="All Companies"
+              />
+            )}
             <Button variant="outline" onClick={loadCandidates}>
-              🔍 Search
+              Search
             </Button>
           </div>
         </CardContent>
@@ -101,6 +116,9 @@ export default function CandidatesPage() {
                     <th className="px-4 py-3 text-left text-sm font-semibold">Skills</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Visa Status</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Bench Status</th>
+                    {isMasterAdmin && (
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Company</th>
+                    )}
                     <th className="px-4 py-3 text-left text-sm font-semibold">Added</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold">Actions</th>
                   </tr>
@@ -133,6 +151,14 @@ export default function CandidatesPage() {
                       <td className="px-4 py-3">
                         <Badge variant="status" status={candidate.bench_status} />
                       </td>
+                      {isMasterAdmin && (
+                        <td className="px-4 py-3">
+                          <TeamBadge
+                            teamName={candidate.team?.team_name}
+                            companyName={candidate.team?.company_name}
+                          />
+                        </td>
+                      )}
                       <td className="px-4 py-3 text-sm text-gray-500">
                         {formatDate(candidate.created_at)}
                       </td>

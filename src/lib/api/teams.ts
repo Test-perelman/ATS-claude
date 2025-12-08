@@ -3,6 +3,30 @@ import { getCurrentUserTeamId } from '@/lib/supabase/auth';
 import type { Database } from '@/types/database';
 import type { ApiResponse, ApiArrayResponse, ApiVoidResponse } from '@/types/api';
 
+type Team = Database['public']['Tables']['teams']['Row'];
+
+/**
+ * Get all teams (Master Admin only)
+ */
+export async function getAllTeams(): Promise<ApiArrayResponse<Team>> {
+  try {
+    const { data, error } = await supabase
+      .from('teams')
+      .select('*')
+      .eq('is_active', true)
+      .order('team_name', { ascending: true });
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    return { data: data as Team[] };
+  } catch (error) {
+    console.error('Get all teams error:', error);
+    return { error: 'An unexpected error occurred' };
+  }
+}
+
 /**
  * Get current user's team
  */

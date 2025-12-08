@@ -24,6 +24,9 @@ type CreateCandidateResponse =
 
 /**
  * Get all candidates with filters
+ * @param filters.teamId - Filter by team (for master admin). If not provided, master admin sees all.
+ * @param filters.userTeamId - Current user's team ID (for non-master admin filtering)
+ * @param filters.isMasterAdmin - Whether current user is master admin
  */
 export async function getCandidates(filters?: {
   search?: string;
@@ -31,6 +34,9 @@ export async function getCandidates(filters?: {
   visaStatus?: string;
   limit?: number;
   offset?: number;
+  teamId?: string;
+  userTeamId?: string;
+  isMasterAdmin?: boolean;
 }): Promise<ApiResponse<CandidatesWithCount>> {
   try {
     let query = supabase
@@ -39,8 +45,21 @@ export async function getCandidates(filters?: {
         *,
         visa_status:visa_status(visa_name),
         sales_manager:sales_manager_id(username),
-        recruiter_manager:recruiter_manager_id(username)
+        recruiter_manager:recruiter_manager_id(username),
+        team:team_id(team_id, team_name, company_name)
       `, { count: 'exact' });
+
+    // Team filtering logic
+    if (filters?.isMasterAdmin) {
+      // Master admin can filter by specific team or see all
+      if (filters?.teamId) {
+        query = query.eq('team_id', filters.teamId);
+      }
+      // If no teamId specified, master admin sees all teams
+    } else if (filters?.userTeamId) {
+      // Regular users only see their team's data
+      query = query.eq('team_id', filters.userTeamId);
+    }
 
     if (filters?.search) {
       query = query.or(

@@ -7,19 +7,24 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
+import { TeamFilter } from '@/components/ui/TeamFilter';
+import { TeamBadge } from '@/components/ui/TeamBadge';
 import { getJobRequirements } from '@/lib/api/requirements';
 import { formatDate, formatCurrency } from '@/lib/utils/format';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function RequirementsPage() {
+  const { isMasterAdmin, teamId } = useAuth();
   const [requirements, setRequirements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
+  const [teamFilter, setTeamFilter] = useState('');
 
   useEffect(() => {
     loadRequirements();
-  }, [search, statusFilter, priorityFilter]);
+  }, [search, statusFilter, priorityFilter, teamFilter, isMasterAdmin, teamId]);
 
   async function loadRequirements() {
     setLoading(true);
@@ -27,6 +32,9 @@ export default function RequirementsPage() {
       search: search || undefined,
       status: statusFilter || undefined,
       priority: priorityFilter || undefined,
+      teamId: teamFilter || undefined,
+      userTeamId: teamId || undefined,
+      isMasterAdmin,
     });
     setRequirements(data || []);
     setLoading(false);
@@ -68,7 +76,7 @@ export default function RequirementsPage() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
             <Input
               placeholder="Search jobs..."
               value={search}
@@ -96,6 +104,13 @@ export default function RequirementsPage() {
                 { value: 'Urgent', label: 'Urgent' },
               ]}
             />
+            {isMasterAdmin && (
+              <TeamFilter
+                value={teamFilter}
+                onChange={setTeamFilter}
+                allOptionLabel="All Companies"
+              />
+            )}
             <Button variant="outline" onClick={loadRequirements}>
               Search
             </Button>
@@ -127,6 +142,9 @@ export default function RequirementsPage() {
                     <th className="px-4 py-3 text-left text-sm font-semibold">Bill Rate</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Location</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                    {isMasterAdmin && (
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Company</th>
+                    )}
                     <th className="px-4 py-3 text-right text-sm font-semibold">Actions</th>
                   </tr>
                 </thead>
@@ -186,6 +204,14 @@ export default function RequirementsPage() {
                           {job.status}
                         </Badge>
                       </td>
+                      {isMasterAdmin && (
+                        <td className="px-4 py-3">
+                          <TeamBadge
+                            teamName={job.team?.team_name}
+                            companyName={job.team?.company_name}
+                          />
+                        </td>
+                      )}
                       <td className="px-4 py-3 text-right">
                         <Link href={`/requirements/${job.job_id}`}>
                           <Button size="sm" variant="outline">View</Button>

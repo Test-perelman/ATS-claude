@@ -7,19 +7,24 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
+import { TeamFilter } from '@/components/ui/TeamFilter';
+import { TeamBadge } from '@/components/ui/TeamBadge';
 import { getClients } from '@/lib/api/clients';
 import { formatDate, formatPhoneNumber } from '@/lib/utils/format';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function ClientsPage() {
+  const { isMasterAdmin, teamId } = useAuth();
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [industryFilter, setIndustryFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [teamFilter, setTeamFilter] = useState('');
 
   useEffect(() => {
     loadClients();
-  }, [search, industryFilter, statusFilter]);
+  }, [search, industryFilter, statusFilter, teamFilter, isMasterAdmin, teamId]);
 
   async function loadClients() {
     setLoading(true);
@@ -27,6 +32,9 @@ export default function ClientsPage() {
       search: search || undefined,
       industry: industryFilter || undefined,
       isActive: statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined,
+      teamId: teamFilter || undefined,
+      userTeamId: teamId || undefined,
+      isMasterAdmin,
     });
     if ('error' in result) {
       console.error('Error loading clients:', result.error);
@@ -55,7 +63,7 @@ export default function ClientsPage() {
       {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
             <Input
               placeholder="Search by name, contact..."
               value={search}
@@ -75,8 +83,15 @@ export default function ClientsPage() {
                 { value: 'inactive', label: 'Inactive' },
               ]}
             />
+            {isMasterAdmin && (
+              <TeamFilter
+                value={teamFilter}
+                onChange={setTeamFilter}
+                allOptionLabel="All Companies"
+              />
+            )}
             <Button variant="outline" onClick={loadClients}>
-              🔍 Search
+              Search
             </Button>
           </div>
         </CardContent>
@@ -106,6 +121,9 @@ export default function ClientsPage() {
                     <th className="px-4 py-3 text-left text-sm font-semibold">Industry</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Phone</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                    {isMasterAdmin && (
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Company</th>
+                    )}
                     <th className="px-4 py-3 text-left text-sm font-semibold">Added</th>
                     <th className="px-4 py-3 text-right text-sm font-semibold">Actions</th>
                   </tr>
@@ -137,6 +155,14 @@ export default function ClientsPage() {
                           status={client.is_active ? 'active' : 'inactive'}
                         />
                       </td>
+                      {isMasterAdmin && (
+                        <td className="px-4 py-3">
+                          <TeamBadge
+                            teamName={client.team?.team_name}
+                            companyName={client.team?.company_name}
+                          />
+                        </td>
+                      )}
                       <td className="px-4 py-3 text-sm text-gray-500">
                         {formatDate(client.created_at)}
                       </td>
