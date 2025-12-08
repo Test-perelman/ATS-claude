@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils/cn';
+import { signOut } from '@/lib/supabase/auth';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 interface NavItem {
   name: string;
@@ -30,7 +32,44 @@ const navigation: NavItem[] = [
 
 export const TopNavigation: React.FC = () => {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, userRole } = useAuth();
   const [showMore, setShowMore] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await signOut();
+      router.push('/auth/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  // Get user initials
+  const getUserInitials = () => {
+    if (user?.email) {
+      return user.email.charAt(0).toUpperCase();
+    }
+    return 'U';
+  };
 
   const visibleItems = navigation.slice(0, 8);
   const moreItems = navigation.slice(8);
@@ -125,9 +164,45 @@ export const TopNavigation: React.FC = () => {
           </button>
 
           {/* Profile */}
-          <button className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-500 font-bold text-white hover:shadow-md transition-all hover:from-amber-500 hover:to-amber-600">
-            U
-          </button>
+          <div className="relative" ref={profileMenuRef}>
+            <button
+              onClick={() => setShowProfileMenu(!showProfileMenu)}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-amber-500 font-bold text-white hover:shadow-md transition-all hover:from-amber-500 hover:to-amber-600"
+            >
+              {getUserInitials()}
+            </button>
+
+            {/* Profile Dropdown Menu */}
+            {showProfileMenu && (
+              <div className="absolute right-0 mt-2 w-56 rounded-lg bg-white shadow-2xl border border-purple-200 py-2 z-50">
+                {/* User Info */}
+                <div className="px-4 py-3 border-b border-purple-100">
+                  <p className="text-sm font-medium text-gray-900">{user?.email || 'User'}</p>
+                  <p className="text-xs text-gray-500 mt-1">{userRole || 'Member'}</p>
+                </div>
+
+                {/* Menu Items */}
+                <Link
+                  href="/settings"
+                  className="flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 transition-colors"
+                  onClick={() => setShowProfileMenu(false)}
+                >
+                  <span>⚙️</span>
+                  <span>Settings</span>
+                </Link>
+
+                {/* Logout Button */}
+                <button
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+                >
+                  <span>🚪</span>
+                  <span>{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
