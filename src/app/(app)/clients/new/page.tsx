@@ -5,14 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { createClient } from '@/lib/api/clients';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function NewClientPage() {
   const router = useRouter();
-  const { user, teamId } = useAuth();
+  const { user, teamId, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
 
   // Form state
@@ -47,12 +46,20 @@ export default function NewClientPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Don't submit if auth is still loading
+    if (authLoading) {
+      return;
+    }
+
+    if (!teamId || !user?.user_id) {
+      alert('User or team information not available. Please refresh the page and try again.');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      if (!teamId || !user?.user_id) {
-        throw new Error('User or team information not available');
-      }
 
       // Prepare data for insertion
       const clientData: any = {
@@ -76,19 +83,27 @@ export default function NewClientPage() {
       const result = await createClient(clientData, user.user_id, teamId);
 
       if (result.error) {
-        throw result.error;
+        alert('Error creating client: ' + result.error);
+        setLoading(false);
+        return;
       }
 
       // Check for duplicates
       if (result.duplicate && result.matches && result.matches.length > 0) {
+        setLoading(false);
         const confirmed = window.confirm(
           `A similar client \"${(result.matches as any)[0].client_name}\" already exists. Do you want to create anyway?`
         );
 
         if (confirmed) {
+          setLoading(true);
           // Create with duplicate check skipped
           const forceResult = await createClient(clientData, user.user_id, teamId, { skipDuplicateCheck: true });
-          if (forceResult.error) throw forceResult.error;
+          if (forceResult.error) {
+            alert('Error creating client: ' + forceResult.error);
+            setLoading(false);
+            return;
+          }
           if (forceResult.data) {
             router.push(`/clients/${(forceResult.data as any).client_id}`);
           }
@@ -100,10 +115,35 @@ export default function NewClientPage() {
     } catch (error: any) {
       console.error('Error creating client:', error);
       alert('Error creating client: ' + error.message);
-    } finally {
       setLoading(false);
     }
   };
+
+  // Show error if auth loaded but user/team info is missing
+  if (!authLoading && (!user || !teamId)) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="py-8">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">Unable to Create Client</h2>
+              <p className="text-gray-600 mb-4">
+                User or team information is not available. This might happen if you don't have proper access permissions.
+              </p>
+              <div className="flex gap-4 justify-center">
+                <Button variant="outline" onClick={() => router.back()}>
+                  Go Back
+                </Button>
+                <Button onClick={() => router.push('/dashboard')}>
+                  Go to Dashboard
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -301,12 +341,12 @@ export default function NewClientPage() {
               type="button"
               variant="outline"
               onClick={() => router.back()}
-              disabled={loading}
+              disabled={loading || authLoading}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Creating...' : 'Create Client'}
+            <Button type="submit" disabled={loading || authLoading}>
+              {authLoading ? 'Loading...' : loading ? 'Creating...' : 'Create Client'}
             </Button>
           </div>
         </div>
