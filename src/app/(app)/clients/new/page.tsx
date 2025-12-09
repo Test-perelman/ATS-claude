@@ -11,7 +11,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function NewClientPage() {
   const router = useRouter();
-  const { user, teamId, loading: authLoading } = useAuth();
+  const { user, teamId } = useAuth();
   const [loading, setLoading] = useState(false);
 
   // Form state
@@ -47,20 +47,15 @@ export default function NewClientPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Don't submit if auth is still loading
-    if (authLoading) {
-      return;
-    }
-
-    if (!teamId || !user?.user_id) {
-      alert('User or team information not available. Please refresh the page and try again.');
+    // Type guard (should never happen due to component-level checks)
+    if (!user || !teamId) {
+      console.error('[ClientNew] User or teamId is null, this should not happen');
       return;
     }
 
     setLoading(true);
 
     try {
-
       // Prepare data for insertion
       const clientData: any = {
         client_name: formData.client_name,
@@ -118,32 +113,6 @@ export default function NewClientPage() {
       setLoading(false);
     }
   };
-
-  // Show error if auth loaded but user/team info is missing
-  if (!authLoading && (!user || !teamId)) {
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardContent className="py-8">
-            <div className="text-center">
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Unable to Create Client</h2>
-              <p className="text-gray-600 mb-4">
-                User or team information is not available. This might happen if you don't have proper access permissions.
-              </p>
-              <div className="flex gap-4 justify-center">
-                <Button variant="outline" onClick={() => router.back()}>
-                  Go Back
-                </Button>
-                <Button onClick={() => router.push('/dashboard')}>
-                  Go to Dashboard
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -341,12 +310,12 @@ export default function NewClientPage() {
               type="button"
               variant="outline"
               onClick={() => router.back()}
-              disabled={loading || authLoading}
+              disabled={loading}
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || authLoading}>
-              {authLoading ? 'Loading...' : loading ? 'Creating...' : 'Create Client'}
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Creating...' : 'Create Client'}
             </Button>
           </div>
         </div>
