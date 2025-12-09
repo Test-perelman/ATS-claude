@@ -33,7 +33,8 @@
       "Bash(del nul:*)",
       "Bash(.gitignore)",
       "Bash(curl:*)",
-      "Bash(tree -L 3 \"d:\\Perelman-ATS-claude\\src\")"
+      "Bash(tree -L 3 \"d:\\Perelman-ATS-claude\\src\")",
+      "Bash(npx ts-node:*)"
     ],
     "deny": [],
     "ask": []

@@ -117,7 +117,7 @@ export default function BenchPage() {
                         </Link>
                         <div className="text-xs text-gray-500">{candidate.email_address}</div>
                       </td>
-                      <td className="px-4 py-3 text-sm">{candidate.primary_skills || '-'}</td>
+                      <td className="px-4 py-3 text-sm">{candidate.skills_primary || '-'}</td>
                       <td className="px-4 py-3 text-sm">
                         <Badge variant="info">{candidate.visa_status?.visa_name || 'N/A'}</Badge>
                       </td>

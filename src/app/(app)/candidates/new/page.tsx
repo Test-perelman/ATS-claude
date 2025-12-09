@@ -25,7 +25,7 @@ export default function NewCandidatePage() {
     last_name: '',
     email_address: '',
     phone_number: '',
-    linkedin_url: '',
+    linkedin_url: 'https://www.linkedin.com/in/',
     current_location: '',
     relocation_preference: '',
     visa_status_id: '',
@@ -64,6 +64,16 @@ export default function NewCandidatePage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+
+    // Ensure LinkedIn URL always starts with the prefix
+    if (name === 'linkedin_url') {
+      const prefix = 'https://www.linkedin.com/in/';
+      if (!value.startsWith(prefix)) {
+        setFormData(prev => ({ ...prev, [name]: prefix }));
+        return;
+      }
+    }
+
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
