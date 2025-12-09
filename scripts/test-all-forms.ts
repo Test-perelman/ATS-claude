@@ -39,17 +39,18 @@ const testData = {
   },
   client: {
     client_name: 'Test Corp Industries',
-    contact_name: 'Jane TestClient',
-    contact_email: `test.client.${Date.now()}@testcorp.com`,
-    contact_phone: '555-0456',
+    primary_contact_name: 'Jane TestClient',
+    primary_contact_email: `test.client.${Date.now()}@testcorp.com`,
+    primary_contact_phone: '555-0456',
     industry: 'Technology',
-    address: '123 Tech Street, Suite 400, San Francisco, CA 94105',
+    address: '123 Tech Street, Suite 400',
+    city: 'San Francisco',
+    state: 'CA',
+    zip_code: '94105',
     website: 'https://www.testcorp.com',
-    preferred_communication_mode: 'Email',
     payment_terms: 'Net 30',
     payment_terms_days: 30,
     is_active: true,
-    notes: 'Major technology company, excellent payment history',
   },
   vendor: {
     vendor_name: 'Test Staffing Solutions',
@@ -66,35 +67,31 @@ const testData = {
   },
   requirement: {
     job_title: 'Senior Full Stack Developer',
-    client_billing_rate: 125.00,
-    candidate_pay_rate: 85.00,
-    max_submissions: 5,
-    required_skills: 'Java, Spring Boot, React, AWS, Microservices',
-    preferred_skills: 'Kubernetes, Docker, CI/CD, GraphQL',
-    job_location: 'San Francisco, CA',
+    bill_rate_range_min: 85.00,
+    bill_rate_range_max: 125.00,
+    skills_required: 'Java, Spring Boot, React, AWS, Microservices, Kubernetes, Docker, CI/CD, GraphQL',
+    location: 'San Francisco, CA',
     work_mode: 'Hybrid' as const,
-    experience_required_years: 8,
-    contract_duration_months: 12,
-    contract_type: 'C2C' as const,
-    visa_requirement: 'US Citizen or Green Card preferred',
-    job_description: 'We are looking for an experienced Full Stack Developer to join our team and work on cutting-edge cloud-native applications. The ideal candidate will have strong experience with Java backend development and modern React frontend development.',
-    responsibility_description: '- Design and develop microservices using Java and Spring Boot\n- Build responsive user interfaces with React\n- Deploy and maintain applications on AWS\n- Collaborate with cross-functional teams\n- Mentor junior developers',
-    additional_notes: 'This is a high-priority position with potential for extension.',
-    requirement_status: 'open' as const,
+    duration: '12 months',
+    employment_type: 'C2C' as const,
+    job_description: 'We are looking for an experienced Full Stack Developer to join our team and work on cutting-edge cloud-native applications. The ideal candidate will have strong experience with Java backend development and modern React frontend development. Must have 8+ years of experience. Visa requirement: US Citizen or Green Card preferred.',
+    notes: 'This is a high-priority position with potential for extension.',
+    status: 'open' as const,
+    received_date: new Date().toISOString().split('T')[0],
   },
   submission: {
     submission_status: 'submitted' as const,
-    submission_notes: 'Strong match for the position. Candidate has all required skills and 2 years additional experience.',
-    expected_response_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 days from now
+    notes: 'Strong match for the position. Candidate has all required skills and 2 years additional experience.',
+    submitted_at: new Date().toISOString(),
   },
   interview: {
-    interview_type: 'Technical' as const,
-    interview_mode: 'Video Call' as const,
-    interview_round: 1,
-    interview_location: 'Zoom Meeting',
-    duration_minutes: 60,
-    interview_notes: 'First round technical interview. Focus on Java, Spring Boot, and system design.',
-    interviewer_feedback: '',
+    interview_round: 'Round 1',
+    scheduled_time: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days from now
+    interviewer_name: 'Sarah Technical Lead',
+    interviewer_email: 'sarah.tech@testcorp.com',
+    interview_mode: 'Video',
+    meeting_link: 'https://zoom.us/j/123456789',
+    feedback_notes: 'First round technical interview. Focus on Java, Spring Boot, and system design.',
   },
 };
 
@@ -152,7 +149,7 @@ async function testClientCreation(teamId: string, userId: string) {
 
     console.log('✅ Client created successfully:', data.client_id);
     console.log('   Name:', data.client_name);
-    console.log('   Contact:', data.contact_email);
+    console.log('   Contact:', data.primary_contact_email);
     return data;
   } catch (err) {
     console.error('❌ Unexpected error:', err);
@@ -195,7 +192,7 @@ async function testRequirementCreation(teamId: string, userId: string, clientId:
 
   try {
     const { data, error } = await supabase
-      .from('requirements')
+      .from('job_requirements')
       .insert({
         ...testData.requirement,
         client_id: clientId,
@@ -211,9 +208,9 @@ async function testRequirementCreation(teamId: string, userId: string, clientId:
       return null;
     }
 
-    console.log('✅ Requirement created successfully:', data.requirement_id);
+    console.log('✅ Requirement created successfully:', data.job_id);
     console.log('   Job Title:', data.job_title);
-    console.log('   Location:', data.job_location);
+    console.log('   Location:', data.location);
     console.log('   Work Mode:', data.work_mode);
     return data;
   } catch (err) {
@@ -226,7 +223,7 @@ async function testSubmissionCreation(
   teamId: string,
   userId: string,
   candidateId: string,
-  requirementId: string,
+  jobId: string,
   vendorId: string
 ) {
   console.log('\n📤 Testing Submission Creation...');
@@ -237,11 +234,8 @@ async function testSubmissionCreation(
       .insert({
         ...testData.submission,
         candidate_id: candidateId,
-        requirement_id: requirementId,
-        vendor_id: vendorId,
+        job_id: jobId,
         team_id: teamId,
-        created_by: userId,
-        updated_by: userId,
       })
       .select()
       .single();
@@ -253,7 +247,7 @@ async function testSubmissionCreation(
 
     console.log('✅ Submission created successfully:', data.submission_id);
     console.log('   Status:', data.submission_status);
-    console.log('   Expected Response:', data.expected_response_date);
+    console.log('   Submitted At:', data.submitted_at);
     return data;
   } catch (err) {
     console.error('❌ Unexpected error:', err);
@@ -268,19 +262,13 @@ async function testInterviewCreation(
 ) {
   console.log('\n🎤 Testing Interview Creation...');
 
-  const interviewDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000); // 3 days from now
-
   try {
     const { data, error } = await supabase
       .from('interviews')
       .insert({
         ...testData.interview,
         submission_id: submissionId,
-        interview_date: interviewDate.toISOString().split('T')[0],
-        interview_time: '14:00:00',
         team_id: teamId,
-        created_by: userId,
-        updated_by: userId,
       })
       .select()
       .single();
@@ -291,9 +279,9 @@ async function testInterviewCreation(
     }
 
     console.log('✅ Interview created successfully:', data.interview_id);
-    console.log('   Type:', data.interview_type);
+    console.log('   Round:', data.interview_round);
     console.log('   Mode:', data.interview_mode);
-    console.log('   Date:', data.interview_date);
+    console.log('   Scheduled:', data.scheduled_time);
     return data;
   } catch (err) {
     console.error('❌ Unexpected error:', err);
@@ -401,7 +389,7 @@ async function runAllTests() {
     teamId,
     userId,
     candidate.candidate_id,
-    requirement.requirement_id,
+    requirement.job_id,
     vendor.vendor_id
   );
   if (!submission) {
@@ -422,7 +410,7 @@ async function runAllTests() {
   console.log(`   Candidate: ${candidate.first_name} ${candidate.last_name} (${candidate.candidate_id})`);
   console.log(`   Client: ${client.client_name} (${client.client_id})`);
   console.log(`   Vendor: ${vendor.vendor_name} (${vendor.vendor_id})`);
-  console.log(`   Requirement: ${requirement.job_title} (${requirement.requirement_id})`);
+  console.log(`   Requirement: ${requirement.job_title} (${requirement.job_id})`);
   console.log(`   Submission: ${submission.submission_id}`);
   console.log(`   Interview: ${interview.interview_id}`);
   console.log('\n🎉 You can now verify these records in the application UI!');
