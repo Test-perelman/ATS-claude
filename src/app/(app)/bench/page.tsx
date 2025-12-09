@@ -130,9 +130,7 @@ export default function BenchPage() {
                         {candidate.bench_added_date ? formatDate(candidate.bench_added_date) : '-'}
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {candidate.current_city && candidate.current_state
-                          ? `${candidate.current_city}, ${candidate.current_state}`
-                          : '-'}
+                        {candidate.current_location || '-'}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <Link href={`/candidates/${candidate.candidate_id}`}>
