@@ -1,10 +1,17 @@
 /**
  * Vendor API Functions
+ *
+ * Multi-Tenant Architecture:
+ * - All create/update/delete operations require authenticated userId
+ * - team_id is ALWAYS extracted server-side from user context
+ * - NEVER trust team_id from client requests
+ * - Master admins can optionally specify target team via filters
  */
 
 import { supabase, typedInsert, typedUpdate } from '@/lib/supabase/client';
 import { findDuplicateVendors, mergeEntityData } from '@/lib/utils/deduplication';
 import { createAuditLog, createActivity } from '@/lib/utils/audit';
+import { getTeamContext, applyTeamFilter, validateTeamAccess } from '@/lib/utils/team-context';
 import type { Database } from '@/types/database';
 import type { ApiResponse, ApiVoidResponse } from '@/types/api';
 
@@ -19,21 +26,26 @@ type CreateVendorResponse =
 
 /**
  * Get all vendors with filters
- * @param filters.teamId - Filter by team (for master admin)
- * @param filters.userTeamId - Current user's team ID (for non-master admin filtering)
- * @param filters.isMasterAdmin - Whether current user is master admin
+ *
+ * @param userId - Authenticated user ID (REQUIRED for team scoping)
+ * @param filters - Optional filters (search, status, pagination)
+ * @param filters.teamId - For master admin: specify which team to view (null = all teams)
  */
-export async function getVendors(filters?: {
-    search?: string;
-    tierLevel?: string;
-    isActive?: boolean;
-    limit?: number;
-    offset?: number;
-    teamId?: string;
-    userTeamId?: string;
-    isMasterAdmin?: boolean;
-}): Promise<ApiResponse<{ vendors: Vendor[]; count: number | null }>> {
+export async function getVendors(
+    userId: string,
+    filters?: {
+        search?: string;
+        tierLevel?: string;
+        isActive?: boolean;
+        limit?: number;
+        offset?: number;
+        teamId?: string; // Only used by master admin to filter specific team
+    }
+): Promise<ApiResponse<{ vendors: Vendor[]; count: number | null }>> {
     try {
+        // Apply team filtering based on user's context
+        const teamFilters = await applyTeamFilter(userId, filters);
+
         let query = supabase
             .from('vendors')
             .select(`
@@ -41,14 +53,11 @@ export async function getVendors(filters?: {
                 team:team_id(team_id, team_name, company_name)
             `, { count: 'exact' });
 
-        // Team filtering logic
-        if (filters?.isMasterAdmin) {
-            if (filters?.teamId) {
-                query = query.eq('team_id', filters.teamId);
-            }
-        } else if (filters?.userTeamId) {
-            query = query.eq('team_id', filters.userTeamId);
+        // Apply team filter
+        if (teamFilters.teamId) {
+            query = query.eq('team_id', teamFilters.teamId);
         }
+        // If teamFilters.teamId is null, master admin sees all teams
 
         if (filters?.search) {
             query = query.or(
@@ -81,8 +90,8 @@ export async function getVendors(filters?: {
         }
 
         return { data: { vendors: data || [], count } };
-    } catch (error) {
-        return { error: 'Failed to fetch vendors' };
+    } catch (error: any) {
+        return { error: error.message || 'Failed to fetch vendors' };
     }
 }
 
@@ -106,21 +115,36 @@ export async function getVendorById(vendorId: string): Promise<ApiResponse<any>>
         }
 
         return { data };
-    } catch (error) {
-        return { error: 'Failed to fetch vendor' };
+    } catch (error: any) {
+        return { error: error.message || 'Failed to fetch vendor' };
     }
 }
 
 /**
  * Create a new vendor with deduplication
+ *
+ * @param vendorData - Vendor data (WITHOUT team_id - it will be set server-side)
+ * @param userId - Authenticated user ID (REQUIRED)
+ * @param options - Optional configuration
+ *
+ * Security:
+ * - team_id is ALWAYS extracted from authenticated user
+ * - Client cannot manipulate team_id
+ * - RLS policies enforce team isolation at database level
  */
 export async function createVendor(
-    vendorData: VendorInsert,
-    userId?: string,
-    teamId?: string,
+    vendorData: Omit<VendorInsert, 'team_id' | 'created_by' | 'updated_by'>,
+    userId: string,
     options?: { skipDuplicateCheck?: boolean }
 ): Promise<CreateVendorResponse> {
     try {
+        // Extract team context from authenticated user (SERVER-SIDE)
+        const teamContext = await getTeamContext(userId);
+
+        if (!teamContext.teamId) {
+            return { error: 'Cannot create vendor: User team not found. Please contact your administrator.' };
+        }
+
         // Check for duplicates unless explicitly skipped
         if (!options?.skipDuplicateCheck) {
             const duplicateCheck = await findDuplicateVendors({
@@ -139,12 +163,12 @@ export async function createVendor(
             }
         }
 
-        // Create new vendor
+        // Create new vendor with server-controlled team_id
         const { data, error } = await typedInsert('vendors', {
             ...vendorData,
-            created_by: userId || null,
-            updated_by: userId || null,
-            team_id: teamId || null,
+            team_id: teamContext.teamId, // SERVER-CONTROLLED - never from client
+            created_by: userId,
+            updated_by: userId,
         });
 
         if (error) {
@@ -162,6 +186,7 @@ export async function createVendor(
             action: 'CREATE',
             newValue: data,
             userId,
+            teamId: data.team_id || undefined,
         });
 
         // Create activity
@@ -172,31 +197,51 @@ export async function createVendor(
             activityTitle: 'Vendor Created',
             activityDescription: `${data.vendor_name} was added to the system`,
             userId,
+            teamId: data.team_id || undefined,
         });
 
         return { data, duplicate: false };
-    } catch (error) {
-        return { error: 'Failed to create vendor' };
+    } catch (error: any) {
+        return { error: error.message || 'Failed to create vendor' };
     }
 }
 
 /**
  * Update an existing vendor
+ *
+ * @param vendorId - The vendor ID to update
+ * @param updates - Fields to update (team_id cannot be changed)
+ * @param userId - Authenticated user ID (REQUIRED)
+ *
+ * Security:
+ * - Validates user has access to the vendor's team
+ * - Master admin can update any team's vendors
+ * - Regular users can only update their own team's vendors
  */
 export async function updateVendor(
     vendorId: string,
-    updates: VendorUpdate,
-    userId?: string
+    updates: Omit<VendorUpdate, 'team_id' | 'updated_by'>,
+    userId: string
 ): Promise<ApiResponse<Vendor>> {
     try {
-        // Get current data for audit log
+        // Get current data for audit log and team validation
         const oldDataResult = await getVendorById(vendorId);
-        const oldData = 'data' in oldDataResult ? oldDataResult.data : null;
+        if ('error' in oldDataResult) {
+            return oldDataResult;
+        }
+        const oldData = oldDataResult.data;
 
-        // Update vendor
+        if (!oldData) {
+            return { error: 'Vendor not found' };
+        }
+
+        // Validate user has access to this vendor's team
+        await validateTeamAccess(userId, oldData.team_id);
+
+        // Update vendor (team_id cannot be changed)
         const { data, error } = await typedUpdate('vendors', 'vendor_id', vendorId, {
             ...updates,
-            updated_by: userId || null,
+            updated_by: userId,
         });
 
         if (error) {
@@ -215,6 +260,7 @@ export async function updateVendor(
             oldValue: oldData,
             newValue: data,
             userId,
+            teamId: data.team_id || undefined,
         });
 
         // Create activity for significant changes
@@ -227,22 +273,27 @@ export async function updateVendor(
                 activityTitle: 'Vendor Tier Updated',
                 activityDescription: `Tier changed from ${oldVendor?.tier_level} to ${updates.tier_level}`,
                 userId,
+                teamId: data.team_id || undefined,
             });
         }
 
         return { data };
-    } catch (error) {
-        return { error: 'Failed to update vendor' };
+    } catch (error: any) {
+        return { error: error.message || 'Failed to update vendor' };
     }
 }
 
 /**
  * Merge vendor data with existing record
+ *
+ * @param existingVendorId - The existing vendor ID
+ * @param newData - New data to merge
+ * @param userId - Authenticated user ID (REQUIRED)
  */
 export async function mergeVendor(
     existingVendorId: string,
-    newData: Partial<VendorInsert>,
-    userId?: string
+    newData: Partial<Omit<VendorInsert, 'team_id'>>,
+    userId: string
 ): Promise<ApiResponse<Vendor>> {
     try {
         // Get existing vendor
@@ -256,24 +307,45 @@ export async function mergeVendor(
             return { error: 'Failed to retrieve vendor' };
         }
 
+        // Validate user has access to this vendor's team
+        await validateTeamAccess(userId, result.data.team_id);
+
         // Merge data
         const merged = mergeEntityData(result.data, newData);
 
         // Update with merged data
         return updateVendor(existingVendorId, merged, userId);
-    } catch (error) {
-        return { error: 'Failed to merge vendor' };
+    } catch (error: any) {
+        return { error: error.message || 'Failed to merge vendor' };
     }
 }
 
 /**
  * Delete a vendor
+ *
+ * @param vendorId - The vendor ID to delete
+ * @param userId - Authenticated user ID (REQUIRED)
+ *
+ * Security:
+ * - Validates user has access to the vendor's team
+ * - Master admin can delete any team's vendors
+ * - Regular users can only delete their own team's vendors
  */
-export async function deleteVendor(vendorId: string, userId?: string): Promise<ApiVoidResponse> {
+export async function deleteVendor(vendorId: string, userId: string): Promise<ApiVoidResponse> {
     try {
-        // Get data for audit log
+        // Get data for audit log and team validation
         const result = await getVendorById(vendorId);
-        const vendorData = 'data' in result ? result.data : null;
+        if ('error' in result) {
+            return result;
+        }
+        const vendorData = result.data;
+
+        if (!vendorData) {
+            return { error: 'Vendor not found' };
+        }
+
+        // Validate user has access to this vendor's team
+        await validateTeamAccess(userId, vendorData.team_id);
 
         const { error } = await supabase
             .from('vendors')
@@ -284,19 +356,18 @@ export async function deleteVendor(vendorId: string, userId?: string): Promise<A
             return { error: error.message };
         }
 
-        if (vendorData) {
-            // Create audit log
-            await createAuditLog({
-                entityName: 'vendors',
-                entityId: vendorId,
-                action: 'DELETE',
-                oldValue: vendorData,
-                userId,
-            });
-        }
+        // Create audit log
+        await createAuditLog({
+            entityName: 'vendors',
+            entityId: vendorId,
+            action: 'DELETE',
+            oldValue: vendorData,
+            userId,
+            teamId: vendorData.team_id || undefined,
+        });
 
         return { data: true };
-    } catch (error) {
-        return { error: 'Failed to delete vendor' };
+    } catch (error: any) {
+        return { error: error.message || 'Failed to delete vendor' };
     }
 }

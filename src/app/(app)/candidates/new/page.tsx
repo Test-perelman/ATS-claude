@@ -14,7 +14,7 @@ import type { Database } from '@/types/database';
 
 export default function NewCandidatePage() {
   const router = useRouter();
-  const { user, teamId } = useAuth();
+  const { user } = useAuth(); // teamId no longer needed - handled server-side
   const [loading, setLoading] = useState(false);
   const [visaStatuses, setVisaStatuses] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -82,12 +82,12 @@ export default function NewCandidatePage() {
     setLoading(true);
 
     try {
-      if (!teamId || !user?.user_id) {
-        throw new Error('User or team information not available');
+      if (!user?.user_id) {
+        throw new Error('User authentication required. Please log in again.');
       }
 
-      // Prepare data for insertion with proper typing
-      const candidateData: Database['public']['Tables']['candidates']['Insert'] = {
+      // Prepare data for insertion (team_id will be set server-side)
+      const candidateData = {
         first_name: formData.first_name,
         last_name: formData.last_name,
         email_address: formData.email_address || null,
@@ -106,18 +106,28 @@ export default function NewCandidatePage() {
         bench_status: formData.bench_status,
         bench_added_date: formData.bench_status === 'on_bench' ? new Date().toISOString().split('T')[0] : null,
         notes_internal: formData.notes_internal || null,
-        team_id: teamId,
+        // team_id is NOT included - it will be set server-side from authenticated user
       };
 
-      const { data, error } = await createCandidate(candidateData, user.user_id);
+      // Call API with userId - team_id will be extracted server-side
+      const result = await createCandidate(candidateData, user.user_id);
 
-      if (error) throw error;
+      if ('error' in result) {
+        throw new Error(result.error);
+      }
 
-      // Redirect to candidate detail page
-      router.push(`/candidates/${data?.candidate_id}`);
+      if ('duplicate' in result && result.duplicate) {
+        // Handle duplicate - show matches to user
+        alert('Duplicate candidate found. Please review existing records.');
+        // TODO: Show duplicate modal with matches
+        return;
+      }
+
+      // Success - redirect to candidate detail page
+      router.push(`/candidates/${result.data.candidate_id}`);
     } catch (error: any) {
       console.error('Error creating candidate:', error);
-      alert('Error creating candidate: ' + error.message);
+      alert('Error creating candidate: ' + (error.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }

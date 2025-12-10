@@ -11,7 +11,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function NewClientPage() {
   const router = useRouter();
-  const { user, teamId } = useAuth();
+  const { user } = useAuth(); // teamId no longer needed - handled server-side
   const [loading, setLoading] = useState(false);
 
   // Form state
@@ -47,17 +47,16 @@ export default function NewClientPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Type guard (should never happen due to component-level checks)
-    if (!user || !teamId) {
-      console.error('[ClientNew] User or teamId is null, this should not happen');
+    if (!user?.user_id) {
+      alert('User authentication required. Please log in again.');
       return;
     }
 
     setLoading(true);
 
     try {
-      // Prepare data for insertion
-      const clientData: any = {
+      // Prepare data for insertion (team_id will be set server-side)
+      const clientData = {
         client_name: formData.client_name,
         industry: formData.industry || null,
         address: formData.address || null,
@@ -73,43 +72,45 @@ export default function NewClientPage() {
         website: formData.website || null,
         notes_internal: formData.notes_internal || null,
         is_active: formData.is_active,
+        // team_id is NOT included - it will be set server-side from authenticated user
       };
 
-      const result = await createClient(clientData, user.user_id, teamId);
+      // Call API with userId - team_id will be extracted server-side
+      const result = await createClient(clientData, user.user_id);
 
-      if (result.error) {
+      if ('error' in result && result.error) {
         alert('Error creating client: ' + result.error);
         setLoading(false);
         return;
       }
 
       // Check for duplicates
-      if (result.duplicate && result.matches && result.matches.length > 0) {
+      if ('duplicate' in result && result.duplicate && result.matches && result.matches.length > 0) {
         setLoading(false);
         const confirmed = window.confirm(
-          `A similar client \"${(result.matches as any)[0].client_name}\" already exists. Do you want to create anyway?`
+          `A similar client "${(result.matches as any)[0].client_name}" already exists. Do you want to create anyway?`
         );
 
         if (confirmed) {
           setLoading(true);
           // Create with duplicate check skipped
-          const forceResult = await createClient(clientData, user.user_id, teamId, { skipDuplicateCheck: true });
-          if (forceResult.error) {
+          const forceResult = await createClient(clientData, user.user_id, { skipDuplicateCheck: true });
+          if ('error' in forceResult && forceResult.error) {
             alert('Error creating client: ' + forceResult.error);
             setLoading(false);
             return;
           }
-          if (forceResult.data) {
-            router.push(`/clients/${(forceResult.data as any).client_id}`);
+          if ('data' in forceResult && forceResult.data) {
+            router.push(`/clients/${forceResult.data.client_id}`);
           }
         }
-      } else if (result.data) {
+      } else if ('data' in result && result.data) {
         // Redirect to client detail page
-        router.push(`/clients/${(result.data as any).client_id}`);
+        router.push(`/clients/${result.data.client_id}`);
       }
     } catch (error: any) {
       console.error('Error creating client:', error);
-      alert('Error creating client: ' + error.message);
+      alert('Error creating client: ' + (error.message || 'Unknown error'));
       setLoading(false);
     }
   };

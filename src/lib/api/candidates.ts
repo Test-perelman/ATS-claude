@@ -1,10 +1,17 @@
 /**
  * Candidate API Functions
+ *
+ * Multi-Tenant Architecture:
+ * - All create/update/delete operations require authenticated userId
+ * - team_id is ALWAYS extracted server-side from user context
+ * - NEVER trust team_id from client requests
+ * - Master admins can optionally specify target team via filters
  */
 
 import { supabase, typedInsert, typedUpdate } from '@/lib/supabase/client';
 import { findDuplicateCandidates, mergeCandidateData } from '@/lib/utils/deduplication';
 import { createAuditLog, createActivity } from '@/lib/utils/audit';
+import { getTeamContext, applyTeamFilter, validateTeamAccess } from '@/lib/utils/team-context';
 import type { Database } from '@/types/database';
 import type { ApiResponse, ApiArrayResponse, ApiVoidResponse } from '@/types/api';
 
@@ -24,21 +31,36 @@ type CreateCandidateResponse =
 
 /**
  * Get all candidates with filters
- * @param filters.teamId - Filter by team (for master admin). If not provided, master admin sees all.
- * @param filters.userTeamId - Current user's team ID (for non-master admin filtering)
- * @param filters.isMasterAdmin - Whether current user is master admin
+ *
+ * @param userId - Authenticated user ID (REQUIRED for team scoping)
+ * @param filters - Optional filters (search, status, pagination)
+ * @param filters.teamId - For master admin: specify which team to view (null = all teams)
+ *
+ * @example
+ * // Regular user - automatically scoped to their team
+ * const result = await getCandidates(userId, { search: 'john' });
+ *
+ * // Master admin - view specific team
+ * const result = await getCandidates(masterAdminUserId, { teamId: 'team-123' });
+ *
+ * // Master admin - view all teams
+ * const result = await getCandidates(masterAdminUserId, {});
  */
-export async function getCandidates(filters?: {
-  search?: string;
-  benchStatus?: string;
-  visaStatus?: string;
-  limit?: number;
-  offset?: number;
-  teamId?: string;
-  userTeamId?: string;
-  isMasterAdmin?: boolean;
-}): Promise<ApiResponse<CandidatesWithCount>> {
+export async function getCandidates(
+  userId: string,
+  filters?: {
+    search?: string;
+    benchStatus?: string;
+    visaStatus?: string;
+    limit?: number;
+    offset?: number;
+    teamId?: string; // Only used by master admin to filter specific team
+  }
+): Promise<ApiResponse<CandidatesWithCount>> {
   try {
+    // Apply team filtering based on user's context
+    const teamFilters = await applyTeamFilter(userId, filters);
+
     let query = supabase
       .from('candidates')
       .select(`
@@ -49,17 +71,12 @@ export async function getCandidates(filters?: {
         team:team_id(team_id, team_name, company_name)
       `, { count: 'exact' });
 
-    // Team filtering logic
-    if (filters?.isMasterAdmin) {
-      // Master admin can filter by specific team or see all
-      if (filters?.teamId) {
-        query = query.eq('team_id', filters.teamId);
-      }
-      // If no teamId specified, master admin sees all teams
-    } else if (filters?.userTeamId) {
-      // Regular users only see their team's data
-      query = query.eq('team_id', filters.userTeamId);
+    // Apply team filter
+    if (teamFilters.teamId) {
+      // Specific team filter (regular user or master admin with team selection)
+      query = query.eq('team_id', teamFilters.teamId);
     }
+    // If teamFilters.teamId is null, master admin sees all teams
 
     if (filters?.search) {
       query = query.or(
@@ -129,13 +146,37 @@ export async function getCandidateById(candidateId: string): Promise<ApiResponse
 
 /**
  * Create a new candidate with deduplication
+ *
+ * @param candidateData - Candidate data (WITHOUT team_id - it will be set server-side)
+ * @param userId - Authenticated user ID (REQUIRED)
+ * @param options - Optional configuration
+ *
+ * @example
+ * ```ts
+ * const result = await createCandidate(
+ *   { first_name: 'John', last_name: 'Doe', ... },
+ *   authenticatedUserId
+ * );
+ * ```
+ *
+ * Security:
+ * - team_id is ALWAYS extracted from authenticated user
+ * - Client cannot manipulate team_id
+ * - RLS policies enforce team isolation at database level
  */
 export async function createCandidate(
-  candidateData: CandidateInsert,
-  userId?: string,
+  candidateData: Omit<CandidateInsert, 'team_id' | 'created_by' | 'updated_by'>,
+  userId: string,
   options?: { skipDuplicateCheck?: boolean }
 ): Promise<CreateCandidateResponse> {
   try {
+    // Extract team context from authenticated user (SERVER-SIDE)
+    const teamContext = await getTeamContext(userId);
+
+    if (!teamContext.teamId) {
+      return { error: 'Cannot create candidate: User team not found. Please contact your administrator.' };
+    }
+
     // Check for duplicates unless explicitly skipped
     if (!options?.skipDuplicateCheck) {
       const duplicateCheck = await findDuplicateCandidates({
@@ -156,11 +197,12 @@ export async function createCandidate(
       }
     }
 
-    // Create new candidate
+    // Create new candidate with server-controlled team_id
     const { data, error } = await typedInsert('candidates', {
       ...candidateData,
-      created_by: userId || null,
-      updated_by: userId || null,
+      team_id: teamContext.teamId, // SERVER-CONTROLLED - never from client
+      created_by: userId,
+      updated_by: userId,
     });
 
     if (error) {
@@ -191,28 +233,47 @@ export async function createCandidate(
     }
 
     return { data: data as Candidate, duplicate: false };
-  } catch (err) {
-    return { error: 'Failed to create candidate' };
+  } catch (err: any) {
+    return { error: err.message || 'Failed to create candidate' };
   }
 }
 
 /**
  * Update an existing candidate
+ *
+ * @param candidateId - The candidate ID to update
+ * @param updates - Fields to update (team_id cannot be changed)
+ * @param userId - Authenticated user ID (REQUIRED)
+ *
+ * Security:
+ * - Validates user has access to the candidate's team
+ * - Master admin can update any team's candidates
+ * - Regular users can only update their own team's candidates
  */
 export async function updateCandidate(
   candidateId: string,
-  updates: CandidateUpdate,
-  userId?: string
+  updates: Omit<CandidateUpdate, 'team_id' | 'updated_by'>,
+  userId: string
 ): Promise<ApiResponse<Candidate>> {
   try {
-    // Get current data for audit log
+    // Get current data for audit log and team validation
     const oldDataResult = await getCandidateById(candidateId);
-    const oldData = 'data' in oldDataResult ? oldDataResult.data : null;
+    if ('error' in oldDataResult) {
+      return oldDataResult;
+    }
+    const oldData = oldDataResult.data;
 
-    // Update candidate
+    if (!oldData) {
+      return { error: 'Candidate not found' };
+    }
+
+    // Validate user has access to this candidate's team
+    await validateTeamAccess(userId, oldData.team_id);
+
+    // Update candidate (team_id cannot be changed)
     const { data, error } = await typedUpdate('candidates', 'candidate_id', candidateId, {
       ...updates,
-      updated_by: userId || null,
+      updated_by: userId,
     });
 
     if (error) {
@@ -251,11 +312,15 @@ export async function updateCandidate(
 
 /**
  * Merge candidate data with existing record
+ *
+ * @param existingCandidateId - The existing candidate ID
+ * @param newData - New data to merge
+ * @param userId - Authenticated user ID (REQUIRED)
  */
 export async function mergeCandidate(
   existingCandidateId: string,
-  newData: Partial<CandidateInsert>,
-  userId?: string
+  newData: Partial<Omit<CandidateInsert, 'team_id'>>,
+  userId: string
 ): Promise<ApiResponse<Candidate>> {
   try {
     // Get existing candidate
@@ -270,24 +335,45 @@ export async function mergeCandidate(
       return { error: 'Candidate not found' };
     }
 
+    // Validate user has access to this candidate's team
+    await validateTeamAccess(userId, existing.team_id);
+
     // Merge data
     const merged = mergeCandidateData(existing, newData);
 
     // Update with merged data
     return updateCandidate(existingCandidateId, merged, userId);
-  } catch (err) {
-    return { error: 'Failed to merge candidate data' };
+  } catch (err: any) {
+    return { error: err.message || 'Failed to merge candidate data' };
   }
 }
 
 /**
  * Delete a candidate
+ *
+ * @param candidateId - The candidate ID to delete
+ * @param userId - Authenticated user ID (REQUIRED)
+ *
+ * Security:
+ * - Validates user has access to the candidate's team
+ * - Master admin can delete any team's candidates
+ * - Regular users can only delete their own team's candidates
  */
-export async function deleteCandidate(candidateId: string, userId?: string): Promise<ApiVoidResponse> {
+export async function deleteCandidate(candidateId: string, userId: string): Promise<ApiVoidResponse> {
   try {
-    // Get data for audit log
+    // Get data for audit log and team validation
     const candidateResult = await getCandidateById(candidateId);
-    const candidateData = 'data' in candidateResult ? candidateResult.data : null;
+    if ('error' in candidateResult) {
+      return candidateResult;
+    }
+    const candidateData = candidateResult.data;
+
+    if (!candidateData) {
+      return { error: 'Candidate not found' };
+    }
+
+    // Validate user has access to this candidate's team
+    await validateTeamAccess(userId, candidateData.team_id);
 
     const { error } = await supabase
       .from('candidates')
@@ -298,35 +384,34 @@ export async function deleteCandidate(candidateId: string, userId?: string): Pro
       return { error: error.message };
     }
 
-    if (candidateData) {
-      // Create audit log
-      await createAuditLog({
-        entityName: 'candidates',
-        entityId: candidateId,
-        action: 'DELETE',
-        oldValue: candidateData,
-        userId,
-      });
-    }
+    // Create audit log
+    await createAuditLog({
+      entityName: 'candidates',
+      entityId: candidateId,
+      action: 'DELETE',
+      oldValue: candidateData,
+      userId,
+      teamId: candidateData.team_id || undefined,
+    });
 
     return { data: true };
-  } catch (err) {
-    return { error: 'Failed to delete candidate' };
+  } catch (err: any) {
+    return { error: err.message || 'Failed to delete candidate' };
   }
 }
 
 /**
  * Get candidates on bench
  */
-export async function getBenchCandidates(): Promise<ApiResponse<CandidatesWithCount>> {
-  return getCandidates({ benchStatus: 'on_bench' });
+export async function getBenchCandidates(userId: string): Promise<ApiResponse<CandidatesWithCount>> {
+  return getCandidates(userId, { benchStatus: 'on_bench' });
 }
 
 /**
  * Get available candidates
  */
-export async function getAvailableCandidates(): Promise<ApiResponse<CandidatesWithCount>> {
-  return getCandidates({ benchStatus: 'available' });
+export async function getAvailableCandidates(userId: string): Promise<ApiResponse<CandidatesWithCount>> {
+  return getCandidates(userId, { benchStatus: 'available' });
 }
 
 /**
@@ -334,8 +419,8 @@ export async function getAvailableCandidates(): Promise<ApiResponse<CandidatesWi
  */
 export async function addToBench(
   candidateId: string,
-  notes?: string,
-  userId?: string
+  userId: string,
+  notes?: string
 ): Promise<ApiResponse<Candidate>> {
   try {
     // Update candidate status
@@ -382,8 +467,8 @@ export async function addToBench(
  */
 export async function removeFromBench(
   candidateId: string,
-  reason: string,
-  userId?: string
+  userId: string,
+  reason: string
 ): Promise<ApiResponse<Candidate>> {
   try {
     // Update candidate status
@@ -437,21 +522,42 @@ export async function removeFromBench(
 
 /**
  * Search candidates by skills
+ *
+ * @param userId - Authenticated user ID (REQUIRED for team scoping)
+ * @param skills - Skills to search for
+ *
+ * Security:
+ * - Results are automatically scoped to user's team
+ * - Master admin can search across all teams
  */
-export async function searchCandidatesBySkills(skills: string): Promise<ApiArrayResponse<Candidate>> {
+export async function searchCandidatesBySkills(
+  userId: string,
+  skills: string
+): Promise<ApiArrayResponse<Candidate>> {
   try {
-    const { data, error } = await supabase
+    // Apply team filtering
+    const teamFilters = await applyTeamFilter(userId);
+
+    let query = supabase
       .from('candidates')
       .select('*')
-      .or(`skills_primary.ilike.%${skills}%,skills_secondary.ilike.%${skills}%`)
-      .order('total_experience_years', { ascending: false });
+      .or(`skills_primary.ilike.%${skills}%,skills_secondary.ilike.%${skills}%`);
+
+    // Apply team filter
+    if (teamFilters.teamId) {
+      query = query.eq('team_id', teamFilters.teamId);
+    }
+
+    query = query.order('total_experience_years', { ascending: false });
+
+    const { data, error } = await query;
 
     if (error) {
       return { error: error.message };
     }
 
     return { data: data as Candidate[] };
-  } catch (err) {
-    return { error: 'Failed to search candidates' };
+  } catch (err: any) {
+    return { error: err.message || 'Failed to search candidates' };
   }
 }
