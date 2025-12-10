@@ -14,7 +14,7 @@ import { formatDate, formatPhoneNumber } from '@/lib/utils/format';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function CandidatesPage() {
-  const { isMasterAdmin, teamId } = useAuth();
+  const { user, isMasterAdmin, teamId } = useAuth();
   const [candidates, setCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -22,17 +22,22 @@ export default function CandidatesPage() {
   const [teamFilter, setTeamFilter] = useState('');
 
   useEffect(() => {
-    loadCandidates();
-  }, [search, benchFilter, teamFilter, isMasterAdmin, teamId]);
+    if (user?.user_id) {
+      loadCandidates();
+    }
+  }, [search, benchFilter, teamFilter, isMasterAdmin, teamId, user]);
 
   async function loadCandidates() {
+    if (!user?.user_id) {
+      console.error('User not authenticated');
+      return;
+    }
+
     setLoading(true);
-    const result = await getCandidates({
+    const result = await getCandidates(user.user_id, {
       search: search || undefined,
       benchStatus: benchFilter || undefined,
       teamId: teamFilter || undefined,
-      userTeamId: teamId || undefined,
-      isMasterAdmin,
     });
     if ('error' in result) {
       console.error('Error loading candidates:', result.error);

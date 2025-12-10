@@ -8,19 +8,28 @@ import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { getCandidates } from '@/lib/api/candidates';
 import { formatDate } from '@/lib/utils/format';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function BenchPage() {
+  const { user } = useAuth();
   const [candidates, setCandidates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [benchStatusFilter, setBenchStatusFilter] = useState('on_bench');
 
   useEffect(() => {
-    loadBenchCandidates();
-  }, [benchStatusFilter]);
+    if (user?.user_id) {
+      loadBenchCandidates();
+    }
+  }, [benchStatusFilter, user]);
 
   async function loadBenchCandidates() {
+    if (!user?.user_id) {
+      console.error('User not authenticated');
+      return;
+    }
+
     setLoading(true);
-    const result = await getCandidates({
+    const result = await getCandidates(user.user_id, {
       benchStatus: benchStatusFilter || undefined,
     });
     if ('error' in result) {

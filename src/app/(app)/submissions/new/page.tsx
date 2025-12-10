@@ -14,7 +14,7 @@ import { useAuth } from '@/lib/contexts/AuthContext';
 
 function NewSubmissionForm() {
   const router = useRouter();
-  const { user, teamId } = useAuth();
+  const { user, teamId, isMasterAdmin } = useAuth();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [candidates, setCandidates] = useState<any[]>([]);
@@ -34,9 +34,11 @@ function NewSubmissionForm() {
   });
 
   useEffect(() => {
-    loadCandidates();
-    loadJobs();
-  }, []);
+    if (user?.user_id) {
+      loadCandidates();
+      loadJobs();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (formData.candidate_id) {
@@ -73,7 +75,12 @@ function NewSubmissionForm() {
   }, [formData.bill_rate_offered, formData.pay_rate_offered]);
 
   async function loadCandidates() {
-    const result = await getCandidates();
+    if (!user?.user_id) {
+      console.error('User not authenticated');
+      return;
+    }
+
+    const result = await getCandidates(user.user_id);
     if ('error' in result) {
       console.error('Error loading candidates:', result.error);
       setCandidates([]);
@@ -83,7 +90,11 @@ function NewSubmissionForm() {
   }
 
   async function loadJobs() {
-    const result = await getJobRequirements({ status: 'open' });
+    const result = await getJobRequirements({
+      status: 'open',
+      userTeamId: teamId || undefined,
+      isMasterAdmin: isMasterAdmin || false,
+    });
     if ('error' in result) {
       console.error('Error loading jobs:', result.error);
       setJobs([]);
