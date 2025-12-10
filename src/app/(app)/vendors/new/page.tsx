@@ -81,7 +81,7 @@ export default function NewVendorPage() {
         is_active: formData.is_active,
       };
 
-      const result = await createVendor(vendorData, user.user_id, teamId);
+      const result = await createVendor(vendorData, user.user_id);
 
       if (result.error) {
         throw result.error;
@@ -95,7 +95,7 @@ export default function NewVendorPage() {
 
         if (confirmed) {
           // Create with duplicate check skipped
-          const forceResult = await createVendor(vendorData, user.user_id, teamId, { skipDuplicateCheck: true });
+          const forceResult = await createVendor(vendorData, user.user_id, { skipDuplicateCheck: true });
           if (forceResult.error) throw forceResult.error;
           if (forceResult.data) {
             router.push(`/vendors/${(forceResult.data as any).vendor_id}`);

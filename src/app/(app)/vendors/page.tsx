@@ -14,7 +14,7 @@ import { formatDate, formatPhoneNumber } from '@/lib/utils/format';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function VendorsPage() {
-  const { isMasterAdmin, teamId } = useAuth();
+  const { user, isMasterAdmin, teamId } = useAuth();
   const [vendors, setVendors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -23,18 +23,23 @@ export default function VendorsPage() {
   const [teamFilter, setTeamFilter] = useState('');
 
   useEffect(() => {
-    loadVendors();
-  }, [search, tierFilter, statusFilter, teamFilter, isMasterAdmin, teamId]);
+    if (user?.user_id) {
+      loadVendors();
+    }
+  }, [search, tierFilter, statusFilter, teamFilter, isMasterAdmin, teamId, user]);
 
   async function loadVendors() {
+    if (!user?.user_id) {
+      console.error('User not authenticated');
+      return;
+    }
+
     setLoading(true);
-    const result = await getVendors({
+    const result = await getVendors(user.user_id, {
       search: search || undefined,
       tierLevel: tierFilter || undefined,
       isActive: statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined,
       teamId: teamFilter || undefined,
-      userTeamId: teamId || undefined,
-      isMasterAdmin,
     });
     if ('error' in result) {
       console.error('Error loading vendors:', result.error);

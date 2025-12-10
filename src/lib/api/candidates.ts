@@ -364,7 +364,7 @@ export async function deleteCandidate(candidateId: string, userId: string): Prom
     // Get data for audit log and team validation
     const candidateResult = await getCandidateById(candidateId);
     if ('error' in candidateResult) {
-      return candidateResult;
+      return { error: candidateResult.error || 'Failed to fetch candidate' };
     }
     const candidateData = candidateResult.data;
 

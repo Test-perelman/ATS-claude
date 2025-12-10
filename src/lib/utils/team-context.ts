@@ -92,8 +92,8 @@ export async function getTeamContext(
     throw new Error('User not found or not authenticated');
   }
 
-  const isMasterAdmin = user.is_master_admin === true;
-  const userTeamId = user.team_id;
+  const isMasterAdmin = (user as any).is_master_admin === true;
+  const userTeamId = (user as any).team_id;
 
   // Validate team requirement
   if (requireTeam && !userTeamId && !isMasterAdmin) {
@@ -135,7 +135,7 @@ export async function getTeamContext(
         throw new Error('User team does not exist. Please contact your administrator.');
       }
 
-      if (team.is_active === false) {
+      if ((team as any).is_active === false) {
         throw new Error('Your team is currently inactive. Please contact your administrator.');
       }
     }

@@ -40,12 +40,19 @@ export default function NewJobRequirementPage() {
   });
 
   useEffect(() => {
-    loadClients();
-    loadVendors();
-  }, []);
+    if (user?.user_id) {
+      loadClients();
+      loadVendors();
+    }
+  }, [user]);
 
   async function loadClients() {
-    const result = await getClients();
+    if (!user?.user_id) {
+      console.error('User not authenticated');
+      return;
+    }
+
+    const result = await getClients(user.user_id);
     if ('error' in result) {
       console.error('Error loading clients:', result.error);
       setClients([]);
@@ -55,7 +62,12 @@ export default function NewJobRequirementPage() {
   }
 
   async function loadVendors() {
-    const result = await getVendors();
+    if (!user?.user_id) {
+      console.error('User not authenticated');
+      return;
+    }
+
+    const result = await getVendors(user.user_id);
     if ('error' in result) {
       console.error('Error loading vendors:', result.error);
       setVendors([]);

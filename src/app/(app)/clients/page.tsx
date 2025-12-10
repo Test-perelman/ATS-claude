@@ -14,7 +14,7 @@ import { formatDate, formatPhoneNumber } from '@/lib/utils/format';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function ClientsPage() {
-  const { isMasterAdmin, teamId } = useAuth();
+  const { user, isMasterAdmin, teamId } = useAuth();
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -23,18 +23,23 @@ export default function ClientsPage() {
   const [teamFilter, setTeamFilter] = useState('');
 
   useEffect(() => {
-    loadClients();
-  }, [search, industryFilter, statusFilter, teamFilter, isMasterAdmin, teamId]);
+    if (user?.user_id) {
+      loadClients();
+    }
+  }, [search, industryFilter, statusFilter, teamFilter, isMasterAdmin, teamId, user]);
 
   async function loadClients() {
+    if (!user?.user_id) {
+      console.error('User not authenticated');
+      return;
+    }
+
     setLoading(true);
-    const result = await getClients({
+    const result = await getClients(user.user_id, {
       search: search || undefined,
       industry: industryFilter || undefined,
       isActive: statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined,
       teamId: teamFilter || undefined,
-      userTeamId: teamId || undefined,
-      isMasterAdmin,
     });
     if ('error' in result) {
       console.error('Error loading clients:', result.error);
