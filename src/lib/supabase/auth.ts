@@ -130,3 +130,5 @@ export async function signOut(): Promise<ApiResponse<void>> {
   }
 }
 
+// End of authentication module
+
