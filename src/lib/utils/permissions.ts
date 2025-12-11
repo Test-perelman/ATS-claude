@@ -1,275 +1,517 @@
 /**
- * Permission Checking Utilities
- * Role-based access control (RBAC)
+ * Permission Checking Utilities V2
+ * Role-based access control (RBAC) with multi-tenant support
+ *
+ * Key Features:
+ * - Master admins bypass all permission checks
+ * - Local admins have full permissions within their team
+ * - Regular users have role-based permissions
  */
 
-import { supabase, typedUpsert } from '@/lib/supabase/client';
-import type { Database } from '@/types/database';
-
-export interface Permission {
-  permission_id: string;
-  permission_key: string;
-  permission_description: string | null;
-  module_name: string | null;
-}
-
-export interface RolePermission {
-  role_id: string;
-  permission_id: string;
-  allowed: boolean;
-}
-
-/**
- * Get all permissions for a role
- */
-export async function getRolePermissions(roleId: string): Promise<string[]> {
-  const { data, error } = await supabase
-    .from('role_permissions')
-    .select('permission:permissions(permission_key)')
-    .eq('role_id', roleId)
-    .eq('allowed', true);
-
-  if (error || !data) {
-    console.error('Error fetching role permissions:', error);
-    return [];
-  }
-
-  return data.map((rp: any) => rp.permission.permission_key);
-}
+import { createServerClient } from '@/lib/supabase/server'
+import type { Database, PermissionModule } from '@/types/database'
 
 /**
  * Check if user has a specific permission
+ * Master admins automatically have all permissions
+ *
+ * @param userId - The user's ID
+ * @param permissionKey - The permission key to check (e.g., 'candidates.create')
+ * @returns True if user has the permission
  */
-export async function hasPermission(userId: string, permissionKey: string): Promise<boolean> {
-  // Get user's role
-  const { data: user, error: userError } = await supabase
+export async function checkPermission(
+  userId: string,
+  permissionKey: string
+): Promise<boolean> {
+  const supabase = await createServerClient()
+
+  // Get user with role information
+  const { data: user, error } = await supabase
     .from('users')
-    .select('role_id')
+    .select(`
+      user_id,
+      role_id,
+      is_master_admin,
+      role:roles (
+        role_id,
+        is_admin_role
+      )
+    `)
     .eq('user_id', userId)
-    .single();
+    .single()
 
-  if (userError || !user) {
-    return false;
+  if (error || !user) {
+    return false
   }
 
-  const userData = user as Database['public']['Tables']['users']['Row'];
-  if (!userData.role_id) {
-    return false;
+  // Master admin has all permissions
+  if (user.is_master_admin) {
+    return true
   }
 
-  // Get role permissions
-  const permissions = await getRolePermissions(userData.role_id);
+  // Local admin has all permissions within their team
+  if ((user.role as any)?.is_admin_role === true) {
+    return true
+  }
 
-  return permissions.includes(permissionKey);
+  // Check role permissions
+  if (!user.role_id) {
+    return false
+  }
+
+  const { data: rolePermissions } = await supabase
+    .from('role_permissions')
+    .select(`
+      permission:permissions (
+        permission_key
+      )
+    `)
+    .eq('role_id', user.role_id)
+
+  if (!rolePermissions) {
+    return false
+  }
+
+  const permissions = rolePermissions
+    .map(rp => (rp.permission as any)?.permission_key)
+    .filter(Boolean)
+
+  return permissions.includes(permissionKey)
+}
+
+/**
+ * Get all permissions for a user
+ *
+ * @param userId - The user's ID
+ * @returns Array of permission keys
+ */
+export async function getUserPermissions(userId: string): Promise<string[]> {
+  const supabase = await createServerClient()
+
+  // Get user with role information
+  const { data: user } = await supabase
+    .from('users')
+    .select(`
+      user_id,
+      role_id,
+      is_master_admin,
+      role:roles (
+        role_id,
+        is_admin_role
+      )
+    `)
+    .eq('user_id', userId)
+    .single()
+
+  if (!user) {
+    return []
+  }
+
+  // Master admins and local admins have all permissions
+  if (user.is_master_admin || (user.role as any)?.is_admin_role === true) {
+    // Return all permission keys
+    const { data: allPermissions } = await supabase
+      .from('permissions')
+      .select('permission_key')
+
+    return allPermissions?.map(p => p.permission_key) || []
+  }
+
+  // Get role-specific permissions
+  if (!user.role_id) {
+    return []
+  }
+
+  const { data: rolePermissions } = await supabase
+    .from('role_permissions')
+    .select(`
+      permission:permissions (
+        permission_key
+      )
+    `)
+    .eq('role_id', user.role_id)
+
+  return rolePermissions
+    ?.map(rp => (rp.permission as any)?.permission_key)
+    .filter(Boolean) || []
 }
 
 /**
  * Check if user has any of the specified permissions
+ *
+ * @param userId - The user's ID
+ * @param permissionKeys - Array of permission keys to check
+ * @returns True if user has at least one of the permissions
  */
-export async function hasAnyPermission(
+export async function checkAnyPermission(
   userId: string,
   permissionKeys: string[]
 ): Promise<boolean> {
-  const { data: user, error: userError } = await supabase
+  const supabase = await createServerClient()
+
+  // Get user info
+  const { data: user } = await supabase
     .from('users')
-    .select('role_id')
+    .select('user_id, is_master_admin, role:roles(is_admin_role)')
     .eq('user_id', userId)
-    .single();
+    .single()
 
-  if (userError || !user) {
-    return false;
+  if (!user) {
+    return false
   }
 
-  const userData = user as Database['public']['Tables']['users']['Row'];
-  if (!userData.role_id) {
-    return false;
+  // Master admin and local admin have all permissions
+  if (user.is_master_admin || (user.role as any)?.is_admin_role === true) {
+    return true
   }
 
-  const permissions = await getRolePermissions(userData.role_id);
+  // Check each permission
+  for (const key of permissionKeys) {
+    if (await checkPermission(userId, key)) {
+      return true
+    }
+  }
 
-  return permissionKeys.some((key) => permissions.includes(key));
+  return false
 }
 
 /**
  * Check if user has all specified permissions
+ *
+ * @param userId - The user's ID
+ * @param permissionKeys - Array of permission keys to check
+ * @returns True if user has all the permissions
  */
-export async function hasAllPermissions(
+export async function checkAllPermissions(
   userId: string,
   permissionKeys: string[]
 ): Promise<boolean> {
-  const { data: user, error: userError } = await supabase
+  const supabase = await createServerClient()
+
+  // Get user info
+  const { data: user } = await supabase
     .from('users')
-    .select('role_id')
+    .select('user_id, is_master_admin, role:roles(is_admin_role)')
     .eq('user_id', userId)
-    .single();
+    .single()
 
-  if (userError || !user) {
-    return false;
+  if (!user) {
+    return false
   }
 
-  const userData = user as Database['public']['Tables']['users']['Row'];
-  if (!userData.role_id) {
-    return false;
+  // Master admin and local admin have all permissions
+  if (user.is_master_admin || (user.role as any)?.is_admin_role === true) {
+    return true
   }
 
-  const permissions = await getRolePermissions(userData.role_id);
+  // Check each permission
+  for (const key of permissionKeys) {
+    if (!(await checkPermission(userId, key))) {
+      return false
+    }
+  }
 
-  return permissionKeys.every((key) => permissions.includes(key));
+  return true
 }
 
 /**
- * Get user's role name
+ * Check if user is a local admin (team administrator)
+ *
+ * @param userId - The user's ID
+ * @returns True if user is a local admin
  */
-export async function getUserRole(userId: string): Promise<string | null> {
-  const { data, error } = await supabase
+export async function isLocalAdmin(userId: string): Promise<boolean> {
+  const supabase = await createServerClient()
+
+  const { data: user } = await supabase
     .from('users')
-    .select('role:roles(role_name)')
+    .select(`
+      user_id,
+      is_master_admin,
+      role:roles (
+        is_admin_role
+      )
+    `)
     .eq('user_id', userId)
-    .single();
+    .single()
 
-  if (error || !data) {
-    return null;
+  if (!user) {
+    return false
   }
 
-  return (data as any).role?.role_name || null;
+  // Master admins are not local admins (they're global)
+  if (user.is_master_admin) {
+    return false
+  }
+
+  return (user.role as any)?.is_admin_role === true
 }
 
 /**
- * Check if user is Super Admin
+ * Check if user is a master admin (system administrator)
+ *
+ * @param userId - The user's ID
+ * @returns True if user is a master admin
  */
-export async function isSuperAdmin(userId: string): Promise<boolean> {
-  const role = await getUserRole(userId);
-  return role === 'Super Admin';
-}
+export async function isMasterAdmin(userId: string): Promise<boolean> {
+  const supabase = await createServerClient()
 
-/**
- * Assign permission to role
- */
-export async function assignPermissionToRole(roleId: string, permissionId: string) {
-  const payload: Database['public']['Tables']['role_permissions']['Insert'] = {
-    role_id: roleId,
-    permission_id: permissionId,
-    allowed: true,
-  };
+  const { data: user } = await supabase
+    .from('users')
+    .select('user_id, is_master_admin')
+    .eq('user_id', userId)
+    .single()
 
-  const { data, error } = await typedUpsert('role_permissions', payload, {
-    onConflict: 'role_id,permission_id'
-  });
-
-  return { data, error };
-}
-
-/**
- * Revoke permission from role
- */
-export async function revokePermissionFromRole(roleId: string, permissionId: string) {
-  const { data, error } = await supabase
-    .from('role_permissions')
-    .delete()
-    .eq('role_id', roleId)
-    .eq('permission_id', permissionId);
-
-  return { data, error };
+  return user?.is_master_admin === true
 }
 
 /**
  * Get all permissions grouped by module
+ *
+ * @returns Object with modules as keys and permission arrays as values
  */
-export async function getAllPermissionsGrouped() {
+export async function getAllPermissionsGrouped(): Promise<Record<string, PermissionModule['permissions']>> {
+  const supabase = await createServerClient()
+
   const { data, error } = await supabase
     .from('permissions')
     .select('*')
-    .order('module_name, permission_key');
+    .order('module, permission_key')
 
   if (error || !data) {
-    return {};
+    return {}
   }
 
-  const grouped: Record<string, Permission[]> = {};
-  const permissions = data as Permission[];
+  const grouped: Record<string, PermissionModule['permissions']> = {}
 
-  permissions.forEach((permission) => {
-    const module = permission.module_name || 'Other';
+  data.forEach((permission: Database['public']['Tables']['permissions']['Row']) => {
+    const module = permission.module || 'other'
     if (!grouped[module]) {
-      grouped[module] = [];
+      grouped[module] = []
     }
-    grouped[module].push(permission);
-  });
+    grouped[module].push({
+      permission_id: permission.permission_id,
+      permission_key: permission.permission_key,
+      permission_name: permission.permission_name,
+      description: permission.description,
+    })
+  })
 
-  return grouped;
+  return grouped
+}
+
+/**
+ * Get role permissions for a specific role
+ *
+ * @param roleId - The role ID
+ * @returns Array of permission keys
+ */
+export async function getRolePermissions(roleId: string): Promise<string[]> {
+  const supabase = await createServerClient()
+
+  const { data } = await supabase
+    .from('role_permissions')
+    .select(`
+      permission:permissions (
+        permission_key
+      )
+    `)
+    .eq('role_id', roleId)
+
+  return data
+    ?.map(rp => (rp.permission as any)?.permission_key)
+    .filter(Boolean) || []
+}
+
+/**
+ * Assign permission to role
+ *
+ * @param roleId - The role ID
+ * @param permissionId - The permission ID
+ * @param grantedBy - User ID who granted the permission
+ */
+export async function assignPermissionToRole(
+  roleId: string,
+  permissionId: string,
+  grantedBy?: string
+) {
+  const supabase = await createServerClient()
+
+  const { data, error } = await supabase
+    .from('role_permissions')
+    .upsert({
+      role_id: roleId,
+      permission_id: permissionId,
+      granted_by: grantedBy || null,
+    }, {
+      onConflict: 'role_id,permission_id'
+    })
+
+  return { data, error }
+}
+
+/**
+ * Revoke permission from role
+ *
+ * @param roleId - The role ID
+ * @param permissionId - The permission ID
+ */
+export async function revokePermissionFromRole(roleId: string, permissionId: string) {
+  const supabase = await createServerClient()
+
+  const { data, error } = await supabase
+    .from('role_permissions')
+    .delete()
+    .eq('role_id', roleId)
+    .eq('permission_id', permissionId)
+
+  return { data, error }
+}
+
+/**
+ * Bulk update permissions for a role
+ * Replaces all existing permissions with the new set
+ *
+ * @param roleId - The role ID
+ * @param permissionIds - Array of permission IDs to assign
+ * @param grantedBy - User ID who granted the permissions
+ */
+export async function updateRolePermissions(
+  roleId: string,
+  permissionIds: string[],
+  grantedBy?: string
+) {
+  const supabase = await createServerClient()
+
+  // Delete existing permissions
+  await supabase
+    .from('role_permissions')
+    .delete()
+    .eq('role_id', roleId)
+
+  // Insert new permissions
+  if (permissionIds.length > 0) {
+    const { data, error } = await supabase
+      .from('role_permissions')
+      .insert(
+        permissionIds.map(permissionId => ({
+          role_id: roleId,
+          permission_id: permissionId,
+          granted_by: grantedBy || null,
+        }))
+      )
+
+    return { data, error }
+  }
+
+  return { data: null, error: null }
 }
 
 /**
  * Permission constants for easy reference
+ * Based on the module.action pattern from seed data
  */
 export const PERMISSIONS = {
   // Candidates
-  CANDIDATE_CREATE: 'candidate.create',
-  CANDIDATE_READ: 'candidate.read',
-  CANDIDATE_UPDATE: 'candidate.update',
-  CANDIDATE_DELETE: 'candidate.delete',
+  CANDIDATES_CREATE: 'candidates.create',
+  CANDIDATES_READ: 'candidates.read',
+  CANDIDATES_UPDATE: 'candidates.update',
+  CANDIDATES_DELETE: 'candidates.delete',
+  CANDIDATES_EXPORT: 'candidates.export',
 
   // Vendors
-  VENDOR_CREATE: 'vendor.create',
-  VENDOR_READ: 'vendor.read',
-  VENDOR_UPDATE: 'vendor.update',
-  VENDOR_DELETE: 'vendor.delete',
+  VENDORS_CREATE: 'vendors.create',
+  VENDORS_READ: 'vendors.read',
+  VENDORS_UPDATE: 'vendors.update',
+  VENDORS_DELETE: 'vendors.delete',
+  VENDORS_EXPORT: 'vendors.export',
 
   // Clients
-  CLIENT_CREATE: 'client.create',
-  CLIENT_READ: 'client.read',
-  CLIENT_UPDATE: 'client.update',
-  CLIENT_DELETE: 'client.delete',
+  CLIENTS_CREATE: 'clients.create',
+  CLIENTS_READ: 'clients.read',
+  CLIENTS_UPDATE: 'clients.update',
+  CLIENTS_DELETE: 'clients.delete',
+  CLIENTS_EXPORT: 'clients.export',
 
-  // Jobs
-  JOB_CREATE: 'job.create',
-  JOB_READ: 'job.read',
-  JOB_UPDATE: 'job.update',
-  JOB_DELETE: 'job.delete',
+  // Requirements
+  REQUIREMENTS_CREATE: 'requirements.create',
+  REQUIREMENTS_READ: 'requirements.read',
+  REQUIREMENTS_UPDATE: 'requirements.update',
+  REQUIREMENTS_DELETE: 'requirements.delete',
+  REQUIREMENTS_EXPORT: 'requirements.export',
 
   // Submissions
-  SUBMISSION_CREATE: 'submission.create',
-  SUBMISSION_READ: 'submission.read',
-  SUBMISSION_UPDATE: 'submission.update',
-  SUBMISSION_DELETE: 'submission.delete',
+  SUBMISSIONS_CREATE: 'submissions.create',
+  SUBMISSIONS_READ: 'submissions.read',
+  SUBMISSIONS_UPDATE: 'submissions.update',
+  SUBMISSIONS_DELETE: 'submissions.delete',
+  SUBMISSIONS_EXPORT: 'submissions.export',
 
   // Interviews
-  INTERVIEW_CREATE: 'interview.create',
-  INTERVIEW_READ: 'interview.read',
-  INTERVIEW_UPDATE: 'interview.update',
-  INTERVIEW_DELETE: 'interview.delete',
+  INTERVIEWS_CREATE: 'interviews.create',
+  INTERVIEWS_READ: 'interviews.read',
+  INTERVIEWS_UPDATE: 'interviews.update',
+  INTERVIEWS_DELETE: 'interviews.delete',
+  INTERVIEWS_EXPORT: 'interviews.export',
 
   // Projects
-  PROJECT_CREATE: 'project.create',
-  PROJECT_READ: 'project.read',
-  PROJECT_UPDATE: 'project.update',
-  PROJECT_DELETE: 'project.delete',
+  PROJECTS_CREATE: 'projects.create',
+  PROJECTS_READ: 'projects.read',
+  PROJECTS_UPDATE: 'projects.update',
+  PROJECTS_DELETE: 'projects.delete',
+  PROJECTS_EXPORT: 'projects.export',
 
   // Timesheets
-  TIMESHEET_CREATE: 'timesheet.create',
-  TIMESHEET_READ: 'timesheet.read',
-  TIMESHEET_UPDATE: 'timesheet.update',
-  TIMESHEET_APPROVE: 'timesheet.approve',
+  TIMESHEETS_CREATE: 'timesheets.create',
+  TIMESHEETS_READ: 'timesheets.read',
+  TIMESHEETS_UPDATE: 'timesheets.update',
+  TIMESHEETS_DELETE: 'timesheets.delete',
+  TIMESHEETS_APPROVE: 'timesheets.approve',
+  TIMESHEETS_EXPORT: 'timesheets.export',
 
   // Invoices
-  INVOICE_CREATE: 'invoice.create',
-  INVOICE_READ: 'invoice.read',
-  INVOICE_UPDATE: 'invoice.update',
-  INVOICE_DELETE: 'invoice.delete',
+  INVOICES_CREATE: 'invoices.create',
+  INVOICES_READ: 'invoices.read',
+  INVOICES_UPDATE: 'invoices.update',
+  INVOICES_DELETE: 'invoices.delete',
+  INVOICES_SEND: 'invoices.send',
+  INVOICES_EXPORT: 'invoices.export',
 
   // Immigration
   IMMIGRATION_CREATE: 'immigration.create',
   IMMIGRATION_READ: 'immigration.read',
   IMMIGRATION_UPDATE: 'immigration.update',
+  IMMIGRATION_DELETE: 'immigration.delete',
+  IMMIGRATION_EXPORT: 'immigration.export',
 
   // Users
-  USER_CREATE: 'user.create',
-  USER_READ: 'user.read',
-  USER_UPDATE: 'user.update',
-  USER_DELETE: 'user.delete',
+  USERS_CREATE: 'users.create',
+  USERS_READ: 'users.read',
+  USERS_UPDATE: 'users.update',
+  USERS_DELETE: 'users.delete',
+  USERS_MANAGE_ROLES: 'users.manage-roles',
+
+  // Roles
+  ROLES_CREATE: 'roles.create',
+  ROLES_READ: 'roles.read',
+  ROLES_UPDATE: 'roles.update',
+  ROLES_DELETE: 'roles.delete',
+
+  // Reports
+  REPORTS_VIEW: 'reports.view',
+  REPORTS_CREATE: 'reports.create',
+  REPORTS_EXPORT: 'reports.export',
 
   // Settings
-  SETTINGS_MANAGE: 'settings.manage',
-  AUDIT_VIEW: 'audit.view',
-  REPORTS_VIEW: 'reports.view',
-} as const;
+  SETTINGS_READ: 'settings.read',
+  SETTINGS_UPDATE: 'settings.update',
+
+  // Notes
+  NOTES_CREATE: 'notes.create',
+  NOTES_READ: 'notes.read',
+  NOTES_UPDATE: 'notes.update',
+  NOTES_DELETE: 'notes.delete',
+
+  // Activities
+  ACTIVITIES_READ: 'activities.read',
+} as const
