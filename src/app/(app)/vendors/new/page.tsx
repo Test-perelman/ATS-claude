@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
-import { createVendor } from '@/lib/api/vendors';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function NewVendorPage() {
@@ -81,11 +80,18 @@ export default function NewVendorPage() {
         is_active: formData.is_active,
       };
 
-      const result = await createVendor(vendorData, user.user_id);
+      const response = await fetch('/api/vendors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(vendorData),
+      });
 
-      if (result.error) {
-        throw result.error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create vendor');
       }
+
+      const result = await response.json();
 
       // Check for duplicates
       if (result.duplicate && result.matches && result.matches.length > 0) {
@@ -95,8 +101,16 @@ export default function NewVendorPage() {
 
         if (confirmed) {
           // Create with duplicate check skipped
-          const forceResult = await createVendor(vendorData, user.user_id, { skipDuplicateCheck: true });
-          if (forceResult.error) throw forceResult.error;
+          const forceResponse = await fetch('/api/vendors?skipDuplicateCheck=true', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(vendorData),
+          });
+          if (!forceResponse.ok) {
+            const errorData = await forceResponse.json();
+            throw new Error(errorData.error || 'Failed to create vendor');
+          }
+          const forceResult = await forceResponse.json();
           if (forceResult.data) {
             router.push(`/vendors/${(forceResult.data as any).vendor_id}`);
           }

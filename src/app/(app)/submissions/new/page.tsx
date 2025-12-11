@@ -7,9 +7,6 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
-import { createSubmission } from '@/lib/api/submissions';
-import { getCandidates } from '@/lib/api/candidates';
-import { getJobRequirements } from '@/lib/api/requirements';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
 function NewSubmissionForm() {
@@ -80,26 +77,26 @@ function NewSubmissionForm() {
       return;
     }
 
-    const result = await getCandidates(user.user_id);
-    if ('error' in result) {
-      console.error('Error loading candidates:', result.error);
+    try {
+      const response = await fetch('/api/candidates');
+      if (!response.ok) throw new Error('Failed to load candidates');
+      const { data } = await response.json();
+      setCandidates(data || []);
+    } catch (error) {
+      console.error('Error loading candidates:', error);
       setCandidates([]);
-    } else {
-      setCandidates(result.data.data || []);
     }
   }
 
   async function loadJobs() {
-    const result = await getJobRequirements({
-      status: 'open',
-      userTeamId: teamId || undefined,
-      isMasterAdmin: isMasterAdmin || false,
-    });
-    if ('error' in result) {
-      console.error('Error loading jobs:', result.error);
+    try {
+      const response = await fetch('/api/requirements?status=open');
+      if (!response.ok) throw new Error('Failed to load jobs');
+      const { data } = await response.json();
+      setJobs(data || []);
+    } catch (error) {
+      console.error('Error loading jobs:', error);
       setJobs([]);
-    } else {
-      setJobs(result.data || []);
     }
   }
 
@@ -129,11 +126,18 @@ function NewSubmissionForm() {
         submitted_at: new Date().toISOString(),
       };
 
-      const result = await createSubmission(submissionData, user.user_id, teamId);
+      const response = await fetch('/api/submissions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(submissionData),
+      });
 
-      if (result.error) {
-        throw result.error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create submission');
       }
+
+      const result = await response.json();
 
       if ((result as any).data) {
         // Redirect to submission detail page

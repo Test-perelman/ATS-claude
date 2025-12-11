@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
-import { getCandidates } from '@/lib/api/candidates';
 import { formatDate } from '@/lib/utils/format';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
@@ -29,16 +28,36 @@ export default function BenchPage() {
     }
 
     setLoading(true);
-    const result = await getCandidates(user.user_id, {
-      benchStatus: benchStatusFilter || undefined,
-    });
-    if ('error' in result) {
-      console.error('Error loading candidates:', result.error);
+    try {
+      const params = new URLSearchParams();
+      if (benchStatusFilter) params.append('status', benchStatusFilter);
+
+      const response = await fetch(`/api/candidates?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Error loading candidates:', response.statusText);
+        setCandidates([]);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setCandidates(result.data || []);
+      } else {
+        console.error('Error loading candidates:', result.error);
+        setCandidates([]);
+      }
+    } catch (error) {
+      console.error('Error loading candidates:', error);
       setCandidates([]);
-    } else {
-      setCandidates(result.data.data || []);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   const getBenchBadgeVariant = (status: string) => {

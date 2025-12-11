@@ -99,7 +99,7 @@ export async function getTimesheetById(id: string): Promise<ApiResponse<any>> {
 
 export async function createTimesheet(data: TimesheetInsert, userId?: string, teamId?: string): Promise<ApiResponse<Timesheet>> {
   try {
-    const result = await typedInsert('timesheets', { ...data, created_by: userId, team_id: teamId || null });
+    const result = await typedInsert('timesheets', { ...data, created_by: userId, team_id: teamId || null } as any);
 
     if (result.error) {
       return { error: result.error.message };
@@ -115,7 +115,7 @@ export async function createTimesheet(data: TimesheetInsert, userId?: string, te
         entityId: result.data.timesheet_id,
         activityType: 'created',
         activityTitle: 'Timesheet Created',
-        activityDescription: `Timesheet for week ${data.week_start} was created`,
+        activityDescription: `Timesheet for week ${(data as any).week_start || (data as any).week_ending} was created`,
         userId,
       });
     }
@@ -128,7 +128,7 @@ export async function createTimesheet(data: TimesheetInsert, userId?: string, te
 
 export async function updateTimesheet(id: string, updates: TimesheetUpdate, userId?: string): Promise<ApiResponse<Timesheet>> {
   try {
-    const result = await typedUpdate('timesheets', 'timesheet_id', id, { ...updates, updated_by: userId });
+    const result = await typedUpdate('timesheets', 'timesheet_id', id, { ...updates, updated_by: userId } as any);
 
     if (result.error) {
       return { error: result.error.message };

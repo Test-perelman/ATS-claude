@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/supabase/auth'
+import { getCurrentUser } from '@/lib/supabase/auth-server'
 import { getTeamContext } from '@/lib/utils/team-context'
 import { checkPermission } from '@/lib/utils/permissions'
 import { getTeamRoles, createCustomRole } from '@/lib/utils/role-helpers'

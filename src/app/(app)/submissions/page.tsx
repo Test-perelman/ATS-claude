@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
-import { getSubmissions, getSubmissionStats } from '@/lib/api/submissions';
 import { formatDate, formatCurrency } from '@/lib/utils/format';
 
 export default function SubmissionsPage() {
@@ -37,17 +36,62 @@ export default function SubmissionsPage() {
 
   async function loadSubmissions() {
     setLoading(true);
-    const { data } = await getSubmissions({
-      search: search || undefined,
-      status: statusFilter || undefined,
-    });
-    setSubmissions(data || []);
-    setLoading(false);
+    try {
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (statusFilter) params.append('status', statusFilter);
+
+      const response = await fetch(`/api/submissions?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Error loading submissions:', response.statusText);
+        setSubmissions([]);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setSubmissions(result.data || []);
+      } else {
+        console.error('Error loading submissions:', result.error);
+        setSubmissions([]);
+      }
+    } catch (error) {
+      console.error('Error loading submissions:', error);
+      setSubmissions([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function loadStats() {
-    const statsData = await getSubmissionStats();
-    setStats(statsData);
+    try {
+      const response = await fetch('/api/submissions/stats', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Error loading stats:', response.statusText);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setStats(result.data || { total: 0, byStatus: {} });
+      } else {
+        console.error('Error loading stats:', result.error);
+      }
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    }
   }
 
   function getSubmissionsByStatus(status: string) {

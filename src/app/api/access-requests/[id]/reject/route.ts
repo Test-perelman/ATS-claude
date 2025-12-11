@@ -1,4 +1,4 @@
-import { getCurrentUserTeamId } from '@/lib/supabase/auth';
+import { getCurrentUserTeamId } from '@/lib/supabase/auth-server';
 import { rejectAccessRequest } from '@/lib/api/teams';
 import { NextRequest, NextResponse } from 'next/server';
 

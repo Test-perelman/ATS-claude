@@ -46,7 +46,7 @@ export async function getTeamRoles(teamId: string): Promise<RoleWithPermissions[
     return []
   }
 
-  return roles.map(role => ({
+  return (roles as any).map((role: any) => ({
     role_id: role.role_id,
     team_id: role.team_id,
     role_name: role.role_name,
@@ -96,14 +96,14 @@ export async function getRoleWithPermissions(roleId: string): Promise<RoleWithPe
   }
 
   return {
-    role_id: role.role_id,
-    team_id: role.team_id,
-    role_name: role.role_name,
-    description: role.description,
-    is_admin_role: role.is_admin_role,
-    is_custom: role.is_custom,
-    based_on_template: role.based_on_template,
-    permissions: (role.role_permissions as any[])
+    role_id: (role as any).role_id,
+    team_id: (role as any).team_id,
+    role_name: (role as any).role_name,
+    description: (role as any).description,
+    is_admin_role: (role as any).is_admin_role,
+    is_custom: (role as any).is_custom,
+    based_on_template: (role as any).based_on_template,
+    permissions: ((role as any).role_permissions as any[])
       .map(rp => rp.permission)
       .filter(Boolean),
   }
@@ -138,12 +138,12 @@ export async function cloneRoleTemplatesForTeam(teamId: string): Promise<string[
       .from('roles')
       .insert({
         team_id: teamId,
-        role_name: template.template_name,
-        description: template.description,
-        is_admin_role: template.is_admin_role,
+        role_name: (template as any).template_name,
+        description: (template as any).description,
+        is_admin_role: (template as any).is_admin_role,
         is_custom: false,
-        based_on_template: template.template_id,
-      })
+        based_on_template: (template as any).template_id,
+      } as any)
       .select('role_id')
       .single()
 
@@ -152,23 +152,23 @@ export async function cloneRoleTemplatesForTeam(teamId: string): Promise<string[
       continue
     }
 
-    createdRoleIds.push(newRole.role_id)
+    createdRoleIds.push((newRole as any).role_id)
 
     // Get template permissions
     const { data: templatePermissions } = await supabase
       .from('template_permissions')
       .select('permission_id')
-      .eq('template_id', template.template_id)
+      .eq('template_id', (template as any).template_id)
 
     if (templatePermissions && templatePermissions.length > 0) {
       // Clone permissions for the new role
       await supabase
         .from('role_permissions')
         .insert(
-          templatePermissions.map(tp => ({
-            role_id: newRole.role_id,
+          (templatePermissions as any).map((tp: any) => ({
+            role_id: (newRole as any).role_id,
             permission_id: tp.permission_id,
-          }))
+          })) as any
         )
     }
   }
@@ -205,7 +205,7 @@ export async function createCustomRole(
       is_admin_role: false,
       is_custom: true,
       based_on_template: null,
-    })
+    } as any)
     .select()
     .single()
 
@@ -220,10 +220,10 @@ export async function createCustomRole(
       .from('role_permissions')
       .insert(
         permissionIds.map(permissionId => ({
-          role_id: role.role_id,
+          role_id: (role as any).role_id,
           permission_id: permissionId,
           granted_by: createdBy || null,
-        }))
+        })) as any
       )
   }
 
@@ -271,11 +271,11 @@ export async function cloneRole(
     .insert({
       team_id: teamId,
       role_name: newRoleName,
-      description: `Cloned from ${sourceRole.role_name}`,
+      description: `Cloned from ${(sourceRole as any).role_name}`,
       is_admin_role: false, // Cloned roles are never admin roles
       is_custom: true,
-      based_on_template: sourceRole.based_on_template,
-    })
+      based_on_template: (sourceRole as any).based_on_template,
+    } as any)
     .select()
     .single()
 
@@ -289,11 +289,11 @@ export async function cloneRole(
     await supabase
       .from('role_permissions')
       .insert(
-        sourcePermissions.map(sp => ({
-          role_id: newRole.role_id,
+        (sourcePermissions as any).map((sp: any) => ({
+          role_id: (newRole as any).role_id,
           permission_id: sp.permission_id,
           granted_by: createdBy || null,
-        }))
+        })) as any
       )
   }
 
@@ -326,7 +326,7 @@ export async function updateRolePermissions(
   }
 
   // Admin roles cannot have their permissions modified
-  if (role.is_admin_role) {
+  if ((role as any).is_admin_role) {
     return { success: false, error: 'Cannot modify admin role permissions' }
   }
 
@@ -349,7 +349,7 @@ export async function updateRolePermissions(
           role_id: roleId,
           permission_id: permissionId,
           granted_by: updatedBy || null,
-        }))
+        })) as any
       )
 
     if (insertError) {
@@ -387,12 +387,12 @@ export async function deleteCustomRole(
   }
 
   // Cannot delete admin roles
-  if (role.is_admin_role) {
+  if ((role as any).is_admin_role) {
     return { success: false, error: 'Cannot delete admin roles' }
   }
 
   // Cannot delete system roles (those based on templates)
-  if (!role.is_custom) {
+  if (!(role as any).is_custom) {
     return { success: false, error: 'Cannot delete system roles' }
   }
 

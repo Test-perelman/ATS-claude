@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createMasterAdmin, getCurrentUser } from '@/lib/supabase/auth'
+import { createMasterAdmin, getCurrentUser } from '@/lib/supabase/auth-server'
 import { z } from 'zod'
 
 // Validation schema

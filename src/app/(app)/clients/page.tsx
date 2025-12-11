@@ -9,7 +9,6 @@ import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { TeamFilter } from '@/components/ui/TeamFilter';
 import { TeamBadge } from '@/components/ui/TeamBadge';
-import { getClients } from '@/lib/api/clients';
 import { formatDate, formatPhoneNumber } from '@/lib/utils/format';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
@@ -35,19 +34,40 @@ export default function ClientsPage() {
     }
 
     setLoading(true);
-    const result = await getClients(user.user_id, {
-      search: search || undefined,
-      industry: industryFilter || undefined,
-      isActive: statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined,
-      teamId: teamFilter || undefined,
-    });
-    if ('error' in result) {
-      console.error('Error loading clients:', result.error);
+    try {
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (industryFilter) params.append('industry', industryFilter);
+      if (statusFilter === 'active') params.append('isActive', 'true');
+      if (statusFilter === 'inactive') params.append('isActive', 'false');
+      if (teamFilter) params.append('teamId', teamFilter);
+
+      const response = await fetch(`/api/clients?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Error loading clients:', response.statusText);
+        setClients([]);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setClients(result.data || []);
+      } else {
+        console.error('Error loading clients:', result.error);
+        setClients([]);
+      }
+    } catch (error) {
+      console.error('Error loading clients:', error);
       setClients([]);
-    } else {
-      setClients(result.data.clients || []);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (

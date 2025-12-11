@@ -1,4 +1,4 @@
-import { adminSignUp } from '@/lib/supabase/auth';
+import { adminSignUp } from '@/lib/supabase/auth-server';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {

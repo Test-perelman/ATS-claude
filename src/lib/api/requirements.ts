@@ -155,14 +155,14 @@ export async function createJobRequirement(
       }
     }
 
-    const insertData: JobRequirementInsert = {
+    const insertData = {
       ...jobData,
       created_by: userId || null,
       updated_by: userId || null,
       team_id: teamId || null,
-    };
+    } as any;
 
-    const result = await typedInsert('job_requirements', insertData);
+    const result = await typedInsert('job_requirements', insertData as any);
 
     if (result.error) {
       return { error: result.error.message };
@@ -176,7 +176,7 @@ export async function createJobRequirement(
     if (userId) {
       await createAuditLog({
         entityName: 'job_requirements',
-        entityId: result.data.job_id,
+        entityId: (result.data as any).job_id || (result.data as any).requirement_id,
         action: 'CREATE',
         newValue: jobData,
         userId,
@@ -185,7 +185,7 @@ export async function createJobRequirement(
       // Create activity
       await createActivity({
         entityType: 'job_requirement',
-        entityId: result.data.job_id,
+        entityId: (result.data as any).job_id || (result.data as any).requirement_id,
         activityType: 'created',
         activityTitle: 'Job Requirement Created',
         activityDescription: `Job requirement "${jobData.job_title}" was created`,
@@ -220,10 +220,10 @@ export async function updateJobRequirement(
       }
     }
 
-    const result = await typedUpdate('job_requirements', 'job_id', jobId, {
+    const result = await typedUpdate('job_requirements', 'requirement_id' as any, jobId, {
       ...updates,
       updated_by: userId || null,
-    });
+    } as any);
 
     if (result.error) {
       return { error: result.error.message };
@@ -342,14 +342,17 @@ export async function getMatchingCandidates(jobId: string): Promise<ApiArrayResp
       .eq('bench_status', 'available');
 
     // If skills are specified, search for them
-    if (jobData.skills_required) {
-      const skills = jobData.skills_required.split(',').map((s: string) => s.trim());
-      const skillQuery = skills.map((skill: string) =>
-        `skills_primary.ilike.%${skill}%,skills_secondary.ilike.%${skill}%`
-      ).join(',');
+    if ((jobData as any).skills_required || (jobData as any).required_skills) {
+      const skillsStr = (jobData as any).skills_required || (jobData as any).required_skills;
+      if (typeof skillsStr === 'string') {
+        const skills = skillsStr.split(',').map((s: string) => s.trim());
+        const skillQuery = skills.map((skill: string) =>
+          `skills_primary.ilike.%${skill}%,skills_secondary.ilike.%${skill}%`
+        ).join(',');
 
-      if (skillQuery) {
-        query = query.or(skillQuery);
+        if (skillQuery) {
+          query = query.or(skillQuery);
+        }
       }
     }
 

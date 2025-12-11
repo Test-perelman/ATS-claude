@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { useCanManageRoles } from '@/lib/utils/permission-hooks';
-import { getRoleById, updateRole, getAllPermissions, assignPermissionsToRole } from '@/lib/api/roles';
 import type { Database } from '@/types/database';
 
 type Role = Database['public']['Tables']['roles']['Row'];
@@ -46,33 +45,39 @@ export default function RoleEditorPage() {
       setLoading(true);
 
       // Load all permissions
-      const permResult = await getAllPermissions();
-      if ('data' in permResult) {
-        setAllPermissions(permResult.data as any);
+      const permResponse = await fetch('/api/permissions');
+      if (permResponse.ok) {
+        const { data } = await permResponse.json();
+        setAllPermissions(data as any);
       }
 
       // Load role if editing
       if (!isNewRole) {
-        const roleResult = await getRoleById(roleId);
+        const roleResponse = await fetch(`/api/roles/${roleId}`);
 
-        if ('error' in roleResult) {
-          setError(roleResult.error || 'Failed to load role');
+        if (!roleResponse.ok) {
+          setError('Failed to load role');
           return;
         }
 
-        const roleData = roleResult.data.role as Role;
-        setRole(roleData);
-        setRoleName(roleData.role_name);
-        setRoleDescription(roleData.role_description || '');
+        const { data: roleData } = await roleResponse.json();
+        const roleInfo = roleData as Role;
+        setRole(roleInfo);
+        setRoleName(roleInfo.role_name);
+        setRoleDescription(roleInfo.description || '');
 
-        // Set selected permissions
-        const selectedPerms = new Set<string>();
-        if (roleResult.data.permissions) {
-          (roleResult.data.permissions as any[]).forEach((rp) => {
-            selectedPerms.add(rp.permission?.permission_id || '');
-          });
+        // Load role permissions
+        const permResponse = await fetch(`/api/roles/${roleId}/permissions`);
+        if (permResponse.ok) {
+          const { data: permissions } = await permResponse.json();
+          const selectedPerms = new Set<string>();
+          if (permissions) {
+            (permissions as any[]).forEach((rp) => {
+              selectedPerms.add(rp.permission_id || '');
+            });
+          }
+          setSelectedPermissions(selectedPerms);
         }
-        setSelectedPermissions(selectedPerms);
       }
     } catch (err) {
       console.error('Error loading data:', err);
@@ -355,9 +360,9 @@ export default function RoleEditorPage() {
                         <p className="text-sm font-medium text-gray-900">
                           {permission.permission_key}
                         </p>
-                        {permission.permission_description && (
+                        {permission.description && (
                           <p className="text-xs text-gray-500">
-                            {permission.permission_description}
+                            {permission.description}
                           </p>
                         )}
                       </div>

@@ -9,7 +9,6 @@ import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { TeamFilter } from '@/components/ui/TeamFilter';
 import { TeamBadge } from '@/components/ui/TeamBadge';
-import { getJobRequirements } from '@/lib/api/requirements';
 import { formatDate, formatCurrency } from '@/lib/utils/format';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
@@ -28,16 +27,39 @@ export default function RequirementsPage() {
 
   async function loadRequirements() {
     setLoading(true);
-    const { data } = await getJobRequirements({
-      search: search || undefined,
-      status: statusFilter || undefined,
-      priority: priorityFilter || undefined,
-      teamId: teamFilter || undefined,
-      userTeamId: teamId || undefined,
-      isMasterAdmin,
-    });
-    setRequirements(data || []);
-    setLoading(false);
+    try {
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (statusFilter) params.append('status', statusFilter);
+      if (priorityFilter) params.append('priority', priorityFilter);
+      if (teamFilter) params.append('teamId', teamFilter);
+
+      const response = await fetch(`/api/requirements?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Error loading requirements:', response.statusText);
+        setRequirements([]);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setRequirements(result.data || []);
+      } else {
+        console.error('Error loading requirements:', result.error);
+        setRequirements([]);
+      }
+    } catch (error) {
+      console.error('Error loading requirements:', error);
+      setRequirements([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   function getStatusBadgeVariant(status: string) {

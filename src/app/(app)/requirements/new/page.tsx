@@ -7,9 +7,6 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
-import { createJobRequirement } from '@/lib/api/requirements';
-import { getClients } from '@/lib/api/clients';
-import { getVendors } from '@/lib/api/vendors';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function NewJobRequirementPage() {
@@ -52,12 +49,14 @@ export default function NewJobRequirementPage() {
       return;
     }
 
-    const result = await getClients(user.user_id);
-    if ('error' in result) {
-      console.error('Error loading clients:', result.error);
+    try {
+      const response = await fetch('/api/clients');
+      if (!response.ok) throw new Error('Failed to load clients');
+      const { data } = await response.json();
+      setClients(data || []);
+    } catch (error) {
+      console.error('Error loading clients:', error);
       setClients([]);
-    } else {
-      setClients(result.data.clients || []);
     }
   }
 
@@ -67,12 +66,14 @@ export default function NewJobRequirementPage() {
       return;
     }
 
-    const result = await getVendors(user.user_id);
-    if ('error' in result) {
-      console.error('Error loading vendors:', result.error);
+    try {
+      const response = await fetch('/api/vendors');
+      if (!response.ok) throw new Error('Failed to load vendors');
+      const { data } = await response.json();
+      setVendors(data || []);
+    } catch (error) {
+      console.error('Error loading vendors:', error);
       setVendors([]);
-    } else {
-      setVendors(result.data.vendors || []);
     }
   }
 
@@ -110,11 +111,18 @@ export default function NewJobRequirementPage() {
         notes: formData.notes || null,
       };
 
-      const result = await createJobRequirement(jobData, user.user_id, teamId);
+      const response = await fetch('/api/requirements', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(jobData),
+      });
 
-      if (result.error) {
-        throw result.error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create job requirement');
       }
+
+      const result = await response.json();
 
       // Check for duplicates
       if (result.duplicate && result.matches && result.matches.length > 0) {
@@ -124,8 +132,16 @@ export default function NewJobRequirementPage() {
 
         if (confirmed) {
           // Create with duplicate check skipped
-          const forceResult = await createJobRequirement(jobData, user.user_id, teamId, { skipDuplicateCheck: true });
-          if (forceResult.error) throw forceResult.error;
+          const forceResponse = await fetch('/api/requirements?skipDuplicateCheck=true', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(jobData),
+          });
+          if (!forceResponse.ok) {
+            const errorData = await forceResponse.json();
+            throw new Error(errorData.error || 'Failed to create job requirement');
+          }
+          const forceResult = await forceResponse.json();
           if ((forceResult as any).data) {
             router.push(`/requirements/${((forceResult as any).data as any).job_id}`);
           }

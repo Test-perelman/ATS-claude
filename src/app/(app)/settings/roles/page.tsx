@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useCanManageRoles } from '@/lib/utils/permission-hooks';
-import { getRoles, getRoleStats } from '@/lib/api/roles';
 import type { Database } from '@/types/database';
 
 type Role = Database['public']['Tables']['roles']['Row'];
@@ -50,21 +49,46 @@ export default function RolesPage() {
       setLoading(true);
       setError(null);
 
-      const result = await getRoles();
+      const response = await fetch('/api/roles', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if ('error' in result) {
+      if (!response.ok) {
+        setError('Failed to load roles');
+        return;
+      }
+
+      const result = await response.json();
+      if (!result.success) {
         setError(result.error || 'Failed to load roles');
         return;
       }
 
       // Load stats for each role
       const rolesWithStats = await Promise.all(
-        result.data!.map(async (role) => {
-          const stats = await getRoleStats(role.role_id);
-          return {
-            ...role,
-            ...stats,
-          };
+        (result.data || []).map(async (role: any) => {
+          try {
+            const statsResponse = await fetch(`/api/roles/${role.role_id}/stats`, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            });
+
+            if (statsResponse.ok) {
+              const statsResult = await statsResponse.json();
+              return {
+                ...role,
+                ...statsResult.data,
+              };
+            }
+          } catch (err) {
+            console.error(`Error loading stats for role ${role.role_id}:`, err);
+          }
+          return role;
         })
       );
 
@@ -79,7 +103,7 @@ export default function RolesPage() {
 
   const filteredRoles = roles.filter((role) =>
     role.role_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (role.role_description || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (role.description || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (!canManageRoles) {
@@ -195,7 +219,7 @@ export default function RolesPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-600">
-                        {role.role_description || '-'}
+                        {role.description || '-'}
                       </td>
                       <td className="px-6 py-4 text-center text-sm text-gray-900">
                         <span className="inline-flex items-center justify-center rounded-full bg-blue-100 h-8 w-8 text-blue-700 font-semibold">

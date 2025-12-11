@@ -11,7 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { teamSignUp } from '@/lib/supabase/auth'
+import { teamSignUp } from '@/lib/supabase/auth-server'
 import { z } from 'zod'
 
 // Validation schema

@@ -101,7 +101,7 @@ export async function getInterviewById(id: string): Promise<ApiResponse<any>> {
 
 export async function createInterview(data: InterviewInsert, userId?: string, teamId?: string): Promise<ApiResponse<Interview>> {
   try {
-    const result = await typedInsert('interviews', { ...data, created_by: userId, team_id: teamId || null });
+    const result = await typedInsert('interviews', { ...data, created_by: userId, team_id: teamId || null } as any);
 
     if (result.error) {
       return { error: result.error.message };
@@ -117,7 +117,7 @@ export async function createInterview(data: InterviewInsert, userId?: string, te
         entityId: result.data.interview_id,
         activityType: 'created',
         activityTitle: 'Interview Scheduled',
-        activityDescription: `Interview scheduled for ${data.scheduled_time}`,
+        activityDescription: `Interview scheduled for ${(data as any).scheduled_time || (data as any).scheduled_at}`,
         userId,
       });
     }
@@ -130,7 +130,7 @@ export async function createInterview(data: InterviewInsert, userId?: string, te
 
 export async function updateInterview(id: string, updates: InterviewUpdate, userId?: string): Promise<ApiResponse<Interview>> {
   try {
-    const result = await typedUpdate('interviews', 'interview_id', id, { ...updates, updated_by: userId });
+    const result = await typedUpdate('interviews', 'interview_id', id, { ...updates, updated_by: userId } as any);
 
     if (result.error) {
       return { error: result.error.message };

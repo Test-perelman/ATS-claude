@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
-import { getProjects } from '@/lib/api/projects';
 import { formatDate, formatCurrency } from '@/lib/utils/format';
 
 export default function ProjectsPage() {
@@ -22,12 +21,37 @@ export default function ProjectsPage() {
 
   async function loadProjects() {
     setLoading(true);
-    const { data } = await getProjects({
-      search: search || undefined,
-      status: statusFilter || undefined,
-    });
-    setProjects(data || []);
-    setLoading(false);
+    try {
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (statusFilter) params.append('status', statusFilter);
+
+      const response = await fetch(`/api/projects?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Error loading projects:', response.statusText);
+        setProjects([]);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setProjects(result.data || []);
+      } else {
+        console.error('Error loading projects:', result.error);
+        setProjects([]);
+      }
+    } catch (error) {
+      console.error('Error loading projects:', error);
+      setProjects([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   const getStatusBadgeVariant = (status: string) => {

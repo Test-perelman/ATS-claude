@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { getInterviewById, updateInterview } from '@/lib/api/interviews';
 import { formatDateTime } from '@/lib/utils/format';
 import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
@@ -29,20 +28,43 @@ export default function InterviewDetailPage() {
 
   async function loadInterview() {
     setLoading(true);
-    const { data } = await getInterviewById(interviewId);
-    setInterview(data as any);
-    setFormData({
-      result: (data as any)?.result || '',
-      feedback_notes: (data as any)?.feedback_notes || '',
-      rating: (data as any)?.rating || '',
-    });
-    setLoading(false);
+    try {
+      const response = await fetch(`/api/interviews/${interviewId}`);
+      if (!response.ok) throw new Error('Failed to load interview');
+      const { data } = await response.json();
+      setInterview(data as any);
+      setFormData({
+        result: (data as any)?.result || '',
+        feedback_notes: (data as any)?.feedback_notes || '',
+        rating: (data as any)?.rating || '',
+      });
+    } catch (error) {
+      console.error('Error loading interview:', error);
+      setInterview(null);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleSave() {
-    await updateInterview(interviewId, formData);
-    setEditing(false);
-    loadInterview();
+    try {
+      const response = await fetch(`/api/interviews/${interviewId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update interview');
+      }
+
+      setEditing(false);
+      loadInterview();
+    } catch (error) {
+      console.error('Error saving interview:', error);
+      alert('Error saving interview');
+    }
   }
 
   if (loading) {

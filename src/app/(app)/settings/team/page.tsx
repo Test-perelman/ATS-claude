@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { getTeam, updateTeam } from '@/lib/api/teams';
 
 export default function TeamSettingsPage() {
   const [loading, setLoading] = useState(true);
@@ -26,15 +25,21 @@ export default function TeamSettingsPage() {
   async function loadTeam() {
     try {
       setLoading(true);
-      const result = await getTeam();
+      const response = await fetch('/api/teams', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if ('error' in result) {
-        setError(result.error || 'Failed to load team');
+      if (!response.ok) {
+        setError('Failed to load team');
         return;
       }
 
-      if (!result.data) {
-        setError('No team data found');
+      const result = await response.json();
+      if (!result.success || !result.data) {
+        setError(result.error || 'No team data found');
         return;
       }
 
@@ -69,15 +74,28 @@ export default function TeamSettingsPage() {
     setSaving(true);
 
     try {
-      const result = await updateTeam({
-        team_name: formData.team_name,
-        company_name: formData.company_name,
-        description: formData.description,
-        subscription_tier: formData.subscription_tier,
+      const response = await fetch('/api/teams', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          team_name: formData.team_name,
+          company_name: formData.company_name,
+          description: formData.description,
+          subscription_tier: formData.subscription_tier,
+        }),
       });
 
-      if ('error' in result && result.error) {
-        setError(result.error);
+      if (!response.ok) {
+        setError('Failed to update team');
+        setSaving(false);
+        return;
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        setError(result.error || 'Failed to update team');
         setSaving(false);
         return;
       }

@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Timeline } from '@/components/common/Timeline';
-import { getVendorById } from '@/lib/api/vendors';
 import { getVendorTimeline } from '@/lib/utils/timeline';
 import { formatDate, formatPhoneNumber } from '@/lib/utils/format';
 
@@ -29,9 +28,17 @@ export default function VendorDetailPage() {
 
     async function loadVendor() {
         setLoading(true);
-        const { data } = await getVendorById(vendorId);
-        setVendor(data);
-        setLoading(false);
+        try {
+            const response = await fetch(`/api/vendors/${vendorId}`);
+            if (!response.ok) throw new Error('Failed to load vendor');
+            const { data } = await response.json();
+            setVendor(data);
+        } catch (error) {
+            console.error('Error loading vendor:', error);
+            setVendor(null);
+        } finally {
+            setLoading(false);
+        }
     }
 
     async function loadTimeline() {

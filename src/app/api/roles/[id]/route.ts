@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/supabase/auth';
+import { getCurrentUser } from '@/lib/supabase/auth-server';
 import { isMasterAdmin } from '@/lib/utils/role-helpers';
 import { getRoleById, updateRole, deleteRole } from '@/lib/api/roles';
 

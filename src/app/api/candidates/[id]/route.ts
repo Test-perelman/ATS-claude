@@ -6,11 +6,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/supabase/auth'
+import { getCurrentUser } from '@/lib/supabase/auth-server'
 import { getTeamContext } from '@/lib/utils/team-context'
 import { checkPermission } from '@/lib/utils/permissions'
 import { createServerClient } from '@/lib/supabase/server'
 import { z } from 'zod'
+import type { Database } from '@/types/database'
+
+type Candidate = Database['public']['Tables']['candidates']['Update']
 
 /**
  * GET /api/candidates/[id]
@@ -77,14 +80,13 @@ export async function GET(
       `)
       .eq('candidate_id', params.id)
       .is('deleted_at', null)
-      .single()
 
     // Apply team filter (skip for master admin)
     if (!teamContext.isMasterAdmin && teamContext.teamId) {
       query = query.eq('team_id', teamContext.teamId)
     }
 
-    const { data: candidate, error } = await query
+    const { data: candidate, error } = await query.single()
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -200,46 +202,45 @@ export async function PUT(
     const supabase = await createServerClient()
 
     // Build update object
-    const updateData: any = {
-      updated_by: user.user_id,
+    const updateObj: Record<string, any> = {
       updated_at: new Date().toISOString(),
     }
 
-    if (data.firstName !== undefined) updateData.first_name = data.firstName
-    if (data.lastName !== undefined) updateData.last_name = data.lastName
-    if (data.email !== undefined) updateData.email = data.email || null
-    if (data.phone !== undefined) updateData.phone = data.phone || null
-    if (data.status !== undefined) updateData.status = data.status
+    if (data.firstName !== undefined) updateObj.first_name = data.firstName
+    if (data.lastName !== undefined) updateObj.last_name = data.lastName
+    if (data.email !== undefined) updateObj.email = data.email || null
+    if (data.phone !== undefined) updateObj.phone = data.phone || null
+    if (data.status !== undefined) updateObj.status = data.status
     if (data.currentLocation !== undefined)
-      updateData.current_location = data.currentLocation || null
+      updateObj.current_location = data.currentLocation || null
     if (data.preferredLocations !== undefined)
-      updateData.preferred_locations = data.preferredLocations
+      updateObj.preferred_locations = data.preferredLocations
     if (data.workAuthorization !== undefined)
-      updateData.work_authorization = data.workAuthorization || null
-    if (data.linkedinUrl !== undefined) updateData.linkedin_url = data.linkedinUrl || null
-    if (data.resumeUrl !== undefined) updateData.resume_url = data.resumeUrl || null
-    if (data.skills !== undefined) updateData.skills = data.skills
+      updateObj.work_authorization = data.workAuthorization || null
+    if (data.linkedinUrl !== undefined) updateObj.linkedin_url = data.linkedinUrl || null
+    if (data.resumeUrl !== undefined) updateObj.resume_url = data.resumeUrl || null
+    if (data.skills !== undefined) updateObj.skills = data.skills
     if (data.experienceYears !== undefined)
-      updateData.experience_years = data.experienceYears || null
-    if (data.currentTitle !== undefined) updateData.current_title = data.currentTitle || null
+      updateObj.experience_years = data.experienceYears || null
+    if (data.currentTitle !== undefined) updateObj.current_title = data.currentTitle || null
     if (data.currentCompany !== undefined)
-      updateData.current_company = data.currentCompany || null
-    if (data.desiredSalary !== undefined) updateData.desired_salary = data.desiredSalary || null
-    if (data.availableFrom !== undefined) updateData.available_from = data.availableFrom || null
-    if (data.notes !== undefined) updateData.notes = data.notes || null
+      updateObj.current_company = data.currentCompany || null
+    if (data.desiredSalary !== undefined) updateObj.desired_salary = data.desiredSalary || null
+    if (data.availableFrom !== undefined) updateObj.available_from = data.availableFrom || null
+    if (data.notes !== undefined) updateObj.notes = data.notes || null
 
-    let query = supabase
-      .from('candidates')
-      .update(updateData)
+    let updateQuery: any = (supabase
+      .from('candidates') as any)
+      .update(updateObj)
       .eq('candidate_id', params.id)
       .is('deleted_at', null)
 
     // Apply team filter (skip for master admin)
     if (!teamContext.isMasterAdmin && teamContext.teamId) {
-      query = query.eq('team_id', teamContext.teamId)
+      updateQuery = updateQuery.eq('team_id', teamContext.teamId)
     }
 
-    const { data: candidate, error } = await query.select().single()
+    const { data: candidate, error } = await updateQuery.select().single()
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -303,11 +304,10 @@ export async function DELETE(
     // 4. Soft delete candidate
     const supabase = await createServerClient()
 
-    let query = supabase
-      .from('candidates')
+    let query: any = (supabase
+      .from('candidates') as any)
       .update({
         deleted_at: new Date().toISOString(),
-        updated_by: user.user_id,
       })
       .eq('candidate_id', params.id)
       .is('deleted_at', null)

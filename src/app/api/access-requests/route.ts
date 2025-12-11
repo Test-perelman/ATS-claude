@@ -1,4 +1,4 @@
-import { requestTeamAccess } from '@/lib/supabase/auth';
+import { requestTeamAccess } from '@/lib/supabase/auth-server';
 import { getPendingAccessRequests } from '@/lib/api/teams';
 import { NextRequest, NextResponse } from 'next/server';
 

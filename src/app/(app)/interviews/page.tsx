@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
-import { getInterviews } from '@/lib/api/interviews';
 import { formatDateTime, formatDate } from '@/lib/utils/format';
 
 export default function InterviewsPage() {
@@ -23,13 +22,38 @@ export default function InterviewsPage() {
 
   async function loadInterviews() {
     setLoading(true);
-    const { data } = await getInterviews({
-      result: resultFilter || undefined,
-      fromDate: fromDate || undefined,
-      toDate: toDate || undefined,
-    });
-    setInterviews(data || []);
-    setLoading(false);
+    try {
+      const params = new URLSearchParams();
+      if (resultFilter) params.append('result', resultFilter);
+      if (fromDate) params.append('fromDate', fromDate);
+      if (toDate) params.append('toDate', toDate);
+
+      const response = await fetch(`/api/interviews?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Error loading interviews:', response.statusText);
+        setInterviews([]);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setInterviews(result.data || []);
+      } else {
+        console.error('Error loading interviews:', result.error);
+        setInterviews([]);
+      }
+    } catch (error) {
+      console.error('Error loading interviews:', error);
+      setInterviews([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   const getResultBadgeVariant = (result: string | null) => {

@@ -89,7 +89,7 @@ export async function getImmigrationById(id: string): Promise<ApiResponse<any>> 
 
 export async function createImmigrationRecord(data: ImmigrationInsert, userId?: string, teamId?: string): Promise<ApiResponse<Immigration>> {
   try {
-    const result = await typedInsert('immigration', { ...data, created_by: userId, team_id: teamId || null });
+    const result = await typedInsert('immigration', { ...data, created_by: userId, team_id: teamId || null } as any);
 
     if (result.error) {
       return { error: result.error.message };
@@ -102,7 +102,7 @@ export async function createImmigrationRecord(data: ImmigrationInsert, userId?: 
     if (userId) {
       await createActivity({
         entityType: 'immigration',
-        entityId: result.data.immigration_id,
+        entityId: (result.data as any).immigration_id || (result.data as any).case_id,
         activityType: 'created',
         activityTitle: 'Immigration Record Created',
         activityDescription: `Immigration record for ${data.visa_type} was created`,
@@ -118,7 +118,7 @@ export async function createImmigrationRecord(data: ImmigrationInsert, userId?: 
 
 export async function updateImmigrationRecord(id: string, updates: ImmigrationUpdate, userId?: string): Promise<ApiResponse<Immigration>> {
   try {
-    const result = await typedUpdate('immigration', 'immigration_id', id, { ...updates, updated_by: userId });
+    const result = await typedUpdate('immigration', 'case_id' as any, id, { ...updates, updated_by: userId } as any);
 
     if (result.error) {
       return { error: result.error.message };

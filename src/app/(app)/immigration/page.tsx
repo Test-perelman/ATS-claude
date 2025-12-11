@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
-import { getImmigrationRecords } from '@/lib/api/immigration';
 import { formatDate } from '@/lib/utils/format';
 
 export default function ImmigrationPage() {
@@ -20,11 +19,36 @@ export default function ImmigrationPage() {
 
   async function loadRecords() {
     setLoading(true);
-    const { data } = await getImmigrationRecords({
-      visaType: visaTypeFilter || undefined,
-    });
-    setRecords(data || []);
-    setLoading(false);
+    try {
+      const params = new URLSearchParams();
+      if (visaTypeFilter) params.append('visaType', visaTypeFilter);
+
+      const response = await fetch(`/api/immigration?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Error loading immigration records:', response.statusText);
+        setRecords([]);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setRecords(result.data || []);
+      } else {
+        console.error('Error loading immigration records:', result.error);
+        setRecords([]);
+      }
+    } catch (error) {
+      console.error('Error loading immigration records:', error);
+      setRecords([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   const getDaysUntilExpiry = (expiryDate: string) => {

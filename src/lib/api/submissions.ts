@@ -138,13 +138,13 @@ export async function createSubmission(
   teamId?: string
 ): Promise<ApiResponse<Submission>> {
   try {
-    const insertData: SubmissionInsert = {
+    const insertData = {
       ...submissionData,
       submitted_by_user_id: userId || null,
       team_id: teamId || null,
-    };
+    } as any;
 
-    const result = await typedInsert('submissions', insertData);
+    const result = await typedInsert('submissions', insertData as any);
 
     if (result.error) {
       return { error: result.error.message };
@@ -211,13 +211,14 @@ export async function updateSubmission(
       });
 
       // Create activity for status changes
-      if (updates.submission_status) {
+      if ((updates as any).submission_status || (updates as any).status) {
+        const status = (updates as any).submission_status || (updates as any).status;
         await createActivity({
           entityType: 'submission',
           entityId: submissionId,
           activityType: 'status_changed',
           activityTitle: 'Status Updated',
-          activityDescription: `Submission status changed to ${updates.submission_status}`,
+          activityDescription: `Submission status changed to ${status}`,
           userId,
         });
       }

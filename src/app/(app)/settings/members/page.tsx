@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { getTeamMembers } from '@/lib/api/teams';
 
 export default function TeamMembersPage() {
   const [loading, setLoading] = useState(true);
@@ -19,14 +18,24 @@ export default function TeamMembersPage() {
   async function loadMembers() {
     try {
       setLoading(true);
-      const result = await getTeamMembers();
+      const response = await fetch('/api/teams/members', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if ('error' in result && result.error) {
-        setError(result.error);
+      if (!response.ok) {
+        setError('Failed to load team members');
         return;
       }
 
-      setMembers(result.data || []);
+      const result = await response.json();
+      if (result.success) {
+        setMembers(result.data || []);
+      } else {
+        setError(result.error || 'Failed to load team members');
+      }
     } catch (err) {
       setError('Failed to load team members');
       console.error(err);

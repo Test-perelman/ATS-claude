@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Timeline } from '@/components/common/Timeline';
-import { getClientById } from '@/lib/api/clients';
 import { getClientTimeline } from '@/lib/utils/timeline';
 import { formatDate, formatPhoneNumber } from '@/lib/utils/format';
 
@@ -28,9 +27,17 @@ export default function ClientDetailPage() {
 
     async function loadClient() {
         setLoading(true);
-        const { data } = await getClientById(clientId);
-        setClient(data);
-        setLoading(false);
+        try {
+            const response = await fetch(`/api/clients/${clientId}`);
+            if (!response.ok) throw new Error('Failed to load client');
+            const { data } = await response.json();
+            setClient(data);
+        } catch (error) {
+            console.error('Error loading client:', error);
+            setClient(null);
+        } finally {
+            setLoading(false);
+        }
     }
 
     async function loadTimeline() {

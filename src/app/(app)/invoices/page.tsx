@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
-import { getInvoices } from '@/lib/api/invoices';
 import { formatDate, formatCurrency } from '@/lib/utils/format';
 
 export default function InvoicesPage() {
@@ -20,11 +19,36 @@ export default function InvoicesPage() {
 
   async function loadInvoices() {
     setLoading(true);
-    const { data } = await getInvoices({
-      status: statusFilter || undefined,
-    });
-    setInvoices(data || []);
-    setLoading(false);
+    try {
+      const params = new URLSearchParams();
+      if (statusFilter) params.append('status', statusFilter);
+
+      const response = await fetch(`/api/invoices?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Error loading invoices:', response.statusText);
+        setInvoices([]);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setInvoices(result.data || []);
+      } else {
+        console.error('Error loading invoices:', result.error);
+        setInvoices([]);
+      }
+    } catch (error) {
+      console.error('Error loading invoices:', error);
+      setInvoices([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   const getStatusBadgeVariant = (status: string) => {

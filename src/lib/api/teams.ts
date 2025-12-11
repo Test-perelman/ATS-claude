@@ -1,5 +1,5 @@
 import { supabase, createServerClient, typedUpdate } from '@/lib/supabase/client';
-import { getCurrentUserTeamId } from '@/lib/supabase/auth';
+import { getCurrentUserTeamId } from '@/lib/supabase/auth-server';
 import type { Database } from '@/types/database';
 import type { ApiResponse, ApiArrayResponse, ApiVoidResponse } from '@/types/api';
 
@@ -231,7 +231,7 @@ export async function removeTeamMember(userId: string, teamId: string): Promise<
 /**
  * Get all pending access requests for team (admin only)
  */
-export async function getPendingAccessRequests(): Promise<ApiArrayResponse<Database['public']['Tables']['team_access_requests']['Row']>> {
+export async function getPendingAccessRequests(): Promise<ApiArrayResponse<any>> {
   try {
     const teamId = await getCurrentUserTeamId();
 
@@ -260,7 +260,7 @@ export async function getPendingAccessRequests(): Promise<ApiArrayResponse<Datab
 /**
  * Get all access requests for team (admin only)
  */
-export async function getAccessRequests(status?: 'pending' | 'approved' | 'rejected'): Promise<ApiArrayResponse<Database['public']['Tables']['team_access_requests']['Row']>> {
+export async function getAccessRequests(status?: 'pending' | 'approved' | 'rejected'): Promise<ApiArrayResponse<any>> {
   try {
     const teamId = await getCurrentUserTeamId();
 

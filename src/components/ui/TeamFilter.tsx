@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils/cn';
-import { getAllTeams } from '@/lib/api/teams';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import type { Database } from '@/types/database';
 
@@ -34,11 +33,27 @@ export const TeamFilter: React.FC<TeamFilterProps> = ({
         return;
       }
 
-      const result = await getAllTeams();
-      if ('data' in result && result.data) {
-        setTeams(result.data);
+      try {
+        const response = await fetch('/api/teams', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!response.ok) {
+          console.error('Error loading teams:', response.statusText);
+          setLoading(false);
+          return;
+        }
+
+        const result = await response.json();
+        if (result.success && result.data) {
+          setTeams(result.data);
+        }
+      } catch (error) {
+        console.error('Error loading teams:', error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
     loadTeams();

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { getAccessRequests } from '@/lib/api/teams';
 
 export default function AccessRequestsPage() {
   const [loading, setLoading] = useState(true);
@@ -25,10 +24,24 @@ export default function AccessRequestsPage() {
     try {
       setLoading(true);
       setError('');
-      const result = await getAccessRequests(filter);
+      const params = new URLSearchParams();
+      if (filter) params.append('status', filter);
 
-      if ('error' in result && result.error) {
-        setError(result.error);
+      const response = await fetch(`/api/access-requests?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        setError('Failed to load access requests');
+        return;
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        setError(result.error || 'Failed to load access requests');
         return;
       }
 

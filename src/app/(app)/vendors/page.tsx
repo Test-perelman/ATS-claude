@@ -9,7 +9,6 @@ import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { TeamFilter } from '@/components/ui/TeamFilter';
 import { TeamBadge } from '@/components/ui/TeamBadge';
-import { getVendors } from '@/lib/api/vendors';
 import { formatDate, formatPhoneNumber } from '@/lib/utils/format';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
@@ -35,19 +34,40 @@ export default function VendorsPage() {
     }
 
     setLoading(true);
-    const result = await getVendors(user.user_id, {
-      search: search || undefined,
-      tierLevel: tierFilter || undefined,
-      isActive: statusFilter === 'active' ? true : statusFilter === 'inactive' ? false : undefined,
-      teamId: teamFilter || undefined,
-    });
-    if ('error' in result) {
-      console.error('Error loading vendors:', result.error);
+    try {
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (tierFilter) params.append('tierLevel', tierFilter);
+      if (statusFilter === 'active') params.append('isActive', 'true');
+      if (statusFilter === 'inactive') params.append('isActive', 'false');
+      if (teamFilter) params.append('teamId', teamFilter);
+
+      const response = await fetch(`/api/vendors?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Error loading vendors:', response.statusText);
+        setVendors([]);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setVendors(result.data || []);
+      } else {
+        console.error('Error loading vendors:', result.error);
+        setVendors([]);
+      }
+    } catch (error) {
+      console.error('Error loading vendors:', error);
       setVendors([]);
-    } else {
-      setVendors(result.data.vendors || []);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (

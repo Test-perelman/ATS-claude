@@ -6,8 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { createInterview } from '@/lib/api/interviews';
-import { getSubmissions } from '@/lib/api/submissions';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
 function NewInterviewForm() {
@@ -32,12 +30,14 @@ function NewInterviewForm() {
   }, []);
 
   async function loadSubmissions() {
-    const result = await getSubmissions({});
-    if ('error' in result) {
-      console.error('Error loading submissions:', result.error);
+    try {
+      const response = await fetch('/api/submissions');
+      if (!response.ok) throw new Error('Failed to load submissions');
+      const { data } = await response.json();
+      setSubmissions(data || []);
+    } catch (error) {
+      console.error('Error loading submissions:', error);
       setSubmissions([]);
-    } else {
-      setSubmissions(result.data || []);
     }
   }
 
@@ -50,10 +50,15 @@ function NewInterviewForm() {
         throw new Error('User or team information not available');
       }
 
-      const result = await createInterview(formData, user.user_id, teamId);
+      const response = await fetch('/api/interviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
 
-      if ('error' in result) {
-        alert('Error creating interview: ' + result.error);
+      if (!response.ok) {
+        const errorData = await response.json();
+        alert('Error creating interview: ' + (errorData.error || 'Unknown error'));
         setLoading(false);
         return;
       }

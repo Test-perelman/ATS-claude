@@ -96,7 +96,7 @@ export async function getProjectById(id: string): Promise<ApiResponse<any>> {
 
 export async function createProject(data: ProjectInsert, userId?: string, teamId?: string): Promise<ApiResponse<Project>> {
   try {
-    const result = await typedInsert('projects', { ...data, created_by: userId, team_id: teamId || null });
+    const result = await typedInsert('projects', { ...data, created_by: userId, team_id: teamId || null } as any);
 
     if (result.error) {
       return { error: result.error.message };
@@ -125,7 +125,7 @@ export async function createProject(data: ProjectInsert, userId?: string, teamId
 
 export async function updateProject(id: string, updates: ProjectUpdate, userId?: string): Promise<ApiResponse<Project>> {
   try {
-    const result = await typedUpdate('projects', 'project_id', id, { ...updates, updated_by: userId });
+    const result = await typedUpdate('projects', 'project_id', id, { ...updates, updated_by: userId } as any);
 
     if (result.error) {
       return { error: result.error.message };

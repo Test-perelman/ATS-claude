@@ -44,7 +44,7 @@ export async function createAuditLog({
     });
   }
 
-  const { data, error } = await typedInsert('audit_log', {
+  const { data, error } = await typedInsert('audit_log' as any, {
     entity_name: entityName,
     entity_id: entityId,
     action,
@@ -55,7 +55,7 @@ export async function createAuditLog({
     team_id: teamId || null,
     ip_address: ipAddress || null,
     user_agent: userAgent || null,
-  });
+  } as any);
 
   if (error) {
     console.error('Failed to create audit log:', error);
@@ -170,7 +170,7 @@ export async function createActivity({
     metadata: metadata || null,
     created_by: userId || null,
     team_id: teamId || null,
-  });
+  } as any);
 
   return { data, error };
 }

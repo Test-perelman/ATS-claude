@@ -169,7 +169,7 @@ export async function createClient(
             team_id: teamContext.teamId, // SERVER-CONTROLLED - never from client
             created_by: userId,
             updated_by: userId,
-        });
+        } as any);
 
         if (error) {
             return { error: error.message };
@@ -242,7 +242,7 @@ export async function updateClient(
         const { data, error } = await typedUpdate('clients', 'client_id', clientId, {
             ...updates,
             updated_by: userId,
-        });
+        } as any);
 
         if (error) {
             return { error: error.message };
@@ -263,14 +263,14 @@ export async function updateClient(
         });
 
         // Create activity for significant changes
-        const oldClient = oldData as Client | null;
-        if (updates.is_active !== undefined && updates.is_active !== oldClient?.is_active) {
+        const oldClient = oldData as any;
+        if ((updates as any).is_active !== undefined && (updates as any).is_active !== oldClient?.is_active) {
             await createActivity({
                 entityType: 'client',
                 entityId: clientId,
                 activityType: 'status_change',
                 activityTitle: 'Client Status Updated',
-                activityDescription: `Status changed to ${updates.is_active ? 'Active' : 'Inactive'}`,
+                activityDescription: `Status changed to ${(updates as any).is_active ? 'Active' : 'Inactive'}`,
                 userId,
             });
         }

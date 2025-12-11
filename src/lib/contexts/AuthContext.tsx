@@ -1,8 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { getCurrentUser, checkTeamAccess } from '@/lib/supabase/auth';
-import { getRolePermissions } from '@/lib/utils/permissions';
 import type { Database } from '@/types/database';
 
 type UserWithRole = Database['public']['Tables']['users']['Row'] & {
@@ -71,77 +69,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function initAuth() {
       try {
-        // Get current user
-        const user = await getCurrentUser();
+        // Fetch session from API route
+        const response = await fetch('/api/auth/session', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch session');
+        }
+
+        const result = await response.json();
+
+        if (!result.success || !result.data) {
+          setState((prev) => ({
+            ...prev,
+            loading: false,
+          }));
+          return;
+        }
+
+        const { user, isMasterAdmin, isLocalAdmin, userRole, userPermissions, teamId, teamName } = result.data;
+
+        // Create permission checking functions
+        const hasPermissionFn = (permissionKey: string): boolean => {
+          // Master Admin has all permissions
+          if (isMasterAdmin) return true;
+          return userPermissions.includes(permissionKey);
+        };
+
+        const hasAnyPermissionFn = (permissionKeys: string[]): boolean => {
+          if (isMasterAdmin) return true;
+          return permissionKeys.some((key: string) => userPermissions.includes(key));
+        };
+
+        const hasAllPermissionsFn = (permissionKeys: string[]): boolean => {
+          if (isMasterAdmin) return true;
+          return permissionKeys.every((key: string) => userPermissions.includes(key));
+        };
+
         setState((prev) => ({
           ...prev,
           user,
+          teamId,
+          teamName,
+          hasTeamAccess: !!teamId,
+          requestStatus: null,
+          loading: false,
+          isMasterAdmin,
+          isLocalAdmin,
+          userRole,
+          userPermissions,
+          hasPermission: hasPermissionFn,
+          hasAnyPermission: hasAnyPermissionFn,
+          hasAllPermissions: hasAllPermissionsFn,
+          canManageRoles: isMasterAdmin || isLocalAdmin,
+          canManageUsers: isMasterAdmin || isLocalAdmin,
         }));
-
-        if (user) {
-          // Get user's role name and permissions
-          const roleName = (user.role_id as any)?.role_name || null;
-          let userPermissions: string[] = [];
-          let isMasterAdmin = false;
-          let isLocalAdmin = false;
-
-          // Check if Master Admin
-          isMasterAdmin = user.is_master_admin === true;
-
-          // Check if Local Admin
-          if (roleName === 'Local Admin') {
-            isLocalAdmin = true;
-          }
-
-          // Fetch and cache user's permissions
-          if (user.role_id) {
-            userPermissions = await getRolePermissions((user.role_id as any).role_id);
-          }
-
-          // Check team access status
-          const access = await checkTeamAccess();
-
-          // Create permission checking functions
-          const hasPermissionFn = (permissionKey: string): boolean => {
-            // Master Admin has all permissions
-            if (isMasterAdmin) return true;
-            return userPermissions.includes(permissionKey);
-          };
-
-          const hasAnyPermissionFn = (permissionKeys: string[]): boolean => {
-            if (isMasterAdmin) return true;
-            return permissionKeys.some((key) => userPermissions.includes(key));
-          };
-
-          const hasAllPermissionsFn = (permissionKeys: string[]): boolean => {
-            if (isMasterAdmin) return true;
-            return permissionKeys.every((key) => userPermissions.includes(key));
-          };
-
-          setState((prev) => ({
-            ...prev,
-            hasTeamAccess: access.hasAccess,
-            teamId: access.teamId || null,
-            teamName: access.teamName || null,
-            requestStatus: access.requestStatus || null,
-            loading: false,
-            // Set role and permission data
-            isMasterAdmin,
-            isLocalAdmin,
-            userRole: roleName,
-            userPermissions,
-            hasPermission: hasPermissionFn,
-            hasAnyPermission: hasAnyPermissionFn,
-            hasAllPermissions: hasAllPermissionsFn,
-            canManageRoles: isMasterAdmin || isLocalAdmin,
-            canManageUsers: isMasterAdmin || isLocalAdmin,
-          }));
-        } else {
-          setState((prev) => ({
-            ...prev,
-            loading: false,
-          }));
-        }
       } catch (error) {
         console.error('Auth initialization error:', error);
         setState((prev) => ({

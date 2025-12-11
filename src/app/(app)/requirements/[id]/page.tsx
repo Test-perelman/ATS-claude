@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Timeline } from '@/components/common/Timeline';
-import { getJobRequirementById, getJobSubmissions, getMatchingCandidates } from '@/lib/api/requirements';
 import { getJobRequirementTimeline } from '@/lib/utils/timeline';
 import { formatDate, formatCurrency } from '@/lib/utils/format';
 
@@ -34,9 +33,17 @@ export default function JobRequirementDetailPage() {
 
   async function loadJob() {
     setLoading(true);
-    const { data } = await getJobRequirementById(jobId);
-    setJob(data);
-    setLoading(false);
+    try {
+      const response = await fetch(`/api/requirements/${jobId}`);
+      if (!response.ok) throw new Error('Failed to load job');
+      const { data } = await response.json();
+      setJob(data);
+    } catch (error) {
+      console.error('Error loading job:', error);
+      setJob(null);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function loadTimeline() {
@@ -45,13 +52,27 @@ export default function JobRequirementDetailPage() {
   }
 
   async function loadSubmissions() {
-    const { data } = await getJobSubmissions(jobId);
-    setSubmissions(data || []);
+    try {
+      const response = await fetch(`/api/requirements/${jobId}/submissions`);
+      if (!response.ok) throw new Error('Failed to load submissions');
+      const { data } = await response.json();
+      setSubmissions(data || []);
+    } catch (error) {
+      console.error('Error loading submissions:', error);
+      setSubmissions([]);
+    }
   }
 
   async function loadMatchingCandidates() {
-    const { data } = await getMatchingCandidates(jobId);
-    setMatchingCandidates(data || []);
+    try {
+      const response = await fetch(`/api/requirements/${jobId}/matching-candidates`);
+      if (!response.ok) throw new Error('Failed to load candidates');
+      const { data } = await response.json();
+      setMatchingCandidates(data || []);
+    } catch (error) {
+      console.error('Error loading candidates:', error);
+      setMatchingCandidates([]);
+    }
   }
 
   function getStatusBadgeVariant(status: string) {

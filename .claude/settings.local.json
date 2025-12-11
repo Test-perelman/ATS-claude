@@ -34,7 +34,16 @@
       "Bash(.gitignore)",
       "Bash(curl:*)",
       "Bash(tree -L 3 \"d:\\Perelman-ATS-claude\\src\")",
-      "Bash(npx ts-node:*)"
+      "Bash(npx ts-node:*)",
+      "Bash(powershell:*)",
+      "Bash(while read f)",
+      "Bash(do if grep -q \"from ''''@/lib/api/\" \"$f\")",
+      "Bash(then echo \"$f\")",
+      "Bash(fi)",
+      "Bash(done)",
+      "Bash(for f in \"d:\\Perelman-ATS-claude\\src\\app\\(app)\\candidates\\page.tsx\" \"d:\\Perelman-ATS-claude\\src\\app\\(app)\\clients\\page.tsx\" \"d:\\Perelman-ATS-claude\\src\\app\\(app)\\bench\\page.tsx\" \"d:\\Perelman-ATS-claude\\src\\app\\(app)\\vendors\\page.tsx\" \"d:\\Perelman-ATS-claude\\src\\app\\(app)\\submissions\\page.tsx\" \"d:\\Perelman-ATS-claude\\src\\app\\(app)\\requirements\\page.tsx\" \"d:\\Perelman-ATS-claude\\src\\app\\(app)\\interviews\\page.tsx\" \"d:\\Perelman-ATS-claude\\src\\app\\(app)\\invoices\\page.tsx\" \"d:\\Perelman-ATS-claude\\src\\app\\(app)\\projects\\page.tsx\" \"d:\\Perelman-ATS-claude\\src\\app\\(app)\\immigration\\page.tsx\" \"d:\\Perelman-ATS-claude\\src\\app\\(app)\\timesheets\\page.tsx\")",
+      "Bash(do if grep -q \"from ''@/lib/api/\" \"$f\")",
+      "Bash(then echo \"FOUND IN: $f\")"
     ],
     "deny": [],
     "ask": []

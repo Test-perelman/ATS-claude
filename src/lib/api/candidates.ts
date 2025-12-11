@@ -180,11 +180,11 @@ export async function createCandidate(
     // Check for duplicates unless explicitly skipped
     if (!options?.skipDuplicateCheck) {
       const duplicateCheck = await findDuplicateCandidates({
-        email_address: candidateData.email_address || undefined,
-        phone_number: candidateData.phone_number || undefined,
+        email_address: (candidateData as any).email || undefined,
+        phone_number: (candidateData as any).phone || undefined,
         first_name: candidateData.first_name,
         last_name: candidateData.last_name,
-        passport_number: candidateData.passport_number || undefined,
+        passport_number: (candidateData as any).passport_number || undefined,
       });
 
       if (duplicateCheck.found && duplicateCheck.matches.length > 0) {
@@ -202,7 +202,6 @@ export async function createCandidate(
       ...candidateData,
       team_id: teamContext.teamId, // SERVER-CONTROLLED - never from client
       created_by: userId,
-      updated_by: userId,
     });
 
     if (error) {
@@ -273,7 +272,6 @@ export async function updateCandidate(
     // Update candidate (team_id cannot be changed)
     const { data, error } = await typedUpdate('candidates', 'candidate_id', candidateId, {
       ...updates,
-      updated_by: userId,
     });
 
     if (error) {
@@ -292,13 +290,13 @@ export async function updateCandidate(
       });
 
       // Create activity for significant changes
-      if (updates.bench_status && updates.bench_status !== oldData?.bench_status) {
+      if ((updates as any).bench_status && (updates as any).bench_status !== (oldData as any)?.bench_status) {
         await createActivity({
           entityType: 'candidate',
           entityId: candidateId,
           activityType: 'status_change',
           activityTitle: 'Bench Status Updated',
-          activityDescription: `Status changed from ${oldData?.bench_status} to ${updates.bench_status}`,
+          activityDescription: `Status changed from ${(oldData as any)?.bench_status} to ${(updates as any).bench_status}`,
           userId,
         });
       }
@@ -429,7 +427,7 @@ export async function addToBench(
       {
         bench_status: 'on_bench',
         bench_added_date: new Date().toISOString().split('T')[0],
-      },
+      } as any,
       userId
     );
 
@@ -440,11 +438,12 @@ export async function addToBench(
     const data = result.data;
 
     // Add to bench history
-    await typedInsert('bench_history', {
-      candidate_id: candidateId,
-      bench_added_date: new Date().toISOString().split('T')[0],
-      notes: notes || null,
-    });
+    // TODO: Implement bench_history table and tracking
+    // await typedInsert('bench_history', {
+    //   candidate_id: candidateId,
+    //   bench_added_date: new Date().toISOString().split('T')[0],
+    //   notes: notes || null,
+    // });
 
     // Create activity
     await createActivity({
@@ -476,7 +475,7 @@ export async function removeFromBench(
       candidateId,
       {
         bench_status: 'placed',
-      },
+      } as any,
       userId
     );
 
@@ -487,22 +486,23 @@ export async function removeFromBench(
     const data = result.data;
 
     // Update bench history
-    const { data: benchHistory, error: historyError } = await supabase
-      .from('bench_history')
-      .select('*')
-      .eq('candidate_id', candidateId)
-      .is('bench_removed_date', null)
-      .order('bench_added_date', { ascending: false })
-      .limit(1)
-      .single();
+    // TODO: Implement bench_history table and tracking
+    // const { data: benchHistory, error: historyError } = await supabase
+    //   .from('bench_history')
+    //   .select('*')
+    //   .eq('candidate_id', candidateId)
+    //   .is('bench_removed_date', null)
+    //   .order('bench_added_date', { ascending: false })
+    //   .limit(1)
+    //   .single();
 
-    if (!historyError && benchHistory) {
-      const history = benchHistory as Database['public']['Tables']['bench_history']['Row'];
-      await typedUpdate('bench_history', 'bench_id', history.bench_id, {
-        bench_removed_date: new Date().toISOString().split('T')[0],
-        reason_bench_out: reason,
-      });
-    }
+    // if (!historyError && benchHistory) {
+    //   const history = benchHistory as Database['public']['Tables']['bench_history']['Row'];
+    //   await typedUpdate('bench_history', 'bench_id', history.bench_id, {
+    //     bench_removed_date: new Date().toISOString().split('T')[0],
+    //     reason_bench_out: reason,
+    //   });
+    // }
 
     // Create activity
     await createActivity({

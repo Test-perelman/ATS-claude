@@ -85,8 +85,8 @@ export async function getTeamContext(
     throw new Error('User not found or not authenticated')
   }
 
-  const isMasterAdmin = user.is_master_admin === true
-  const userTeamId = user.team_id
+  const isMasterAdmin = (user as any).is_master_admin === true
+  const userTeamId = (user as any).team_id
 
   // Validate team requirement
   if (requireTeam && !userTeamId && !isMasterAdmin) {
@@ -127,7 +127,7 @@ export async function getTeamContext(
     throw new Error('User has no team assignment')
   }
 
-  if (!user.role_id) {
+  if (!(user as any).role_id) {
     throw new Error('User has no role assignment')
   }
 
@@ -142,12 +142,12 @@ export async function getTeamContext(
     throw new Error('User team does not exist. Please contact your administrator.')
   }
 
-  if (team.is_active === false) {
+  if ((team as any).is_active === false) {
     throw new Error('Your team is currently inactive. Please contact your administrator.')
   }
 
   // Check if user is local admin
-  const isLocalAdmin = (user.role as any)?.is_admin_role === true
+  const isLocalAdmin = (user as any).role?.is_admin_role === true
 
   // Get user permissions
   const { data: rolePermissions } = await supabase
@@ -157,10 +157,10 @@ export async function getTeamContext(
         permission_key
       )
     `)
-    .eq('role_id', user.role_id)
+    .eq('role_id', (user as any).role_id)
 
-  const permissions = rolePermissions
-    ?.map(rp => (rp.permission as any)?.permission_key)
+  const permissions = (rolePermissions as any)
+    ?.map((rp: any) => (rp.permission as any)?.permission_key)
     .filter(Boolean) || []
 
   return {
@@ -279,17 +279,17 @@ export async function getAccessibleTeamIds(userId: string): Promise<string[]> {
   }
 
   // Master admin can access all teams
-  if (user.is_master_admin) {
+  if ((user as any).is_master_admin) {
     const { data: teams } = await supabase
       .from('teams')
       .select('team_id')
       .eq('is_active', true)
 
-    return teams?.map(t => t.team_id) || []
+    return (teams as any)?.map((t: any) => t.team_id) || []
   }
 
   // Regular user can only access their team
-  return user.team_id ? [user.team_id] : []
+  return (user as any).team_id ? [(user as any).team_id] : []
 }
 
 /**
@@ -355,11 +355,11 @@ export async function getUserTeam(userId: string) {
     .eq('user_id', userId)
     .single()
 
-  if (!user || user.is_master_admin) {
+  if (!user || (user as any).is_master_admin) {
     return null
   }
 
-  return user.team
+  return (user as any).team
 }
 
 /**
@@ -410,13 +410,13 @@ export async function requireTeamMembership(userId: string): Promise<string> {
     throw new Error('User not found')
   }
 
-  if (user.is_master_admin) {
+  if ((user as any).is_master_admin) {
     throw new Error('Master admins do not belong to a specific team')
   }
 
-  if (!user.team_id) {
+  if (!(user as any).team_id) {
     throw new Error('User has no team assignment')
   }
 
-  return user.team_id
+  return (user as any).team_id
 }

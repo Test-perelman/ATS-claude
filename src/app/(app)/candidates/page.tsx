@@ -9,7 +9,6 @@ import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { TeamFilter } from '@/components/ui/TeamFilter';
 import { TeamBadge } from '@/components/ui/TeamBadge';
-import { getCandidates } from '@/lib/api/candidates';
 import { formatDate, formatPhoneNumber } from '@/lib/utils/format';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
@@ -34,18 +33,38 @@ export default function CandidatesPage() {
     }
 
     setLoading(true);
-    const result = await getCandidates(user.user_id, {
-      search: search || undefined,
-      benchStatus: benchFilter || undefined,
-      teamId: teamFilter || undefined,
-    });
-    if ('error' in result) {
-      console.error('Error loading candidates:', result.error);
+    try {
+      const params = new URLSearchParams();
+      if (search) params.append('search', search);
+      if (benchFilter) params.append('status', benchFilter);
+      if (teamFilter) params.append('teamId', teamFilter);
+
+      const response = await fetch(`/api/candidates?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Error loading candidates:', response.statusText);
+        setCandidates([]);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setCandidates(result.data || []);
+      } else {
+        console.error('Error loading candidates:', result.error);
+        setCandidates([]);
+      }
+    } catch (error) {
+      console.error('Error loading candidates:', error);
       setCandidates([]);
-    } else {
-      setCandidates(result.data.data || []);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (

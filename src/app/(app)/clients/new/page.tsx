@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
-import { createClient } from '@/lib/api/clients';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function NewClientPage() {
@@ -75,17 +74,24 @@ export default function NewClientPage() {
         // team_id is NOT included - it will be set server-side from authenticated user
       };
 
-      // Call API with userId - team_id will be extracted server-side
-      const result = await createClient(clientData, user.user_id);
+      // Call API with fetch
+      const response = await fetch('/api/clients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(clientData),
+      });
 
-      if ('error' in result && result.error) {
-        alert('Error creating client: ' + result.error);
+      if (!response.ok) {
+        const errorData = await response.json();
+        alert('Error creating client: ' + (errorData.error || 'Unknown error'));
         setLoading(false);
         return;
       }
 
+      const result = await response.json();
+
       // Check for duplicates
-      if ('duplicate' in result && result.duplicate && result.matches && result.matches.length > 0) {
+      if (result.duplicate && result.matches && result.matches.length > 0) {
         setLoading(false);
         const confirmed = window.confirm(
           `A similar client "${(result.matches as any)[0].client_name}" already exists. Do you want to create anyway?`
@@ -94,17 +100,23 @@ export default function NewClientPage() {
         if (confirmed) {
           setLoading(true);
           // Create with duplicate check skipped
-          const forceResult = await createClient(clientData, user.user_id, { skipDuplicateCheck: true });
-          if ('error' in forceResult && forceResult.error) {
-            alert('Error creating client: ' + forceResult.error);
+          const forceResponse = await fetch('/api/clients?skipDuplicateCheck=true', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(clientData),
+          });
+          if (!forceResponse.ok) {
+            const errorData = await forceResponse.json();
+            alert('Error creating client: ' + (errorData.error || 'Unknown error'));
             setLoading(false);
             return;
           }
-          if ('data' in forceResult && forceResult.data) {
+          const forceResult = await forceResponse.json();
+          if (forceResult.data) {
             router.push(`/clients/${forceResult.data.client_id}`);
           }
         }
-      } else if ('data' in result && result.data) {
+      } else if (result.data) {
         // Redirect to client detail page
         router.push(`/clients/${result.data.client_id}`);
       }

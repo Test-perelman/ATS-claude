@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
-import { adminSignIn } from '@/lib/supabase/auth';
+import { signIn } from '@/lib/supabase/auth';
 
 function AdminLoginContent() {
   const searchParams = useSearchParams();
@@ -56,7 +56,7 @@ function AdminLoginContent() {
       }
 
       console.log('Starting login with email:', formData.email);
-      const result = await adminSignIn(formData.email, formData.password);
+      const result = await signIn(formData.email, formData.password);
       console.log('Login result:', result);
 
       if ('error' in result && result.error) {

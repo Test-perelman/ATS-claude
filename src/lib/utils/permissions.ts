@@ -45,17 +45,17 @@ export async function checkPermission(
   }
 
   // Master admin has all permissions
-  if (user.is_master_admin) {
+  if ((user as any).is_master_admin) {
     return true
   }
 
   // Local admin has all permissions within their team
-  if ((user.role as any)?.is_admin_role === true) {
+  if ((user as any).role?.is_admin_role === true) {
     return true
   }
 
   // Check role permissions
-  if (!user.role_id) {
+  if (!(user as any).role_id) {
     return false
   }
 
@@ -66,14 +66,14 @@ export async function checkPermission(
         permission_key
       )
     `)
-    .eq('role_id', user.role_id)
+    .eq('role_id', (user as any).role_id)
 
   if (!rolePermissions) {
     return false
   }
 
-  const permissions = rolePermissions
-    .map(rp => (rp.permission as any)?.permission_key)
+  const permissions = (rolePermissions as any)
+    .map((rp: any) => (rp.permission as any)?.permission_key)
     .filter(Boolean)
 
   return permissions.includes(permissionKey)
@@ -108,17 +108,17 @@ export async function getUserPermissions(userId: string): Promise<string[]> {
   }
 
   // Master admins and local admins have all permissions
-  if (user.is_master_admin || (user.role as any)?.is_admin_role === true) {
+  if ((user as any).is_master_admin || (user as any).role?.is_admin_role === true) {
     // Return all permission keys
     const { data: allPermissions } = await supabase
       .from('permissions')
       .select('permission_key')
 
-    return allPermissions?.map(p => p.permission_key) || []
+    return (allPermissions as any)?.map((p: any) => p.permission_key) || []
   }
 
   // Get role-specific permissions
-  if (!user.role_id) {
+  if (!(user as any).role_id) {
     return []
   }
 
@@ -129,10 +129,10 @@ export async function getUserPermissions(userId: string): Promise<string[]> {
         permission_key
       )
     `)
-    .eq('role_id', user.role_id)
+    .eq('role_id', (user as any).role_id)
 
-  return rolePermissions
-    ?.map(rp => (rp.permission as any)?.permission_key)
+  return (rolePermissions as any)
+    ?.map((rp: any) => (rp.permission as any)?.permission_key)
     .filter(Boolean) || []
 }
 
@@ -161,7 +161,7 @@ export async function checkAnyPermission(
   }
 
   // Master admin and local admin have all permissions
-  if (user.is_master_admin || (user.role as any)?.is_admin_role === true) {
+  if ((user as any).is_master_admin || (user as any).role?.is_admin_role === true) {
     return true
   }
 
@@ -200,7 +200,7 @@ export async function checkAllPermissions(
   }
 
   // Master admin and local admin have all permissions
-  if (user.is_master_admin || (user.role as any)?.is_admin_role === true) {
+  if ((user as any).is_master_admin || (user as any).role?.is_admin_role === true) {
     return true
   }
 
@@ -240,11 +240,11 @@ export async function isLocalAdmin(userId: string): Promise<boolean> {
   }
 
   // Master admins are not local admins (they're global)
-  if (user.is_master_admin) {
+  if ((user as any).is_master_admin) {
     return false
   }
 
-  return (user.role as any)?.is_admin_role === true
+  return (user as any).role?.is_admin_role === true
 }
 
 /**
@@ -262,7 +262,7 @@ export async function isMasterAdmin(userId: string): Promise<boolean> {
     .eq('user_id', userId)
     .single()
 
-  return user?.is_master_admin === true
+  return (user as any)?.is_master_admin === true
 }
 
 /**
@@ -318,8 +318,8 @@ export async function getRolePermissions(roleId: string): Promise<string[]> {
     `)
     .eq('role_id', roleId)
 
-  return data
-    ?.map(rp => (rp.permission as any)?.permission_key)
+  return (data as any)
+    ?.map((rp: any) => (rp.permission as any)?.permission_key)
     .filter(Boolean) || []
 }
 
@@ -343,7 +343,7 @@ export async function assignPermissionToRole(
       role_id: roleId,
       permission_id: permissionId,
       granted_by: grantedBy || null,
-    }, {
+    } as any, {
       onConflict: 'role_id,permission_id'
     })
 
@@ -398,7 +398,7 @@ export async function updateRolePermissions(
           role_id: roleId,
           permission_id: permissionId,
           granted_by: grantedBy || null,
-        }))
+        })) as any
       )
 
     return { data, error }

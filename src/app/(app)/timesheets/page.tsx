@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
-import { getTimesheets } from '@/lib/api/timesheets';
 import { formatDate } from '@/lib/utils/format';
 
 export default function TimesheetsPage() {
@@ -20,11 +19,38 @@ export default function TimesheetsPage() {
 
   async function loadTimesheets() {
     setLoading(true);
-    const { data } = await getTimesheets({
-      approved: approvedFilter === '' ? undefined : approvedFilter === 'true',
-    });
-    setTimesheets(data || []);
-    setLoading(false);
+    try {
+      const params = new URLSearchParams();
+      if (approvedFilter !== '') {
+        params.append('approved', approvedFilter === 'true' ? 'true' : 'false');
+      }
+
+      const response = await fetch(`/api/timesheets?${params.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('Error loading timesheets:', response.statusText);
+        setTimesheets([]);
+        return;
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setTimesheets(result.data || []);
+      } else {
+        console.error('Error loading timesheets:', result.error);
+        setTimesheets([]);
+      }
+    } catch (error) {
+      console.error('Error loading timesheets:', error);
+      setTimesheets([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

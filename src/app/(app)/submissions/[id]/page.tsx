@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Select } from '@/components/ui/Select';
 import { Timeline } from '@/components/common/Timeline';
-import { getSubmissionById, updateSubmissionStatus, getSubmissionInterviews } from '@/lib/api/submissions';
 import { getSubmissionTimeline } from '@/lib/utils/timeline';
 import { formatDate, formatCurrency } from '@/lib/utils/format';
 
@@ -46,14 +45,17 @@ export default function SubmissionDetailPage() {
 
   async function loadSubmission() {
     setLoading(true);
-    const result = await getSubmissionById(submissionId);
-    if ('error' in result) {
-      console.error('Error loading submission:', result.error);
+    try {
+      const response = await fetch(`/api/submissions/${submissionId}`);
+      if (!response.ok) throw new Error('Failed to load submission');
+      const { data } = await response.json();
+      setSubmission(data);
+    } catch (error) {
+      console.error('Error loading submission:', error);
       setSubmission(null);
-    } else {
-      setSubmission(result.data);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function loadTimeline() {
@@ -62,12 +64,14 @@ export default function SubmissionDetailPage() {
   }
 
   async function loadInterviews() {
-    const result = await getSubmissionInterviews(submissionId);
-    if ('error' in result) {
-      console.error('Error loading interviews:', result.error);
+    try {
+      const response = await fetch(`/api/submissions/${submissionId}/interviews`);
+      if (!response.ok) throw new Error('Failed to load interviews');
+      const { data } = await response.json();
+      setInterviews(data || []);
+    } catch (error) {
+      console.error('Error loading interviews:', error);
       setInterviews([]);
-    } else {
-      setInterviews(result.data || []);
     }
   }
 
@@ -81,15 +85,26 @@ export default function SubmissionDetailPage() {
     if (!confirmed) return;
 
     setUpdating(true);
-    const result = await updateSubmissionStatus(submissionId, newStatus);
+    try {
+      const response = await fetch(`/api/submissions/${submissionId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
 
-    if ('error' in result) {
-      alert('Error updating status: ' + result.error);
-    } else {
-      await loadSubmission();
-      await loadTimeline();
+      if (!response.ok) {
+        const errorData = await response.json();
+        alert('Error updating status: ' + (errorData.error || 'Unknown error'));
+      } else {
+        await loadSubmission();
+        await loadTimeline();
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('Error updating status');
+    } finally {
+      setUpdating(false);
     }
-    setUpdating(false);
   }
 
   function getStatusBadgeVariant(status: string): 'active' | 'inactive' {

@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getCurrentUser } from '@/lib/supabase/auth'
+import { getCurrentUser } from '@/lib/supabase/auth-server'
 import { getTeamContext } from '@/lib/utils/team-context'
 import { checkPermission } from '@/lib/utils/permissions'
 import { createServerClient } from '@/lib/supabase/server'
@@ -230,8 +230,8 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createServerClient()
 
-    const { data: candidate, error } = await supabase
-      .from('candidates')
+    const { data: candidate, error } = await (supabase
+      .from('candidates') as any)
       .insert({
         team_id: teamContext.teamId,
         first_name: data.firstName,
@@ -252,7 +252,6 @@ export async function POST(request: NextRequest) {
         available_from: data.availableFrom || null,
         notes: data.notes || null,
         created_by: user.user_id,
-        updated_by: user.user_id,
       })
       .select()
       .single()

@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Timeline } from '@/components/common/Timeline';
-import { getCandidateById } from '@/lib/api/candidates';
 import { getCandidateTimeline } from '@/lib/utils/timeline';
 import { formatDate, formatPhoneNumber, formatCurrency } from '@/lib/utils/format';
 
@@ -28,9 +27,17 @@ export default function CandidateDetailPage() {
 
   async function loadCandidate() {
     setLoading(true);
-    const { data } = await getCandidateById(candidateId);
-    setCandidate(data);
-    setLoading(false);
+    try {
+      const response = await fetch(`/api/candidates/${candidateId}`);
+      if (!response.ok) throw new Error('Failed to load candidate');
+      const { data } = await response.json();
+      setCandidate(data);
+    } catch (error) {
+      console.error('Error loading candidate:', error);
+      setCandidate(null);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function loadTimeline() {

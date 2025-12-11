@@ -149,8 +149,8 @@ export async function createVendor(
         if (!options?.skipDuplicateCheck) {
             const duplicateCheck = await findDuplicateVendors({
                 vendor_name: vendorData.vendor_name,
-                contact_email: vendorData.contact_email || undefined,
-                contact_phone: vendorData.contact_phone || undefined,
+                contact_email: (vendorData as any).contact_email || (vendorData as any).email || undefined,
+                contact_phone: (vendorData as any).contact_phone || (vendorData as any).phone || undefined,
             });
 
             if (duplicateCheck.found && duplicateCheck.matches.length > 0) {
@@ -169,7 +169,7 @@ export async function createVendor(
             team_id: teamContext.teamId, // SERVER-CONTROLLED - never from client
             created_by: userId,
             updated_by: userId,
-        });
+        } as any);
 
         if (error) {
             return { error: error.message };
@@ -242,7 +242,7 @@ export async function updateVendor(
         const { data, error } = await typedUpdate('vendors', 'vendor_id', vendorId, {
             ...updates,
             updated_by: userId,
-        });
+        } as any);
 
         if (error) {
             return { error: error.message };
@@ -264,14 +264,14 @@ export async function updateVendor(
         });
 
         // Create activity for significant changes
-        const oldVendor = oldData as Vendor | null;
-        if (updates.tier_level && updates.tier_level !== oldVendor?.tier_level) {
+        const oldVendor = oldData as any;
+        if ((updates as any).tier_level && (updates as any).tier_level !== oldVendor?.tier_level) {
             await createActivity({
                 entityType: 'vendor',
                 entityId: vendorId,
                 activityType: 'status_change',
                 activityTitle: 'Vendor Tier Updated',
-                activityDescription: `Tier changed from ${oldVendor?.tier_level} to ${updates.tier_level}`,
+                activityDescription: `Tier changed from ${oldVendor?.tier_level} to ${(updates as any).tier_level}`,
                 userId,
                 teamId: data.team_id || undefined,
             });

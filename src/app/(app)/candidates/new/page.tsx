@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { supabase } from '@/lib/supabase/client';
-import { createCandidate } from '@/lib/api/candidates';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import type { Database } from '@/types/database';
 
@@ -109,14 +108,21 @@ export default function NewCandidatePage() {
         // team_id is NOT included - it will be set server-side from authenticated user
       };
 
-      // Call API with userId - team_id will be extracted server-side
-      const result = await createCandidate(candidateData, user.user_id);
+      // Call API with fetch
+      const response = await fetch('/api/candidates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(candidateData),
+      });
 
-      if ('error' in result) {
-        throw new Error(result.error);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create candidate');
       }
 
-      if ('duplicate' in result && result.duplicate) {
+      const result = await response.json();
+
+      if (result.duplicate) {
         // Handle duplicate - show matches to user
         alert('Duplicate candidate found. Please review existing records.');
         // TODO: Show duplicate modal with matches

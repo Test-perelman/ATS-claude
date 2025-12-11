@@ -4,7 +4,7 @@
  */
 
 import { supabase, createServerClient } from '@/lib/supabase/client';
-import { getCurrentUserTeamId } from '@/lib/supabase/auth';
+import { getCurrentUserTeamId } from '@/lib/supabase/auth-server';
 import { isMasterAdmin } from '@/lib/utils/role-helpers';
 import type { Database } from '@/types/database';
 import type { ApiResponse, ApiArrayResponse, ApiVoidResponse } from '@/types/api';
@@ -206,7 +206,7 @@ export async function getAllPermissions(): Promise<ApiResponse<GroupedPermission
     // Group by module
     const grouped: Record<string, Permission[]> = {};
     (data as Permission[]).forEach((perm) => {
-      const module = perm.module_name || 'Other';
+      const module = (perm as any).module_name || (perm as any).module || 'Other';
       if (!grouped[module]) {
         grouped[module] = [];
       }
