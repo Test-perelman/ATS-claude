@@ -12,6 +12,9 @@
  */
 
 import { supabase } from '@/lib/supabase/client';
+import type { Database } from '@/types/database';
+
+type UserTeamInfo = Pick<Database['public']['Tables']['users']['Row'], 'user_id' | 'team_id' | 'is_master_admin'>;
 
 export interface TeamContext {
   /**
@@ -92,8 +95,9 @@ export async function getTeamContext(
     throw new Error('User not found or not authenticated');
   }
 
-  const isMasterAdmin = user.is_master_admin === true;
-  const userTeamId = user.team_id;
+  const userTyped = user as UserTeamInfo;
+  const isMasterAdmin = userTyped.is_master_admin === true;
+  const userTeamId = userTyped.team_id;
 
   // Validate team requirement
   if (requireTeam && !userTeamId && !isMasterAdmin) {

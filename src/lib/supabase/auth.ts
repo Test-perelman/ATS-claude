@@ -210,10 +210,14 @@ export async function adminSignIn(email: string, password: string): Promise<ApiR
   }
 }
 
+type UserWithRole = Database['public']['Tables']['users']['Row'] & {
+  role_id: Database['public']['Tables']['roles']['Row'] | null;
+};
+
 /**
  * Get current authenticated user with team context
  */
-export async function getCurrentUser() {
+export async function getCurrentUser(): Promise<UserWithRole | null> {
   try {
     const {
       data: { user: authUser },
@@ -233,7 +237,7 @@ export async function getCurrentUser() {
       return null;
     }
 
-    return userData;
+    return userData as UserWithRole;
   } catch (error) {
     console.error('Get current user error:', error);
     return null;
