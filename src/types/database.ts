@@ -58,6 +58,7 @@ export interface Database {
           phone: string | null
           role_id: string | null
           team_id: string | null
+          is_master_admin: boolean
           status: string
           last_login: string | null
           created_at: string
@@ -71,6 +72,7 @@ export interface Database {
           phone?: string | null
           role_id?: string | null
           team_id?: string | null
+          is_master_admin?: boolean
           status?: string
           last_login?: string | null
           created_at?: string
@@ -84,6 +86,7 @@ export interface Database {
           phone?: string | null
           role_id?: string | null
           team_id?: string | null
+          is_master_admin?: boolean
           status?: string
           last_login?: string | null
           created_at?: string

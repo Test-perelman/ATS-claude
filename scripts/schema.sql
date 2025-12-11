@@ -64,7 +64,8 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT UNIQUE NOT NULL,
   phone TEXT,
   role_id UUID REFERENCES roles(role_id),
-  team_id UUID NOT NULL REFERENCES teams(team_id) ON DELETE CASCADE,
+  team_id UUID REFERENCES teams(team_id) ON DELETE CASCADE, -- Nullable to support access request flow
+  is_master_admin BOOLEAN DEFAULT FALSE, -- Master Admin can access all teams
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended')),
   last_login TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

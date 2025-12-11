@@ -80,13 +80,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (user) {
           // Get user's role name and permissions
-          const roleName = (user as any).role_id?.role_name || null;
+          const roleName = (user.role_id as any)?.role_name || null;
           let userPermissions: string[] = [];
           let isMasterAdmin = false;
           let isLocalAdmin = false;
 
           // Check if Master Admin
-          isMasterAdmin = (user as any).is_master_admin === true;
+          isMasterAdmin = user.is_master_admin === true;
 
           // Check if Local Admin
           if (roleName === 'Local Admin') {
@@ -94,8 +94,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           // Fetch and cache user's permissions
-          if ((user as any).role_id) {
-            userPermissions = await getRolePermissions((user as any).role_id.role_id);
+          if (user.role_id) {
+            userPermissions = await getRolePermissions((user.role_id as any).role_id);
           }
 
           // Check team access status

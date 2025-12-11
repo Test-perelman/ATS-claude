@@ -92,8 +92,8 @@ export async function getTeamContext(
     throw new Error('User not found or not authenticated');
   }
 
-  const isMasterAdmin = (user as any).is_master_admin === true;
-  const userTeamId = (user as any).team_id;
+  const isMasterAdmin = user.is_master_admin === true;
+  const userTeamId = user.team_id;
 
   // Validate team requirement
   if (requireTeam && !userTeamId && !isMasterAdmin) {

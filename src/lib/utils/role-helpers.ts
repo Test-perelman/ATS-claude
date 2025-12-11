@@ -14,7 +14,7 @@ type User = Database['public']['Tables']['users']['Row'] & {
  */
 export function isMasterAdmin(user: User | null): boolean {
   if (!user) return false;
-  return (user as any).is_master_admin === true;
+  return user.is_master_admin === true;
 }
 
 /**
