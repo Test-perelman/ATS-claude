@@ -3,7 +3,7 @@
  * Use these functions only in Server Components, API Routes, and Server Actions
  */
 
-import { createServerClient } from './server'
+import { createServerClient, createAdminClient } from './server'
 import type { UserWithRole, ApiResponse } from '@/types/database'
 import { cloneRoleTemplatesForTeam, getLocalAdminRole } from '@/lib/utils/role-helpers'
 
@@ -89,7 +89,9 @@ export async function teamSignUp(data: {
   teamName?: string
 }): Promise<ApiResponse<{ user: UserWithRole; team: any }>> {
   try {
-    const supabase = await createServerClient()
+    // Use admin client to bypass RLS for signup operations
+    const supabase = await createAdminClient()
+    console.log('Admin client created with service role key:', !!process.env.SUPABASE_SERVICE_ROLE_KEY)
 
     // Step 1: Create Supabase auth user
     console.log('Step 1: Creating auth user...')
@@ -115,22 +117,36 @@ export async function teamSignUp(data: {
     console.log('Auth user created:', userId)
 
     try {
-      // Step 2: Create team
+      // Step 2: Create team using REST API directly (bypasses SDK filters)
       console.log('Step 2: Creating team...')
-      const { data: teamData, error: teamError } = await supabase
-        .from('teams')
-        .insert({
-          team_name: data.teamName || data.companyName,
-          company_name: data.companyName,
-          subscription_tier: 'free',
-          is_active: true,
-        } as any)
-        .select()
-        .single()
+      const teamResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/teams`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY!,
+            'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({
+            team_name: data.teamName || data.companyName,
+            company_name: data.companyName,
+            subscription_tier: 'free',
+            is_active: true,
+          })
+        }
+      )
 
-      if (teamError || !teamData) {
-        console.error('Team creation failed:', teamError)
-        throw new Error(teamError?.message || 'Failed to create team')
+      if (!teamResponse.ok) {
+        const error = await teamResponse.text()
+        console.error('Team creation failed:', error)
+        throw new Error(`Failed to create team: ${error}`)
+      }
+
+      const teamData = (await teamResponse.json())[0]
+      if (!teamData) {
+        throw new Error('Team creation returned no data')
       }
 
       const teamId = (teamData as any).team_id
@@ -151,51 +167,43 @@ export async function teamSignUp(data: {
 
       console.log('Local Admin role ID:', (localAdminRole as any).role_id)
 
-      // Step 5: Create user record with team and Local Admin role
+      // Step 5: Create user record using REST API directly
       console.log('Step 5: Creating user record...')
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .insert({
-          user_id: userId,
-          email: data.email,
-          username: data.email.split('@')[0],
-          first_name: data.firstName,
-          last_name: data.lastName,
-          team_id: teamId,
-          role_id: (localAdminRole as any).role_id,
-          is_master_admin: false,
-          status: 'active',
-        } as any)
-        .select(`
-          user_id,
-          team_id,
-          role_id,
-          email,
-          username,
-          first_name,
-          last_name,
-          is_master_admin,
-          status,
-          created_at,
-          updated_at,
-          last_login,
-          avatar_url,
-          role:roles (
-            role_id,
-            role_name,
-            is_admin_role
-          ),
-          team:teams (
-            team_id,
-            team_name,
-            company_name
-          )
-        `)
-        .single()
+      const userResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/users?select=*`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY!,
+            'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            email: data.email,
+            username: data.email.split('@')[0],
+            first_name: data.firstName,
+            last_name: data.lastName,
+            team_id: teamId,
+            role_id: (localAdminRole as any).role_id,
+            is_master_admin: false,
+            status: 'active',
+          })
+        }
+      )
 
-      if (userError || !userData) {
-        console.error('User record creation failed:', userError)
-        throw new Error(userError?.message || 'Failed to create user')
+      if (!userResponse.ok) {
+        const error = await userResponse.text()
+        console.error('User record creation failed:', error)
+        throw new Error(`Failed to create user: ${error}`)
+      }
+
+      const userResponseData = await userResponse.json()
+      const userData = Array.isArray(userResponseData) ? userResponseData[0] : userResponseData
+
+      if (!userData) {
+        throw new Error('User creation returned no data')
       }
 
       console.log('User record created successfully')
@@ -236,7 +244,8 @@ export async function createMasterAdmin(data: {
   lastName: string
 }): Promise<ApiResponse<UserWithRole>> {
   try {
-    const supabase = await createServerClient()
+    // Use admin client to bypass RLS for master admin creation
+    const supabase = await createAdminClient()
 
     // Step 1: Create Supabase auth user
     console.log('Creating master admin auth user...')

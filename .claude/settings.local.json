@@ -45,7 +45,9 @@
       "Bash(do if grep -q \"from ''@/lib/api/\" \"$f\")",
       "Bash(then echo \"FOUND IN: $f\")",
       "Bash(grep:*)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(cat:*)",
+      "Bash(psql:*)"
     ],
     "deny": [],
     "ask": []
