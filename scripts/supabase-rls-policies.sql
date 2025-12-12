@@ -66,6 +66,10 @@ CREATE POLICY "users_read_team" ON users
     )
   );
 
+-- Service role can insert users (for signup)
+CREATE POLICY "users_insert_service_role" ON users
+  FOR INSERT WITH CHECK (true);
+
 -- Users can update their own profile
 CREATE POLICY "users_update_self" ON users
   FOR UPDATE USING (
@@ -98,6 +102,10 @@ CREATE POLICY "users_update_admin" ON users
     )
   );
 
+-- Service role can delete users (for cleanup on signup failure)
+CREATE POLICY "users_delete_service_role" ON users
+  FOR DELETE USING (true);
+
 -- ============================================================================
 -- TEAMS TABLE POLICIES
 -- ============================================================================
@@ -121,6 +129,10 @@ CREATE POLICY "teams_read_all" ON teams
     )
   );
 
+-- Service role can insert teams (for signup)
+CREATE POLICY "teams_insert_service_role" ON teams
+  FOR INSERT WITH CHECK (true);
+
 -- Team admins can update their team
 CREATE POLICY "teams_update_admin" ON teams
   FOR UPDATE USING (
@@ -139,6 +151,10 @@ CREATE POLICY "teams_update_admin" ON teams
       AND role_id IN (SELECT role_id FROM roles WHERE role_name IN ('Master Admin', 'Local Admin'))
     )
   );
+
+-- Service role can delete teams (if needed for cleanup)
+CREATE POLICY "teams_delete_service_role" ON teams
+  FOR DELETE USING (true);
 
 -- ============================================================================
 -- ROLES & PERMISSIONS TABLES (READABLE BY AUTHENTICATED USERS)
@@ -164,6 +180,10 @@ CREATE POLICY "roles_write_admin" ON roles
       )
     )
   );
+
+-- Service role can insert roles (for role template cloning during signup)
+CREATE POLICY "roles_insert_service_role" ON roles
+  FOR INSERT WITH CHECK (true);
 
 CREATE POLICY "roles_update_admin" ON roles
   FOR UPDATE USING (
@@ -207,6 +227,10 @@ CREATE POLICY "role_permissions_write_admin" ON role_permissions
       )
     )
   );
+
+-- Service role can insert role_permissions (for role template cloning during signup)
+CREATE POLICY "role_permissions_insert_service_role" ON role_permissions
+  FOR INSERT WITH CHECK (true);
 
 CREATE POLICY "role_permissions_update_admin" ON role_permissions
   FOR UPDATE USING (
