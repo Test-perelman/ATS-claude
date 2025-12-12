@@ -23,7 +23,7 @@ import type { UserWithRole, ApiResponse } from '@/types/database'
 export async function signIn(
   email: string,
   password: string
-): Promise<ApiResponse<{ user: UserWithRole }>> {
+): Promise<ApiResponse<{ user: UserWithRole | null }>> {
   try {
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
@@ -39,53 +39,52 @@ export async function signIn(
 
     console.log('Auth successful, userId:', authData.user.id)
 
-    // Get user record with team and role
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select(`
-        user_id,
-        team_id,
-        role_id,
-        email,
-        username,
-        first_name,
-        last_name,
-        is_master_admin,
-        status,
-        created_at,
-        updated_at,
-        last_login,
-        avatar_url,
-        role:roles (
-          role_id,
-          role_name,
-          is_admin_role
-        ),
-        team:teams (
-          team_id,
-          team_name,
-          company_name
-        )
-      `)
-      .eq('user_id', authData.user.id)
-      .single()
+    // Fetch user record from admin API route (bypasses RLS)
+    const response = await fetch('/api/auth/user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        userId: authData.user.id,
+      }),
+    })
 
-    if (userError || !userData) {
+    if (!response.ok) {
       return {
         success: false,
-        error: userError?.message || 'Failed to fetch user data',
+        error: 'Failed to fetch user data',
       }
     }
 
-    // Update last login
-    await (supabase.from('users') as any)
-      .update({ last_login: new Date().toISOString() })
-      .eq('user_id', authData.user.id)
+    const result = await response.json()
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || 'Failed to fetch user data',
+      }
+    }
+
+    const userData = result.data
+
+    // Update last login if user exists
+    if (userData) {
+      await fetch('/api/auth/update-last-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: authData.user.id,
+        }),
+      }).catch(err => console.error('Failed to update last login:', err))
+    }
 
     return {
       success: true,
       data: {
-        user: userData as UserWithRole,
+        user: userData,
       },
     }
   } catch (error) {
@@ -104,7 +103,7 @@ export async function signIn(
 export async function adminSignIn(
   email: string,
   password: string
-): Promise<ApiResponse<{ user: UserWithRole }>> {
+): Promise<ApiResponse<{ user: UserWithRole | null }>> {
   return signIn(email, password)
 }
 
