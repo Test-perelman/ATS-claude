@@ -1,6 +1,19 @@
 -- Fix RLS Missing INSERT Policies for Signup
 -- This script adds the missing INSERT and DELETE policies needed for user signup
+-- Also grants PostgreSQL 15+ schema permissions to service role
 -- Run this in Supabase SQL Editor
+
+-- ============================================================================
+-- PostgreSQL 15+ COMPATIBILITY: Grant schema permissions to service role
+-- Required for service role to INSERT/UPDATE/DELETE on public schema tables
+-- ============================================================================
+
+GRANT USAGE ON SCHEMA public TO service_role;
+GRANT CREATE ON SCHEMA public TO service_role;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO service_role;
 
 -- ============================================================================
 -- FIX: Add Missing Policies for Users Table

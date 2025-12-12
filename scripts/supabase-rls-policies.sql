@@ -10,6 +10,18 @@
 -- WARNING: Test in non-production environment first!
 
 -- ============================================================================
+-- PostgreSQL 15+ COMPATIBILITY: Grant schema permissions to service role
+-- Required for service role to INSERT/UPDATE/DELETE on public schema tables
+-- ============================================================================
+
+GRANT USAGE ON SCHEMA public TO service_role;
+GRANT CREATE ON SCHEMA public TO service_role;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO service_role;
+
+-- ============================================================================
 -- ENABLE RLS ON ALL TABLES
 -- ============================================================================
 

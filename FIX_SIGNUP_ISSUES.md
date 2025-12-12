@@ -2,25 +2,42 @@
 
 ## Problem Summary
 
-Users cannot sign up for accounts because the Supabase database has **Row-Level Security (RLS) enabled but missing critical INSERT and DELETE policies**. These policies are required for the signup process to work.
+Users cannot sign up for accounts due to **TWO root causes**:
+
+1. **Missing RLS Policies** - RLS enabled but missing INSERT and DELETE policies
+2. **PostgreSQL 15+ Schema Permissions** - Service role lacks `public` schema permissions
 
 ### Symptoms
 - ❌ "Failed to fetch user data" error on login page
-- ❌ Signup attempts fail with permission denied errors
+- ❌ Signup attempts fail with `permission denied for schema public`
 - ❌ Users created in Supabase Authentication are not synced to the database
 - ❌ Admin signup page shows errors
 
-### Root Cause
-The RLS policies defined in `scripts/supabase-rls-policies.sql` only include **SELECT and UPDATE** policies for the core tables (`users`, `teams`, `roles`, `role_permissions`), but **no INSERT or DELETE policies** for the service role to perform signup operations.
+### Root Causes
+
+#### Issue 1: Missing RLS Policies
+The RLS policies only include **SELECT and UPDATE** policies for core tables (`users`, `teams`, `roles`, `role_permissions`), but **no INSERT or DELETE policies** for the service role.
 
 When signup is attempted:
 1. Supabase Auth user is created (works)
 2. Team record needs to be inserted → **BLOCKED** (no INSERT policy)
 3. Signup fails, auth user is deleted for cleanup → **BLOCKED** (no DELETE policy)
 
+#### Issue 2: PostgreSQL 15+ Schema Permissions (Critical!)
+PostgreSQL 15 introduced strict schema permission changes. The service role needs **explicit grants** to the `public` schema to perform INSERT/UPDATE/DELETE operations.
+
+Even with RLS policies in place, without these grants you get:
+```
+ERROR: permission denied for schema public
+```
+
+This was the **actual blocker** preventing the fix from working.
+
 ## Solution
 
-### Step 1: Apply the RLS Policies
+The fix includes both RLS policies AND PostgreSQL 15+ schema permission grants.
+
+### Step 1: Apply Both Fixes
 
 You have two options:
 
@@ -29,18 +46,24 @@ You have two options:
 node scripts/apply-rls-policies.js
 ```
 
-This script attempts to automatically apply all required policies to your Supabase database.
+This script attempts to automatically apply all required fixes (grants + policies) to your Supabase database.
 
-#### Option B: Manual Application (Via Supabase Dashboard)
+#### Option B: Manual Application (Via Supabase Dashboard) - RECOMMENDED FOR BEST RESULTS
 
 1. Go to [Supabase Dashboard](https://supabase.com)
 2. Navigate to your project: **Perelman-ATS**
 3. Go to **SQL Editor**
-4. Create a new query and paste the contents of:
+4. Create a new query and copy-paste the **ENTIRE contents** of:
    ```
    scripts/fix-rls-missing-insert-policies.sql
    ```
+   This file contains:
+   - PostgreSQL 15+ schema permission grants (CRITICAL!)
+   - RLS INSERT/DELETE policies
+
 5. Click **Run** to execute all statements
+
+**⚠️ IMPORTANT:** Make sure to run this as the Supabase admin/project owner user so the GRANT statements work properly.
 
 ### Step 2: Verify the Fix
 
@@ -69,6 +92,24 @@ Testing direct insert with service role key...
 5. Log in with your credentials and verify access to the dashboard
 
 ## Technical Details
+
+### PostgreSQL 15+ Schema Grants (The Critical Fix!)
+
+The following grants are applied first to give service role permissions on the `public` schema:
+
+```sql
+GRANT USAGE ON SCHEMA public TO service_role;
+GRANT CREATE ON SCHEMA public TO service_role;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO service_role;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON TABLES TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL PRIVILEGES ON SEQUENCES TO service_role;
+```
+
+**Why this matters:**
+- PostgreSQL 15+ revoked default `CREATE` permission from non-owners on the `public` schema
+- Without these grants, even with valid RLS policies, you get `ERROR: permission denied for schema public`
+- This grant must run **before** RLS policies to have any effect
 
 ### Policies Added
 
