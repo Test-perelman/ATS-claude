@@ -9,6 +9,101 @@
 -- - Policies are simple and performant
 -- ================================================================
 
+-- ================================================================
+-- DROP EXISTING POLICIES
+-- ================================================================
+
+DROP POLICY IF EXISTS "teams_select_policy" ON teams;
+DROP POLICY IF EXISTS "teams_insert_policy" ON teams;
+DROP POLICY IF EXISTS "teams_update_policy" ON teams;
+DROP POLICY IF EXISTS "teams_delete_policy" ON teams;
+
+DROP POLICY IF EXISTS "roles_select_policy" ON roles;
+DROP POLICY IF EXISTS "roles_insert_policy" ON roles;
+DROP POLICY IF EXISTS "roles_update_policy" ON roles;
+DROP POLICY IF EXISTS "roles_delete_policy" ON roles;
+
+DROP POLICY IF EXISTS "role_permissions_select_policy" ON role_permissions;
+DROP POLICY IF EXISTS "role_permissions_insert_policy" ON role_permissions;
+DROP POLICY IF EXISTS "role_permissions_update_policy" ON role_permissions;
+DROP POLICY IF EXISTS "role_permissions_delete_policy" ON role_permissions;
+
+DROP POLICY IF EXISTS "users_select_policy" ON users;
+DROP POLICY IF EXISTS "users_insert_policy" ON users;
+DROP POLICY IF EXISTS "users_update_policy" ON users;
+DROP POLICY IF EXISTS "users_delete_policy" ON users;
+
+DROP POLICY IF EXISTS "candidates_select_policy" ON candidates;
+DROP POLICY IF EXISTS "candidates_insert_policy" ON candidates;
+DROP POLICY IF EXISTS "candidates_update_policy" ON candidates;
+DROP POLICY IF EXISTS "candidates_delete_policy" ON candidates;
+
+DROP POLICY IF EXISTS "vendors_select_policy" ON vendors;
+DROP POLICY IF EXISTS "vendors_insert_policy" ON vendors;
+DROP POLICY IF EXISTS "vendors_update_policy" ON vendors;
+DROP POLICY IF EXISTS "vendors_delete_policy" ON vendors;
+
+DROP POLICY IF EXISTS "clients_select_policy" ON clients;
+DROP POLICY IF EXISTS "clients_insert_policy" ON clients;
+DROP POLICY IF EXISTS "clients_update_policy" ON clients;
+DROP POLICY IF EXISTS "clients_delete_policy" ON clients;
+
+DROP POLICY IF EXISTS "job_requirements_select_policy" ON job_requirements;
+DROP POLICY IF EXISTS "job_requirements_insert_policy" ON job_requirements;
+DROP POLICY IF EXISTS "job_requirements_update_policy" ON job_requirements;
+DROP POLICY IF EXISTS "job_requirements_delete_policy" ON job_requirements;
+
+DROP POLICY IF EXISTS "submissions_select_policy" ON submissions;
+DROP POLICY IF EXISTS "submissions_insert_policy" ON submissions;
+DROP POLICY IF EXISTS "submissions_update_policy" ON submissions;
+DROP POLICY IF EXISTS "submissions_delete_policy" ON submissions;
+
+DROP POLICY IF EXISTS "interviews_select_policy" ON interviews;
+DROP POLICY IF EXISTS "interviews_insert_policy" ON interviews;
+DROP POLICY IF EXISTS "interviews_update_policy" ON interviews;
+DROP POLICY IF EXISTS "interviews_delete_policy" ON interviews;
+
+DROP POLICY IF EXISTS "projects_select_policy" ON projects;
+DROP POLICY IF EXISTS "projects_insert_policy" ON projects;
+DROP POLICY IF EXISTS "projects_update_policy" ON projects;
+DROP POLICY IF EXISTS "projects_delete_policy" ON projects;
+
+DROP POLICY IF EXISTS "timesheets_select_policy" ON timesheets;
+DROP POLICY IF EXISTS "timesheets_insert_policy" ON timesheets;
+DROP POLICY IF EXISTS "timesheets_update_policy" ON timesheets;
+DROP POLICY IF EXISTS "timesheets_delete_policy" ON timesheets;
+
+DROP POLICY IF EXISTS "invoices_select_policy" ON invoices;
+DROP POLICY IF EXISTS "invoices_insert_policy" ON invoices;
+DROP POLICY IF EXISTS "invoices_update_policy" ON invoices;
+DROP POLICY IF EXISTS "invoices_delete_policy" ON invoices;
+
+DROP POLICY IF EXISTS "immigration_select_policy" ON immigration;
+DROP POLICY IF EXISTS "immigration_insert_policy" ON immigration;
+DROP POLICY IF EXISTS "immigration_update_policy" ON immigration;
+DROP POLICY IF EXISTS "immigration_delete_policy" ON immigration;
+
+DROP POLICY IF EXISTS "notes_select_policy" ON notes;
+DROP POLICY IF EXISTS "notes_insert_policy" ON notes;
+DROP POLICY IF EXISTS "notes_update_policy" ON notes;
+DROP POLICY IF EXISTS "notes_delete_policy" ON notes;
+
+DROP POLICY IF EXISTS "activities_select_policy" ON activities;
+DROP POLICY IF EXISTS "activities_insert_policy" ON activities;
+
+DROP POLICY IF EXISTS "role_templates_select_policy" ON role_templates;
+DROP POLICY IF EXISTS "role_templates_insert_policy" ON role_templates;
+
+DROP POLICY IF EXISTS "permissions_select_policy" ON permissions;
+DROP POLICY IF EXISTS "permissions_insert_policy" ON permissions;
+
+DROP POLICY IF EXISTS "template_permissions_select_policy" ON template_permissions;
+DROP POLICY IF EXISTS "template_permissions_insert_policy" ON template_permissions;
+
+-- ================================================================
+-- ENABLE RLS ON ALL TABLES
+-- ================================================================
+
 -- Enable RLS on all tables
 ALTER TABLE teams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE roles ENABLE ROW LEVEL SECURITY;
@@ -103,13 +198,14 @@ CREATE POLICY "roles_select_policy" ON roles
 -- Only insert into user's team
 CREATE POLICY "roles_insert_policy" ON roles
     FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE users.user_id = auth.uid()::text
+            AND users.is_master_admin = true
+        )
+        OR
         team_id IN (
-            SELECT
-                CASE
-                    WHEN is_master_admin THEN roles.team_id
-                    ELSE users.team_id
-                END
-            FROM users
+            SELECT team_id FROM users
             WHERE users.user_id = auth.uid()::text
         )
     );
@@ -236,21 +332,16 @@ CREATE POLICY "users_select_policy" ON users
 -- Can insert users into their team (or any team if master admin)
 CREATE POLICY "users_insert_policy" ON users
     FOR INSERT WITH CHECK (
-        team_id IN (
-            SELECT
-                CASE
-                    WHEN is_master_admin THEN users.team_id
-                    ELSE u.team_id
-                END
-            FROM users u
+        EXISTS (
+            SELECT 1 FROM users u
             WHERE u.user_id = auth.uid()::text
+            AND u.is_master_admin = true
         )
         OR
-        (team_id IS NULL AND is_master_admin = true AND EXISTS (
-            SELECT 1 FROM users
+        team_id IN (
+            SELECT team_id FROM users
             WHERE users.user_id = auth.uid()::text
-            AND users.is_master_admin = true
-        ))
+        )
     );
 
 -- Can update users in their team, or themselves
@@ -307,13 +398,14 @@ CREATE POLICY "candidates_select_policy" ON candidates
 
 CREATE POLICY "candidates_insert_policy" ON candidates
     FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE users.user_id = auth.uid()::text
+            AND users.is_master_admin = true
+        )
+        OR
         team_id IN (
-            SELECT
-                CASE
-                    WHEN is_master_admin THEN candidates.team_id
-                    ELSE users.team_id
-                END
-            FROM users
+            SELECT team_id FROM users
             WHERE users.user_id = auth.uid()::text
         )
     );
@@ -363,13 +455,14 @@ CREATE POLICY "vendors_select_policy" ON vendors
 
 CREATE POLICY "vendors_insert_policy" ON vendors
     FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE users.user_id = auth.uid()::text
+            AND users.is_master_admin = true
+        )
+        OR
         team_id IN (
-            SELECT
-                CASE
-                    WHEN is_master_admin THEN vendors.team_id
-                    ELSE users.team_id
-                END
-            FROM users
+            SELECT team_id FROM users
             WHERE users.user_id = auth.uid()::text
         )
     );
@@ -419,13 +512,14 @@ CREATE POLICY "clients_select_policy" ON clients
 
 CREATE POLICY "clients_insert_policy" ON clients
     FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE users.user_id = auth.uid()::text
+            AND users.is_master_admin = true
+        )
+        OR
         team_id IN (
-            SELECT
-                CASE
-                    WHEN is_master_admin THEN clients.team_id
-                    ELSE users.team_id
-                END
-            FROM users
+            SELECT team_id FROM users
             WHERE users.user_id = auth.uid()::text
         )
     );
@@ -475,13 +569,14 @@ CREATE POLICY "job_requirements_select_policy" ON job_requirements
 
 CREATE POLICY "job_requirements_insert_policy" ON job_requirements
     FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE users.user_id = auth.uid()::text
+            AND users.is_master_admin = true
+        )
+        OR
         team_id IN (
-            SELECT
-                CASE
-                    WHEN is_master_admin THEN job_requirements.team_id
-                    ELSE users.team_id
-                END
-            FROM users
+            SELECT team_id FROM users
             WHERE users.user_id = auth.uid()::text
         )
     );
@@ -531,13 +626,14 @@ CREATE POLICY "submissions_select_policy" ON submissions
 
 CREATE POLICY "submissions_insert_policy" ON submissions
     FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE users.user_id = auth.uid()::text
+            AND users.is_master_admin = true
+        )
+        OR
         team_id IN (
-            SELECT
-                CASE
-                    WHEN is_master_admin THEN submissions.team_id
-                    ELSE users.team_id
-                END
-            FROM users
+            SELECT team_id FROM users
             WHERE users.user_id = auth.uid()::text
         )
     );
@@ -587,13 +683,14 @@ CREATE POLICY "interviews_select_policy" ON interviews
 
 CREATE POLICY "interviews_insert_policy" ON interviews
     FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE users.user_id = auth.uid()::text
+            AND users.is_master_admin = true
+        )
+        OR
         team_id IN (
-            SELECT
-                CASE
-                    WHEN is_master_admin THEN interviews.team_id
-                    ELSE users.team_id
-                END
-            FROM users
+            SELECT team_id FROM users
             WHERE users.user_id = auth.uid()::text
         )
     );
@@ -643,13 +740,14 @@ CREATE POLICY "projects_select_policy" ON projects
 
 CREATE POLICY "projects_insert_policy" ON projects
     FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE users.user_id = auth.uid()::text
+            AND users.is_master_admin = true
+        )
+        OR
         team_id IN (
-            SELECT
-                CASE
-                    WHEN is_master_admin THEN projects.team_id
-                    ELSE users.team_id
-                END
-            FROM users
+            SELECT team_id FROM users
             WHERE users.user_id = auth.uid()::text
         )
     );
@@ -699,13 +797,14 @@ CREATE POLICY "timesheets_select_policy" ON timesheets
 
 CREATE POLICY "timesheets_insert_policy" ON timesheets
     FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE users.user_id = auth.uid()::text
+            AND users.is_master_admin = true
+        )
+        OR
         team_id IN (
-            SELECT
-                CASE
-                    WHEN is_master_admin THEN timesheets.team_id
-                    ELSE users.team_id
-                END
-            FROM users
+            SELECT team_id FROM users
             WHERE users.user_id = auth.uid()::text
         )
     );
@@ -755,13 +854,14 @@ CREATE POLICY "invoices_select_policy" ON invoices
 
 CREATE POLICY "invoices_insert_policy" ON invoices
     FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE users.user_id = auth.uid()::text
+            AND users.is_master_admin = true
+        )
+        OR
         team_id IN (
-            SELECT
-                CASE
-                    WHEN is_master_admin THEN invoices.team_id
-                    ELSE users.team_id
-                END
-            FROM users
+            SELECT team_id FROM users
             WHERE users.user_id = auth.uid()::text
         )
     );
@@ -811,13 +911,14 @@ CREATE POLICY "immigration_select_policy" ON immigration
 
 CREATE POLICY "immigration_insert_policy" ON immigration
     FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE users.user_id = auth.uid()::text
+            AND users.is_master_admin = true
+        )
+        OR
         team_id IN (
-            SELECT
-                CASE
-                    WHEN is_master_admin THEN immigration.team_id
-                    ELSE users.team_id
-                END
-            FROM users
+            SELECT team_id FROM users
             WHERE users.user_id = auth.uid()::text
         )
     );
@@ -867,13 +968,14 @@ CREATE POLICY "notes_select_policy" ON notes
 
 CREATE POLICY "notes_insert_policy" ON notes
     FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE users.user_id = auth.uid()::text
+            AND users.is_master_admin = true
+        )
+        OR
         team_id IN (
-            SELECT
-                CASE
-                    WHEN is_master_admin THEN notes.team_id
-                    ELSE users.team_id
-                END
-            FROM users
+            SELECT team_id FROM users
             WHERE users.user_id = auth.uid()::text
         )
     );
@@ -923,13 +1025,14 @@ CREATE POLICY "activities_select_policy" ON activities
 
 CREATE POLICY "activities_insert_policy" ON activities
     FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM users
+            WHERE users.user_id = auth.uid()::text
+            AND users.is_master_admin = true
+        )
+        OR
         team_id IN (
-            SELECT
-                CASE
-                    WHEN is_master_admin THEN activities.team_id
-                    ELSE users.team_id
-                END
-            FROM users
+            SELECT team_id FROM users
             WHERE users.user_id = auth.uid()::text
         )
     );
