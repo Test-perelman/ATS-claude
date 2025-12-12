@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { signIn } from '@/lib/supabase/auth';
+import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
 
 function AdminLoginContent() {
   const searchParams = useSearchParams();
@@ -12,6 +13,7 @@ function AdminLoginContent() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -118,9 +120,18 @@ function AdminLoginContent() {
 
         {/* Password */}
         <div>
-          <label className="block text-sm font-medium text-purple-900 mb-1">
-            Password
-          </label>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-sm font-medium text-purple-900">
+              Password
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowForgotPassword(true)}
+              className="text-xs text-amber-600 hover:underline font-medium"
+            >
+              Forgot password?
+            </button>
+          </div>
           <input
             type="password"
             name="password"
@@ -151,6 +162,12 @@ function AdminLoginContent() {
           Create one
         </Link>
       </p>
+
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+      />
     </div>
   );
 }
