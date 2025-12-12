@@ -38,7 +38,7 @@ export async function createServerClient() {
  * Create a Supabase Admin client for privileged operations
  * Uses service role key for admin operations (bypasses RLS)
  */
-export function createAdminClient() {
+export async function createAdminClient() {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
   }
