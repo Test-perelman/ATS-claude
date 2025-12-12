@@ -47,7 +47,8 @@
       "Bash(grep:*)",
       "Bash(mkdir:*)",
       "Bash(cat:*)",
-      "Bash(psql:*)"
+      "Bash(psql:*)",
+      "Bash(node verify-rls.js:*)"
     ],
     "deny": [],
     "ask": []

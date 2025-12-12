@@ -117,7 +117,7 @@ export async function teamSignUp(data: {
     console.log('Auth user created:', userId)
 
     try {
-      // Step 2: Create team using REST API directly (bypasses SDK filters)
+      // Step 2: Create team using REST API directly
       console.log('Step 2: Creating team...')
       const teamResponse = await fetch(
         `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/teams`,
@@ -125,8 +125,7 @@ export async function teamSignUp(data: {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY!,
-            'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
             'Prefer': 'return=representation'
           },
           body: JSON.stringify({
@@ -175,8 +174,7 @@ export async function teamSignUp(data: {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'apikey': process.env.SUPABASE_SERVICE_ROLE_KEY!,
-            'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
             'Prefer': 'return=representation'
           },
           body: JSON.stringify({
