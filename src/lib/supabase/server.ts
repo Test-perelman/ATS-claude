@@ -1,5 +1,6 @@
 import { createServerClient as createSupabaseServerClient } from '@supabase/ssr'
 import { createClient } from '@supabase/supabase-js'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import type { Database } from '@/types/database'
 
@@ -38,7 +39,7 @@ export async function createServerClient() {
  * Create a Supabase Admin client for privileged operations
  * Uses service role key for admin operations (bypasses RLS)
  */
-export async function createAdminClient() {
+export async function createAdminClient(): Promise<SupabaseClient<Database>> {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
   }

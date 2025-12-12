@@ -20,8 +20,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createAdminClient()
 
-    await supabase
-      .from('users')
+    await (supabase.from('users') as any)
       .update({ last_login: new Date().toISOString() })
       .eq('user_id', userId)
 
