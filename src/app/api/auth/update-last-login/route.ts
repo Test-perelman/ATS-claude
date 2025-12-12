@@ -20,9 +20,17 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createAdminClient()
 
-    await (supabase.from('users') as any)
+    const { error } = await (supabase.from('users') as any)
       .update({ last_login: new Date().toISOString() })
       .eq('user_id', userId)
+
+    if (error) {
+      console.error('Error updating last login:', error)
+      return NextResponse.json(
+        { success: false, error: 'Failed to update last login' },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json(
       { success: true },

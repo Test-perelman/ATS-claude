@@ -48,7 +48,8 @@
       "Bash(mkdir:*)",
       "Bash(cat:*)",
       "Bash(psql:*)",
-      "Bash(node verify-rls.js:*)"
+      "Bash(node verify-rls.js:*)",
+      "Bash(npx supabase:*)"
     ],
     "deny": [],
     "ask": []

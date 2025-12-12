@@ -117,35 +117,21 @@ export async function teamSignUp(data: {
     console.log('Auth user created:', userId)
 
     try {
-      // Step 2: Create team using REST API directly
+      // Step 2: Create team using admin client
       console.log('Step 2: Creating team...')
-      const teamResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/teams`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            'Prefer': 'return=representation'
-          },
-          body: JSON.stringify({
-            team_name: data.teamName || data.companyName,
-            company_name: data.companyName,
-            subscription_tier: 'free',
-            is_active: true,
-          })
-        }
-      )
+      const { data: teamData, error: teamError } = await (supabase.from('teams') as any)
+        .insert({
+          team_name: data.teamName || data.companyName,
+          company_name: data.companyName,
+          subscription_tier: 'free',
+          is_active: true,
+        })
+        .select()
+        .single()
 
-      if (!teamResponse.ok) {
-        const error = await teamResponse.text()
-        console.error('Team creation failed:', error)
-        throw new Error(`Failed to create team: ${error}`)
-      }
-
-      const teamData = (await teamResponse.json())[0]
-      if (!teamData) {
-        throw new Error('Team creation returned no data')
+      if (teamError || !teamData) {
+        console.error('Team creation failed:', teamError)
+        throw new Error(`Failed to create team: ${teamError?.message}`)
       }
 
       const teamId = (teamData as any).team_id
@@ -166,42 +152,26 @@ export async function teamSignUp(data: {
 
       console.log('Local Admin role ID:', (localAdminRole as any).role_id)
 
-      // Step 5: Create user record using REST API directly
+      // Step 5: Create user record using admin client
       console.log('Step 5: Creating user record...')
-      const userResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/users?select=*`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            'Prefer': 'return=representation'
-          },
-          body: JSON.stringify({
-            user_id: userId,
-            email: data.email,
-            username: data.email.split('@')[0],
-            first_name: data.firstName,
-            last_name: data.lastName,
-            team_id: teamId,
-            role_id: (localAdminRole as any).role_id,
-            is_master_admin: false,
-            status: 'active',
-          })
-        }
-      )
+      const { data: userData, error: userError } = await (supabase.from('users') as any)
+        .insert({
+          user_id: userId,
+          email: data.email,
+          username: data.email.split('@')[0],
+          first_name: data.firstName,
+          last_name: data.lastName,
+          team_id: teamId,
+          role_id: (localAdminRole as any).role_id,
+          is_master_admin: false,
+          status: 'active',
+        })
+        .select()
+        .single()
 
-      if (!userResponse.ok) {
-        const error = await userResponse.text()
-        console.error('User record creation failed:', error)
-        throw new Error(`Failed to create user: ${error}`)
-      }
-
-      const userResponseData = await userResponse.json()
-      const userData = Array.isArray(userResponseData) ? userResponseData[0] : userResponseData
-
-      if (!userData) {
-        throw new Error('User creation returned no data')
+      if (userError || !userData) {
+        console.error('User record creation failed:', userError)
+        throw new Error(`Failed to create user: ${userError?.message}`)
       }
 
       console.log('User record created successfully')

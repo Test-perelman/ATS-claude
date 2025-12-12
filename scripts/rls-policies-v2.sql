@@ -191,7 +191,6 @@ CREATE POLICY teams_select_policy ON teams
 CREATE POLICY teams_insert_policy ON teams
   FOR INSERT WITH CHECK (
     public._rls_is_master_admin()
-    OR auth.uid() IS NOT NULL  -- Allow any authenticated user to create a team (for signup)
   );
 
 CREATE POLICY teams_update_policy ON teams
