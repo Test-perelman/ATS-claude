@@ -49,7 +49,11 @@
       "Bash(cat:*)",
       "Bash(psql:*)",
       "Bash(node verify-rls.js:*)",
-      "Bash(npx supabase:*)"
+      "Bash(npx supabase:*)",
+      "Bash(node scripts/test_admin_insert.js:*)",
+      "Bash(node scripts/test_direct_rls.js:*)",
+      "Bash(perl -i -pe:*)",
+      "Bash(node scripts/test_master_admin.js:*)"
     ],
     "deny": [],
     "ask": []
