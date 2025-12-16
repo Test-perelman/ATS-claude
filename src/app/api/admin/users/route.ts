@@ -12,11 +12,12 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: profile } = await supabase
+  const profileResult = await supabase
     .from('users')
     .select('is_master_admin')
     .eq('id', user.id)
-    .single();
+    .single() as any;
+  const profile = profileResult?.data as { is_master_admin: boolean } | null;
 
   if (!profile?.is_master_admin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -44,27 +45,28 @@ export async function PATCH(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { data: profile } = await supabase
+  const profileResult2 = await supabase
     .from('users')
     .select('is_master_admin')
     .eq('id', user.id)
-    .single();
+    .single() as any;
+  const profile2 = profileResult2?.data as { is_master_admin: boolean } | null;
 
-  if (!profile?.is_master_admin) {
+  if (!profile2?.is_master_admin) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const body = await req.json();
   const { user_id, is_master_admin } = body;
 
-  const { data, error } = await supabase
-    .from('users')
+  const updateResult = await (supabase
+    .from('users') as any)
     .update({ is_master_admin })
     .eq('id', user_id)
     .select()
-    .single();
+    .single() as any;
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (updateResult.error) return NextResponse.json({ error: updateResult.error.message }, { status: 500 });
 
-  return NextResponse.json(data);
+  return NextResponse.json(updateResult.data);
 }

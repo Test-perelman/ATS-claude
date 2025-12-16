@@ -1,5 +1,5 @@
 import { createServerClient as createSupabaseServerClient } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 import type { Database } from '@/types/database'
@@ -8,8 +8,8 @@ import type { Database } from '@/types/database'
  * Create a Supabase client for use in Server Components, Server Actions, and Route Handlers
  * Uses Next.js cookies for proper authentication handling
  */
-export async function createServerClient() {
-  const cookieStore = await cookies()
+export async function createClient() {
+  const cookieStore = cookies()
 
   return createSupabaseServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,6 +35,9 @@ export async function createServerClient() {
   )
 }
 
+// Alias for compatibility
+export const createServerClient = createClient
+
 /**
  * Create a Supabase Admin client for privileged operations
  * Uses service role key for admin operations (bypasses RLS)
@@ -44,7 +47,7 @@ export async function createAdminClient(): Promise<SupabaseClient<Database>> {
     throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set')
   }
 
-  return createClient<Database>(
+  return createSupabaseClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {

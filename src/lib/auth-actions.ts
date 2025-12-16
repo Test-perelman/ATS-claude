@@ -144,11 +144,12 @@ export async function inviteUser(email: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
 
-  const { data: profile } = await supabase
+  const profileResult = await supabase
     .from('users')
     .select('is_master_admin')
     .eq('id', user.id)
-    .single();
+    .single() as any;
+  const profile = profileResult?.data as { is_master_admin: boolean } | null;
 
   if (!profile?.is_master_admin) {
     return { error: 'Only master admins can invite users' };

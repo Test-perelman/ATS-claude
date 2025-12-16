@@ -84,7 +84,7 @@ export async function hasPermission(
 ): Promise<boolean> {
   const supabase = await createClient();
 
-  const { data } = await supabase.rpc('user_has_permission', {
+  const { data } = await (supabase.rpc as any)('user_has_permission', {
     user_id: userId,
     permission_key: permissionKey,
   });
@@ -99,11 +99,12 @@ export async function hasPermission(
 export async function getUserPermissions(userId: string): Promise<string[]> {
   const supabase = await createClient();
 
-  const { data: user } = await supabase
+  const userResult = await supabase
     .from('users')
     .select('is_master_admin, role_id')
     .eq('id', userId)
-    .single();
+    .single() as any;
+  const user = userResult?.data as { is_master_admin: boolean; role_id: string } | null;
 
   if (!user) return [];
 
@@ -113,10 +114,11 @@ export async function getUserPermissions(userId: string): Promise<string[]> {
   }
 
   // Get role permissions
-  const { data: permissions } = await supabase
+  const permResult = await supabase
     .from('role_permissions')
     .select('permission_id, permissions(key)')
-    .eq('role_id', user.role_id);
+    .eq('role_id', user.role_id) as any;
+  const permissions = permResult?.data as any[];
 
   return permissions?.map((p) => p.permissions?.key).filter(Boolean) as string[];
 }
@@ -152,10 +154,11 @@ export async function hasAllPermissions(
 export async function getRolePermissions(roleId: string): Promise<string[]> {
   const supabase = await createClient();
 
-  const { data } = await supabase
+  const result = await supabase
     .from('role_permissions')
     .select('permissions(key)')
-    .eq('role_id', roleId);
+    .eq('role_id', roleId) as any;
+  const data = result?.data as any[];
 
   return data?.map((p) => p.permissions?.key).filter(Boolean) as string[];
 }
@@ -171,10 +174,11 @@ export async function assignPermissionsToRole(
   const supabase = await createClient();
 
   // Get permission IDs
-  const { data: permissions } = await supabase
+  const permResult = await supabase
     .from('permissions')
     .select('id, key')
-    .in('key', permissionKeys);
+    .in('key', permissionKeys) as any;
+  const permissions = permResult?.data as any[];
 
   if (!permissions) throw new Error('Permissions not found');
 
@@ -182,14 +186,14 @@ export async function assignPermissionsToRole(
   await supabase.from('role_permissions').delete().eq('role_id', roleId);
 
   // Insert new
-  const inserts = permissions.map((p) => ({
+  const inserts = permissions.map((p: any) => ({
     role_id: roleId,
     permission_id: p.id,
   }));
 
-  const { error } = await supabase
-    .from('role_permissions')
-    .insert(inserts);
+  const insertResult = await (supabase
+    .from('role_permissions') as any)
+    .insert(inserts) as any;
 
-  if (error) throw error;
+  if (insertResult.error) throw insertResult.error;
 }
