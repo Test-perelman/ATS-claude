@@ -76,7 +76,17 @@
       "Bash(\"d:\\Perelman-ATS-claude/scripts/test_master_admin.js\" )",
       "Bash(\"d:\\Perelman-ATS-claude/scripts/test_user_access.js\" )",
       "Bash(\"d:\\Perelman-ATS-claude/scripts/test-all-forms.ts\" )",
-      "Bash(\"d:\\Perelman-ATS-claude/scripts/SETUP_VERIFICATION.md\")"
+      "Bash(\"d:\\Perelman-ATS-claude/scripts/SETUP_VERIFICATION.md\")",
+      "Bash(\"d:\\Perelman-ATS-claude/apply-rls.js\" )",
+      "Bash(\"d:\\Perelman-ATS-claude/disable-rls.js\" )",
+      "Bash(\"d:\\Perelman-ATS-claude/fix-permissions.js\" )",
+      "Bash(\"d:\\Perelman-ATS-claude/grant-all-permissions.js\" )",
+      "Bash(\"d:\\Perelman-ATS-claude/open-rls-policies.js\" )",
+      "Bash(\"d:\\Perelman-ATS-claude/verify-rls.js\" )",
+      "Bash(\"d:\\Perelman-ATS-claude/DEPLOY_RLS_FIXES.sql\" )",
+      "Bash(\"d:\\Perelman-ATS-claude/nul\" )",
+      "Bash(\"d:\\Perelman-ATS-claude/tsconfig.tsbuildinfo\")",
+      "Bash(test:*)"
     ],
     "deny": [],
     "ask": []
