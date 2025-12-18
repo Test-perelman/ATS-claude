@@ -15,21 +15,21 @@ export default function NewClientPage() {
 
   // Form state
   const [formData, setFormData] = useState({
-    client_name: '',
+    clientName: '',
     industry: '',
     address: '',
     city: '',
     state: '',
-    zip_code: '',
+    zipCode: '',
     country: 'USA',
-    primary_contact_name: '',
-    primary_contact_email: '',
-    primary_contact_phone: '',
-    payment_terms: '',
-    payment_terms_days: '',
+    primaryContactName: '',
+    primaryContactEmail: '',
+    primaryContactPhone: '',
+    paymentTerms: '',
+    paymentTermsDays: '',
     website: '',
-    notes_internal: '',
-    is_active: true,
+    notes: '',
+    isActive: true,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -56,22 +56,21 @@ export default function NewClientPage() {
     try {
       // Prepare data for insertion (team_id will be set server-side)
       const clientData = {
-        client_name: formData.client_name,
-        industry: formData.industry || null,
-        address: formData.address || null,
-        city: formData.city || null,
-        state: formData.state || null,
-        zip_code: formData.zip_code || null,
-        country: formData.country || null,
-        primary_contact_name: formData.primary_contact_name || null,
-        primary_contact_email: formData.primary_contact_email || null,
-        primary_contact_phone: formData.primary_contact_phone || null,
-        payment_terms: formData.payment_terms || null,
-        payment_terms_days: formData.payment_terms_days ? parseInt(formData.payment_terms_days) : null,
-        website: formData.website || null,
-        notes_internal: formData.notes_internal || null,
-        is_active: formData.is_active,
-        // team_id is NOT included - it will be set server-side from authenticated user
+        clientName: formData.clientName,
+        industry: formData.industry || undefined,
+        address: formData.address || undefined,
+        city: formData.city || undefined,
+        state: formData.state || undefined,
+        zipCode: formData.zipCode || undefined,
+        country: formData.country || undefined,
+        primaryContactName: formData.primaryContactName || undefined,
+        primaryContactEmail: formData.primaryContactEmail || undefined,
+        primaryContactPhone: formData.primaryContactPhone || undefined,
+        paymentTerms: formData.paymentTerms || undefined,
+        paymentTermsDays: formData.paymentTermsDays ? parseInt(formData.paymentTermsDays) : undefined,
+        website: formData.website || undefined,
+        notes: formData.notes || undefined,
+        isActive: formData.isActive,
       };
 
       // Call API with fetch
@@ -152,8 +151,8 @@ export default function NewClientPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   label="Client Name"
-                  name="client_name"
-                  value={formData.client_name}
+                  name="clientName"
+                  value={formData.clientName}
                   onChange={handleChange}
                   required
                   placeholder="Acme Corporation"
@@ -176,13 +175,13 @@ export default function NewClientPage() {
                 <div className="flex items-center pt-6">
                   <input
                     type="checkbox"
-                    id="is_active"
-                    name="is_active"
-                    checked={formData.is_active}
+                    id="isActive"
+                    name="isActive"
+                    checked={formData.isActive}
                     onChange={handleChange}
                     className="mr-2"
                   />
-                  <label htmlFor="is_active" className="text-sm font-medium text-gray-700">
+                  <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
                     Active Client
                   </label>
                 </div>
@@ -199,24 +198,24 @@ export default function NewClientPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   label="Contact Name"
-                  name="primary_contact_name"
-                  value={formData.primary_contact_name}
+                  name="primaryContactName"
+                  value={formData.primaryContactName}
                   onChange={handleChange}
                   placeholder="Jane Smith"
                 />
                 <Input
                   label="Contact Email"
-                  name="primary_contact_email"
+                  name="primaryContactEmail"
                   type="email"
-                  value={formData.primary_contact_email}
+                  value={formData.primaryContactEmail}
                   onChange={handleChange}
                   placeholder="jane@example.com"
                 />
                 <Input
                   label="Contact Phone"
-                  name="primary_contact_phone"
+                  name="primaryContactPhone"
                   type="tel"
-                  value={formData.primary_contact_phone}
+                  value={formData.primaryContactPhone}
                   onChange={handleChange}
                   placeholder="123-456-7890"
                 />
@@ -257,8 +256,8 @@ export default function NewClientPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     label="Zip Code"
-                    name="zip_code"
-                    value={formData.zip_code}
+                    name="zipCode"
+                    value={formData.zipCode}
                     onChange={handleChange}
                     placeholder="94105"
                   />
@@ -283,16 +282,16 @@ export default function NewClientPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   label="Payment Terms"
-                  name="payment_terms"
-                  value={formData.payment_terms}
+                  name="paymentTerms"
+                  value={formData.paymentTerms}
                   onChange={handleChange}
                   placeholder="Net 30, Net 45, etc."
                 />
                 <Input
                   label="Payment Terms (Days)"
-                  name="payment_terms_days"
+                  name="paymentTermsDays"
                   type="number"
-                  value={formData.payment_terms_days}
+                  value={formData.paymentTermsDays}
                   onChange={handleChange}
                   placeholder="30"
                 />
@@ -308,8 +307,8 @@ export default function NewClientPage() {
             <CardContent>
               <Textarea
                 label="Notes"
-                name="notes_internal"
-                value={formData.notes_internal}
+                name="notes"
+                value={formData.notes}
                 onChange={handleChange}
                 placeholder="Add any internal notes about this client..."
                 rows={4}

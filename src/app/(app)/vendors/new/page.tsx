@@ -16,25 +16,25 @@ export default function NewVendorPage() {
 
   // Form state
   const [formData, setFormData] = useState({
-    vendor_name: '',
-    tier_level: '',
-    contact_name: '',
-    contact_email: '',
-    contact_phone: '',
+    vendorName: '',
+    tierLevel: '',
+    contactName: '',
+    contactEmail: '',
+    contactPhone: '',
     website: '',
     address: '',
     city: '',
     state: '',
-    zip_code: '',
+    zipCode: '',
     country: 'USA',
-    payment_terms: '',
-    payment_terms_days: '',
-    w9_received: false,
-    msa_signed: false,
-    msa_expiry_date: '',
+    paymentTerms: '',
+    paymentTermsDays: '',
+    w9Received: false,
+    msaSigned: false,
+    msaExpiryDate: '',
     ein: '',
-    notes_internal: '',
-    is_active: true,
+    notes: '',
+    isActive: true,
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -59,25 +59,25 @@ export default function NewVendorPage() {
 
       // Prepare data for insertion
       const vendorData: any = {
-        vendor_name: formData.vendor_name,
-        tier_level: formData.tier_level || null,
-        contact_name: formData.contact_name || null,
-        contact_email: formData.contact_email || null,
-        contact_phone: formData.contact_phone || null,
-        website: formData.website || null,
-        address: formData.address || null,
-        city: formData.city || null,
-        state: formData.state || null,
-        zip_code: formData.zip_code || null,
-        country: formData.country || null,
-        payment_terms: formData.payment_terms || null,
-        payment_terms_days: formData.payment_terms_days ? parseInt(formData.payment_terms_days) : null,
-        w9_received: formData.w9_received,
-        msa_signed: formData.msa_signed,
-        msa_expiry_date: formData.msa_expiry_date || null,
-        ein: formData.ein || null,
-        notes_internal: formData.notes_internal || null,
-        is_active: formData.is_active,
+        vendorName: formData.vendorName,
+        tierLevel: formData.tierLevel || undefined,
+        contactName: formData.contactName || undefined,
+        contactEmail: formData.contactEmail || undefined,
+        contactPhone: formData.contactPhone || undefined,
+        website: formData.website || undefined,
+        address: formData.address || undefined,
+        city: formData.city || undefined,
+        state: formData.state || undefined,
+        zipCode: formData.zipCode || undefined,
+        country: formData.country || undefined,
+        paymentTerms: formData.paymentTerms || undefined,
+        paymentTermsDays: formData.paymentTermsDays ? parseInt(formData.paymentTermsDays) : undefined,
+        w9Received: formData.w9Received,
+        msaSigned: formData.msaSigned,
+        msaExpiryDate: formData.msaExpiryDate || undefined,
+        ein: formData.ein || undefined,
+        notes: formData.notes || undefined,
+        isActive: formData.isActive,
       };
 
       const response = await fetch('/api/vendors', {
@@ -152,16 +152,16 @@ export default function NewVendorPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   label="Vendor Name"
-                  name="vendor_name"
-                  value={formData.vendor_name}
+                  name="vendorName"
+                  value={formData.vendorName}
                   onChange={handleChange}
                   required
                   placeholder="Acme Staffing Solutions"
                 />
                 <Select
                   label="Tier Level"
-                  name="tier_level"
-                  value={formData.tier_level}
+                  name="tierLevel"
+                  value={formData.tierLevel}
                   onChange={handleChange}
                   options={[
                     { value: '', label: 'Select Tier Level' },
@@ -183,13 +183,13 @@ export default function NewVendorPage() {
                 <div className="flex items-center pt-6">
                   <input
                     type="checkbox"
-                    id="is_active"
-                    name="is_active"
-                    checked={formData.is_active}
+                    id="isActive"
+                    name="isActive"
+                    checked={formData.isActive}
                     onChange={handleChange}
                     className="mr-2"
                   />
-                  <label htmlFor="is_active" className="text-sm font-medium text-gray-700">
+                  <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
                     Active Vendor
                   </label>
                 </div>
@@ -206,24 +206,24 @@ export default function NewVendorPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   label="Contact Name"
-                  name="contact_name"
-                  value={formData.contact_name}
+                  name="contactName"
+                  value={formData.contactName}
                   onChange={handleChange}
                   placeholder="John Doe"
                 />
                 <Input
                   label="Contact Email"
-                  name="contact_email"
+                  name="contactEmail"
                   type="email"
-                  value={formData.contact_email}
+                  value={formData.contactEmail}
                   onChange={handleChange}
                   placeholder="john@example.com"
                 />
                 <Input
                   label="Contact Phone"
-                  name="contact_phone"
+                  name="contactPhone"
                   type="tel"
-                  value={formData.contact_phone}
+                  value={formData.contactPhone}
                   onChange={handleChange}
                   placeholder="123-456-7890"
                 />
@@ -264,8 +264,8 @@ export default function NewVendorPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     label="Zip Code"
-                    name="zip_code"
-                    value={formData.zip_code}
+                    name="zipCode"
+                    value={formData.zipCode}
                     onChange={handleChange}
                     placeholder="10001"
                   />
@@ -291,16 +291,16 @@ export default function NewVendorPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     label="Payment Terms"
-                    name="payment_terms"
-                    value={formData.payment_terms}
+                    name="paymentTerms"
+                    value={formData.paymentTerms}
                     onChange={handleChange}
                     placeholder="Net 30, Net 45, etc."
                   />
                   <Input
                     label="Payment Terms (Days)"
-                    name="payment_terms_days"
+                    name="paymentTermsDays"
                     type="number"
-                    value={formData.payment_terms_days}
+                    value={formData.paymentTermsDays}
                     onChange={handleChange}
                     placeholder="30"
                   />
@@ -309,36 +309,36 @@ export default function NewVendorPage() {
                   <div className="flex items-center pt-6">
                     <input
                       type="checkbox"
-                      id="w9_received"
-                      name="w9_received"
-                      checked={formData.w9_received}
+                      id="w9Received"
+                      name="w9Received"
+                      checked={formData.w9Received}
                       onChange={handleChange}
                       className="mr-2"
                     />
-                    <label htmlFor="w9_received" className="text-sm font-medium text-gray-700">
+                    <label htmlFor="w9Received" className="text-sm font-medium text-gray-700">
                       W9 Received
                     </label>
                   </div>
                   <div className="flex items-center pt-6">
                     <input
                       type="checkbox"
-                      id="msa_signed"
-                      name="msa_signed"
-                      checked={formData.msa_signed}
+                      id="msaSigned"
+                      name="msaSigned"
+                      checked={formData.msaSigned}
                       onChange={handleChange}
                       className="mr-2"
                     />
-                    <label htmlFor="msa_signed" className="text-sm font-medium text-gray-700">
+                    <label htmlFor="msaSigned" className="text-sm font-medium text-gray-700">
                       MSA Signed
                     </label>
                   </div>
                 </div>
-                {formData.msa_signed && (
+                {formData.msaSigned && (
                   <Input
                     label="MSA Expiry Date"
-                    name="msa_expiry_date"
+                    name="msaExpiryDate"
                     type="date"
-                    value={formData.msa_expiry_date}
+                    value={formData.msaExpiryDate}
                     onChange={handleChange}
                   />
                 )}
@@ -361,8 +361,8 @@ export default function NewVendorPage() {
             <CardContent>
               <Textarea
                 label="Notes"
-                name="notes_internal"
-                value={formData.notes_internal}
+                name="notes"
+                value={formData.notes}
                 onChange={handleChange}
                 placeholder="Add any internal notes about this vendor..."
                 rows={4}

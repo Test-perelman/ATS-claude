@@ -18,20 +18,20 @@ export default function NewJobRequirementPage() {
 
   // Form state
   const [formData, setFormData] = useState({
-    job_title: '',
-    job_description: '',
-    skills_required: '',
-    client_id: '',
-    vendor_id: '',
+    jobTitle: '',
+    jobDescription: '',
+    skillsRequired: '',
+    clientId: '',
+    vendorId: '',
     location: '',
-    work_mode: '',
-    bill_rate_range_min: '',
-    bill_rate_range_max: '',
-    employment_type: '',
+    workMode: '',
+    billRateRangeMin: '',
+    billRateRangeMax: '',
+    employmentType: '',
     duration: '',
     priority: 'Medium',
-    received_date: new Date().toISOString().split('T')[0],
-    expiry_date: '',
+    receivedDate: new Date().toISOString().split('T')[0],
+    expiryDate: '',
     status: 'open',
     notes: '',
   });
@@ -93,20 +93,20 @@ export default function NewJobRequirementPage() {
 
       // Prepare data for insertion
       const jobData: any = {
-        job_title: formData.job_title,
-        job_description: formData.job_description || null,
-        skills_required: formData.skills_required || null,
-        client_id: formData.client_id || null,
-        vendor_id: formData.vendor_id || null,
+        jobTitle: formData.jobTitle,
+        jobDescription: formData.jobDescription || null,
+        skillsRequired: formData.skillsRequired || null,
+        clientId: formData.clientId || null,
+        vendorId: formData.vendorId || null,
         location: formData.location || null,
-        work_mode: formData.work_mode || null,
-        bill_rate_range_min: formData.bill_rate_range_min ? parseFloat(formData.bill_rate_range_min) : null,
-        bill_rate_range_max: formData.bill_rate_range_max ? parseFloat(formData.bill_rate_range_max) : null,
-        employment_type: formData.employment_type || null,
+        workMode: formData.workMode || null,
+        billRateRangeMin: formData.billRateRangeMin ? parseFloat(formData.billRateRangeMin) : null,
+        billRateRangeMax: formData.billRateRangeMax ? parseFloat(formData.billRateRangeMax) : null,
+        employmentType: formData.employmentType || null,
         duration: formData.duration || null,
         priority: formData.priority || null,
-        received_date: formData.received_date || null,
-        expiry_date: formData.expiry_date || null,
+        receivedDate: formData.receivedDate || null,
+        expiryDate: formData.expiryDate || null,
         status: formData.status,
         notes: formData.notes || null,
       };
@@ -184,8 +184,8 @@ export default function NewJobRequirementPage() {
                 <div className="md:col-span-2">
                   <Input
                     label="Job Title"
-                    name="job_title"
-                    value={formData.job_title}
+                    name="jobTitle"
+                    value={formData.jobTitle}
                     onChange={handleChange}
                     required
                     placeholder="Senior Software Engineer"
@@ -193,8 +193,8 @@ export default function NewJobRequirementPage() {
                 </div>
                 <Select
                   label="Client"
-                  name="client_id"
-                  value={formData.client_id}
+                  name="clientId"
+                  value={formData.clientId}
                   onChange={handleChange}
                   options={[
                     { value: '', label: 'Select Client' },
@@ -206,8 +206,8 @@ export default function NewJobRequirementPage() {
                 />
                 <Select
                   label="Vendor"
-                  name="vendor_id"
-                  value={formData.vendor_id}
+                  name="vendorId"
+                  value={formData.vendorId}
                   onChange={handleChange}
                   options={[
                     { value: '', label: 'Select Vendor' },
@@ -263,8 +263,8 @@ export default function NewJobRequirementPage() {
                 />
                 <Select
                   label="Work Mode"
-                  name="work_mode"
-                  value={formData.work_mode}
+                  name="workMode"
+                  value={formData.workMode}
                   onChange={handleChange}
                   options={[
                     { value: '', label: 'Select Work Mode' },
@@ -275,8 +275,8 @@ export default function NewJobRequirementPage() {
                 />
                 <Select
                   label="Employment Type"
-                  name="employment_type"
-                  value={formData.employment_type}
+                  name="employmentType"
+                  value={formData.employmentType}
                   onChange={handleChange}
                   options={[
                     { value: '', label: 'Select Employment Type' },
@@ -296,34 +296,34 @@ export default function NewJobRequirementPage() {
                 />
                 <Input
                   label="Bill Rate Min ($/hr)"
-                  name="bill_rate_range_min"
+                  name="billRateRangeMin"
                   type="number"
                   step="0.01"
-                  value={formData.bill_rate_range_min}
+                  value={formData.billRateRangeMin}
                   onChange={handleChange}
                   placeholder="80"
                 />
                 <Input
                   label="Bill Rate Max ($/hr)"
-                  name="bill_rate_range_max"
+                  name="billRateRangeMax"
                   type="number"
                   step="0.01"
-                  value={formData.bill_rate_range_max}
+                  value={formData.billRateRangeMax}
                   onChange={handleChange}
                   placeholder="100"
                 />
                 <Input
                   label="Received Date"
-                  name="received_date"
+                  name="receivedDate"
                   type="date"
-                  value={formData.received_date}
+                  value={formData.receivedDate}
                   onChange={handleChange}
                 />
                 <Input
                   label="Expiry Date"
-                  name="expiry_date"
+                  name="expiryDate"
                   type="date"
-                  value={formData.expiry_date}
+                  value={formData.expiryDate}
                   onChange={handleChange}
                 />
               </div>
@@ -338,8 +338,8 @@ export default function NewJobRequirementPage() {
             <CardContent>
               <Textarea
                 label="Description"
-                name="job_description"
-                value={formData.job_description}
+                name="jobDescription"
+                value={formData.jobDescription}
                 onChange={handleChange}
                 placeholder="Enter detailed job description..."
                 rows={6}
@@ -355,8 +355,8 @@ export default function NewJobRequirementPage() {
             <CardContent>
               <Textarea
                 label="Skills"
-                name="skills_required"
-                value={formData.skills_required}
+                name="skillsRequired"
+                value={formData.skillsRequired}
                 onChange={handleChange}
                 placeholder="Java, Spring Boot, AWS, Docker, Kubernetes..."
                 rows={4}

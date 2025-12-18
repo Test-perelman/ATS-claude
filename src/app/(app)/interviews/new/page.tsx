@@ -16,12 +16,12 @@ function NewInterviewForm() {
 
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [formData, setFormData] = useState({
-    submission_id: submissionId || '',
-    interview_round: '',
-    scheduled_time: '',
-    interviewer_name: '',
-    interview_mode: '',
-    interview_location: '',
+    submissionId: submissionId || '',
+    interviewRound: '',
+    scheduledTime: '',
+    interviewerName: '',
+    interviewMode: '',
+    interviewLocation: '',
   });
   const [loading, setLoading] = useState(false);
 
@@ -93,9 +93,9 @@ function NewInterviewForm() {
                 Submission <span className="text-red-500">*</span>
               </label>
               <Select
-                value={formData.submission_id}
+                value={formData.submissionId}
                 onChange={(e) =>
-                  setFormData({ ...formData, submission_id: e.target.value })
+                  setFormData({ ...formData, submissionId: e.target.value })
                 }
                 options={[
                   { value: '', label: 'Select a submission' },
@@ -110,9 +110,9 @@ function NewInterviewForm() {
                 Interview Round <span className="text-red-500">*</span>
               </label>
               <Select
-                value={formData.interview_round}
+                value={formData.interviewRound}
                 onChange={(e) =>
-                  setFormData({ ...formData, interview_round: e.target.value })
+                  setFormData({ ...formData, interviewRound: e.target.value })
                 }
                 options={[
                   { value: '', label: 'Select round' },
@@ -133,9 +133,9 @@ function NewInterviewForm() {
               </label>
               <Input
                 type="datetime-local"
-                value={formData.scheduled_time}
+                value={formData.scheduledTime}
                 onChange={(e) =>
-                  setFormData({ ...formData, scheduled_time: e.target.value })
+                  setFormData({ ...formData, scheduledTime: e.target.value })
                 }
                 required
               />
@@ -147,9 +147,9 @@ function NewInterviewForm() {
               </label>
               <Input
                 type="text"
-                value={formData.interviewer_name}
+                value={formData.interviewerName}
                 onChange={(e) =>
-                  setFormData({ ...formData, interviewer_name: e.target.value })
+                  setFormData({ ...formData, interviewerName: e.target.value })
                 }
                 placeholder="Enter interviewer name"
               />
@@ -160,9 +160,9 @@ function NewInterviewForm() {
                 Interview Mode
               </label>
               <Select
-                value={formData.interview_mode}
+                value={formData.interviewMode}
                 onChange={(e) =>
-                  setFormData({ ...formData, interview_mode: e.target.value })
+                  setFormData({ ...formData, interviewMode: e.target.value })
                 }
                 options={[
                   { value: '', label: 'Select mode' },
@@ -179,9 +179,9 @@ function NewInterviewForm() {
               </label>
               <Input
                 type="text"
-                value={formData.interview_location}
+                value={formData.interviewLocation}
                 onChange={(e) =>
-                  setFormData({ ...formData, interview_location: e.target.value })
+                  setFormData({ ...formData, interviewLocation: e.target.value })
                 }
                 placeholder="Enter location or meeting link"
               />

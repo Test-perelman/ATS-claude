@@ -21,11 +21,11 @@ function NewSubmissionForm() {
 
   // Form state
   const [formData, setFormData] = useState({
-    candidate_id: searchParams?.get('candidate_id') || '',
-    job_id: searchParams?.get('job_id') || '',
-    submission_status: 'submitted',
-    bill_rate_offered: '',
-    pay_rate_offered: '',
+    candidateId: searchParams?.get('candidateId') || searchParams?.get('candidate_id') || '',
+    jobId: searchParams?.get('jobId') || searchParams?.get('job_id') || '',
+    submissionStatus: 'submitted',
+    billRateOffered: '',
+    payRateOffered: '',
     margin: '',
     notes: '',
   });
@@ -38,38 +38,38 @@ function NewSubmissionForm() {
   }, [user]);
 
   useEffect(() => {
-    if (formData.candidate_id) {
-      const candidate = candidates.find(c => c.candidate_id === formData.candidate_id);
+    if (formData.candidateId) {
+      const candidate = candidates.find(c => c.candidate_id === formData.candidateId);
       setSelectedCandidate(candidate);
 
       // Auto-fill pay rate from candidate's hourly rate
-      if (candidate && candidate.hourly_pay_rate && !formData.pay_rate_offered) {
+      if (candidate && candidate.hourly_pay_rate && !formData.payRateOffered) {
         setFormData(prev => ({
           ...prev,
-          pay_rate_offered: candidate.hourly_pay_rate.toString()
+          payRateOffered: candidate.hourly_pay_rate.toString()
         }));
       }
     }
-  }, [formData.candidate_id, candidates]);
+  }, [formData.candidateId, candidates]);
 
   useEffect(() => {
-    if (formData.job_id) {
-      const job = jobs.find(j => j.job_id === formData.job_id);
+    if (formData.jobId) {
+      const job = jobs.find(j => j.job_id === formData.jobId);
       setSelectedJob(job);
     }
-  }, [formData.job_id, jobs]);
+  }, [formData.jobId, jobs]);
 
   useEffect(() => {
     // Calculate margin when rates change
-    if (formData.bill_rate_offered && formData.pay_rate_offered) {
-      const billRate = parseFloat(formData.bill_rate_offered);
-      const payRate = parseFloat(formData.pay_rate_offered);
+    if (formData.billRateOffered && formData.payRateOffered) {
+      const billRate = parseFloat(formData.billRateOffered);
+      const payRate = parseFloat(formData.payRateOffered);
       if (!isNaN(billRate) && !isNaN(payRate)) {
         const margin = billRate - payRate;
         setFormData(prev => ({ ...prev, margin: margin.toFixed(2) }));
       }
     }
-  }, [formData.bill_rate_offered, formData.pay_rate_offered]);
+  }, [formData.billRateOffered, formData.payRateOffered]);
 
   async function loadCandidates() {
     if (!user?.user_id) {
@@ -116,14 +116,14 @@ function NewSubmissionForm() {
 
       // Prepare data for insertion
       const submissionData: any = {
-        candidate_id: formData.candidate_id,
-        job_id: formData.job_id,
-        submission_status: formData.submission_status,
-        bill_rate_offered: formData.bill_rate_offered ? parseFloat(formData.bill_rate_offered) : null,
-        pay_rate_offered: formData.pay_rate_offered ? parseFloat(formData.pay_rate_offered) : null,
+        candidateId: formData.candidateId,
+        jobId: formData.jobId,
+        submissionStatus: formData.submissionStatus,
+        billRateOffered: formData.billRateOffered ? parseFloat(formData.billRateOffered) : null,
+        payRateOffered: formData.payRateOffered ? parseFloat(formData.payRateOffered) : null,
         margin: formData.margin ? parseFloat(formData.margin) : null,
         notes: formData.notes || null,
-        submitted_at: new Date().toISOString(),
+        submittedAt: new Date().toISOString(),
       };
 
       const response = await fetch('/api/submissions', {
@@ -177,8 +177,8 @@ function NewSubmissionForm() {
                 <div>
                   <Select
                     label="Candidate"
-                    name="candidate_id"
-                    value={formData.candidate_id}
+                    name="candidateId"
+                    value={formData.candidateId}
                     onChange={handleChange}
                     required
                     options={[
@@ -208,8 +208,8 @@ function NewSubmissionForm() {
                 <div>
                   <Select
                     label="Job Requirement"
-                    name="job_id"
-                    value={formData.job_id}
+                    name="jobId"
+                    value={formData.jobId}
                     onChange={handleChange}
                     required
                     options={[
@@ -250,20 +250,20 @@ function NewSubmissionForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   label="Bill Rate ($/hr)"
-                  name="bill_rate_offered"
+                  name="billRateOffered"
                   type="number"
                   step="0.01"
-                  value={formData.bill_rate_offered}
+                  value={formData.billRateOffered}
                   onChange={handleChange}
                   required
                   placeholder="85.00"
                 />
                 <Input
                   label="Pay Rate ($/hr)"
-                  name="pay_rate_offered"
+                  name="payRateOffered"
                   type="number"
                   step="0.01"
-                  value={formData.pay_rate_offered}
+                  value={formData.payRateOffered}
                   onChange={handleChange}
                   required
                   placeholder="60.00"
@@ -280,8 +280,8 @@ function NewSubmissionForm() {
                 />
                 <Select
                   label="Initial Status"
-                  name="submission_status"
-                  value={formData.submission_status}
+                  name="submissionStatus"
+                  value={formData.submissionStatus}
                   onChange={handleChange}
                   required
                   options={[
@@ -292,13 +292,13 @@ function NewSubmissionForm() {
                 />
               </div>
 
-              {formData.bill_rate_offered && formData.pay_rate_offered && formData.margin && (
+              {formData.billRateOffered && formData.payRateOffered && formData.margin && (
                 <div className="mt-4 p-4 bg-blue-50 rounded">
                   <div className="text-sm font-medium text-blue-900">Margin Calculation</div>
                   <div className="text-xs text-blue-700 mt-2">
-                    Bill Rate: ${formData.bill_rate_offered}/hr - Pay Rate: ${formData.pay_rate_offered}/hr =
+                    Bill Rate: ${formData.billRateOffered}/hr - Pay Rate: ${formData.payRateOffered}/hr =
                     Margin: ${formData.margin}/hr (
-                    {((parseFloat(formData.margin) / parseFloat(formData.bill_rate_offered)) * 100).toFixed(2)}%)
+                    {((parseFloat(formData.margin) / parseFloat(formData.billRateOffered)) * 100).toFixed(2)}%)
                   </div>
                 </div>
               )}

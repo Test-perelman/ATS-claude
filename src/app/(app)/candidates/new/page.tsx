@@ -1,71 +1,43 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
-import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import type { Database } from '@/types/database';
 
 export default function NewCandidatePage() {
   const router = useRouter();
-  const { user } = useAuth(); // teamId no longer needed - handled server-side
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [visaStatuses, setVisaStatuses] = useState<any[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
-    email_address: '',
-    phone_number: '',
-    linkedin_url: 'https://www.linkedin.com/in/',
-    current_location: '',
-    relocation_preference: '',
-    visa_status_id: '',
-    visa_expiry_date: '',
-    total_experience_years: '',
-    skills_primary: '',
-    skills_secondary: '',
-    preferred_roles: '',
-    hourly_pay_rate: '',
-    salary_annual: '',
-    bench_status: 'available',
-    notes_internal: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    linkedinUrl: 'https://www.linkedin.com/in/',
+    currentLocation: '',
+    workAuthorization: '',
+    resumeUrl: '',
+    currentTitle: '',
+    currentCompany: '',
+    experienceYears: '',
+    skills: [],
+    desiredSalary: '',
+    status: 'new',
+    notes: '',
   });
-
-  useEffect(() => {
-    loadDropdownData();
-  }, []);
-
-  async function loadDropdownData() {
-    // Load visa statuses
-    const { data: visas } = await supabase
-      .from('visa_status')
-      .select('*')
-      .eq('is_active', true)
-      .order('visa_name');
-    setVisaStatuses(visas || []);
-
-    // Load users for assignment
-    const { data: usersList } = await supabase
-      .from('users')
-      .select('user_id, username, email')
-      .eq('status', 'active')
-      .order('username');
-    setUsers(usersList || []);
-  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
     // Ensure LinkedIn URL always starts with the prefix
-    if (name === 'linkedin_url') {
+    if (name === 'linkedinUrl') {
       const prefix = 'https://www.linkedin.com/in/';
       if (!value.startsWith(prefix)) {
         setFormData(prev => ({ ...prev, [name]: prefix }));
@@ -87,25 +59,21 @@ export default function NewCandidatePage() {
 
       // Prepare data for insertion (team_id will be set server-side)
       const candidateData = {
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        email_address: formData.email_address || null,
-        phone_number: formData.phone_number || null,
-        linkedin_url: formData.linkedin_url || null,
-        current_location: formData.current_location || null,
-        relocation_preference: formData.relocation_preference || null,
-        visa_status_id: formData.visa_status_id || null,
-        visa_expiry_date: formData.visa_expiry_date || null,
-        total_experience_years: formData.total_experience_years ? parseFloat(formData.total_experience_years) : null,
-        skills_primary: formData.skills_primary || null,
-        skills_secondary: formData.skills_secondary || null,
-        preferred_roles: formData.preferred_roles || null,
-        hourly_pay_rate: formData.hourly_pay_rate ? parseFloat(formData.hourly_pay_rate) : null,
-        salary_annual: formData.salary_annual ? parseFloat(formData.salary_annual) : null,
-        bench_status: formData.bench_status,
-        bench_added_date: formData.bench_status === 'on_bench' ? new Date().toISOString().split('T')[0] : null,
-        notes_internal: formData.notes_internal || null,
-        // team_id is NOT included - it will be set server-side from authenticated user
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email || undefined,
+        phone: formData.phone || undefined,
+        linkedinUrl: formData.linkedinUrl || undefined,
+        currentLocation: formData.currentLocation || undefined,
+        workAuthorization: formData.workAuthorization || undefined,
+        resumeUrl: formData.resumeUrl || undefined,
+        currentTitle: formData.currentTitle || undefined,
+        currentCompany: formData.currentCompany || undefined,
+        experienceYears: formData.experienceYears ? parseFloat(formData.experienceYears) : undefined,
+        skills: [],
+        desiredSalary: formData.desiredSalary ? parseFloat(formData.desiredSalary) : undefined,
+        status: formData.status,
+        notes: formData.notes || undefined,
       };
 
       // Call API with fetch
@@ -164,45 +132,45 @@ export default function NewCandidatePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   label="First Name"
-                  name="first_name"
-                  value={formData.first_name}
+                  name="firstName"
+                  value={formData.firstName}
                   onChange={handleChange}
                   required
                 />
                 <Input
                   label="Last Name"
-                  name="last_name"
-                  value={formData.last_name}
+                  name="lastName"
+                  value={formData.lastName}
                   onChange={handleChange}
                   required
                 />
                 <Input
                   label="Email Address"
-                  name="email_address"
+                  name="email"
                   type="email"
-                  value={formData.email_address}
+                  value={formData.email}
                   onChange={handleChange}
                 />
                 <Input
                   label="Phone Number"
-                  name="phone_number"
+                  name="phone"
                   type="tel"
-                  value={formData.phone_number}
+                  value={formData.phone}
                   onChange={handleChange}
                   placeholder="123-456-7890"
                 />
                 <Input
                   label="LinkedIn URL"
-                  name="linkedin_url"
+                  name="linkedinUrl"
                   type="url"
-                  value={formData.linkedin_url}
+                  value={formData.linkedinUrl}
                   onChange={handleChange}
                   placeholder="https://linkedin.com/in/..."
                 />
                 <Input
                   label="Current Location"
-                  name="current_location"
-                  value={formData.current_location}
+                  name="currentLocation"
+                  value={formData.currentLocation}
                   onChange={handleChange}
                   placeholder="City, State"
                 />
@@ -218,28 +186,30 @@ export default function NewCandidatePage() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Select
-                  label="Visa Status"
-                  name="visa_status_id"
-                  value={formData.visa_status_id}
+                  label="Work Authorization"
+                  name="workAuthorization"
+                  value={formData.workAuthorization}
                   onChange={handleChange}
                   options={[
-                    { value: '', label: 'Select Visa Status' },
-                    ...visaStatuses.map(v => ({ value: v.visa_status_id, label: v.visa_name }))
+                    { value: '', label: 'Select Work Authorization' },
+                    { value: 'us_citizen', label: 'US Citizen' },
+                    { value: 'green_card', label: 'Green Card' },
+                    { value: 'h1b', label: 'H1B' },
+                    { value: 'opt', label: 'OPT' },
+                    { value: 'cpt', label: 'CPT' },
+                    { value: 'ead', label: 'EAD' },
+                    { value: 'tn', label: 'TN' },
+                    { value: 'other', label: 'Other' },
+                    { value: 'requires_sponsorship', label: 'Requires Sponsorship' },
                   ]}
                 />
                 <Input
-                  label="Visa Expiry Date"
-                  name="visa_expiry_date"
-                  type="date"
-                  value={formData.visa_expiry_date}
+                  label="Resume URL"
+                  name="resumeUrl"
+                  type="url"
+                  value={formData.resumeUrl}
                   onChange={handleChange}
-                />
-                <Input
-                  label="Relocation Preference"
-                  name="relocation_preference"
-                  value={formData.relocation_preference}
-                  onChange={handleChange}
-                  placeholder="Open to relocation / Remote only"
+                  placeholder="https://..."
                 />
               </div>
             </CardContent>
@@ -254,37 +224,28 @@ export default function NewCandidatePage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
-                    label="Total Experience (Years)"
-                    name="total_experience_years"
+                    label="Years of Experience"
+                    name="experienceYears"
                     type="number"
                     step="0.5"
-                    value={formData.total_experience_years}
+                    value={formData.experienceYears}
                     onChange={handleChange}
                     placeholder="5.0"
                   />
                   <Input
-                    label="Preferred Roles"
-                    name="preferred_roles"
-                    value={formData.preferred_roles}
+                    label="Current Title"
+                    name="currentTitle"
+                    value={formData.currentTitle}
                     onChange={handleChange}
-                    placeholder="Full Stack Developer, Java Developer"
+                    placeholder="Senior Developer"
                   />
                 </div>
-                <Textarea
-                  label="Primary Skills"
-                  name="skills_primary"
-                  value={formData.skills_primary}
+                <Input
+                  label="Current Company"
+                  name="currentCompany"
+                  value={formData.currentCompany}
                   onChange={handleChange}
-                  placeholder="Java, Spring Boot, Microservices, AWS..."
-                  rows={3}
-                />
-                <Textarea
-                  label="Secondary Skills"
-                  name="skills_secondary"
-                  value={formData.skills_secondary}
-                  onChange={handleChange}
-                  placeholder="Docker, Kubernetes, Jenkins..."
-                  rows={3}
+                  placeholder="Company Name"
                 />
               </div>
             </CardContent>
@@ -296,22 +257,13 @@ export default function NewCandidatePage() {
               <CardTitle>Compensation</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <Input
-                  label="Hourly Pay Rate ($)"
-                  name="hourly_pay_rate"
-                  type="number"
-                  step="0.01"
-                  value={formData.hourly_pay_rate}
-                  onChange={handleChange}
-                  placeholder="75.00"
-                />
-                <Input
-                  label="Annual Salary ($)"
-                  name="salary_annual"
+                  label="Desired Salary ($)"
+                  name="desiredSalary"
                   type="number"
                   step="1000"
-                  value={formData.salary_annual}
+                  value={formData.desiredSalary}
                   onChange={handleChange}
                   placeholder="156000"
                 />
@@ -327,23 +279,26 @@ export default function NewCandidatePage() {
             <CardContent>
               <div className="space-y-4">
                 <Select
-                  label="Bench Status"
-                  name="bench_status"
-                  value={formData.bench_status}
+                  label="Status"
+                  name="status"
+                  value={formData.status}
                   onChange={handleChange}
                   options={[
-                    { value: 'available', label: 'Available' },
-                    { value: 'on_bench', label: 'On Bench' },
-                    { value: 'placed', label: 'Placed' },
-                    { value: 'inactive', label: 'Inactive' },
+                    { value: 'new', label: 'New' },
+                    { value: 'screening', label: 'Screening' },
+                    { value: 'interviewing', label: 'Interviewing' },
+                    { value: 'offered', label: 'Offered' },
+                    { value: 'hired', label: 'Hired' },
+                    { value: 'rejected', label: 'Rejected' },
+                    { value: 'withdrawn', label: 'Withdrawn' },
                   ]}
                 />
                 <Textarea
-                  label="Internal Notes"
-                  name="notes_internal"
-                  value={formData.notes_internal}
+                  label="Notes"
+                  name="notes"
+                  value={formData.notes}
                   onChange={handleChange}
-                  placeholder="Add any internal notes about this candidate..."
+                  placeholder="Add any notes about this candidate..."
                   rows={4}
                 />
               </div>
