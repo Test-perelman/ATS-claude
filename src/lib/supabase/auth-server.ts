@@ -15,6 +15,7 @@ import { cloneRoleTemplatesForTeam, getLocalAdminRole } from '@/lib/utils/role-h
  */
 export async function getCurrentUser(): Promise<UserWithRole | null> {
   try {
+    console.log('[getCurrentUser] Starting...')
     const supabase = await createServerClient()
 
     const {
@@ -31,6 +32,8 @@ export async function getCurrentUser(): Promise<UserWithRole | null> {
       console.log('[getCurrentUser] No auth user - not logged in')
       return null
     }
+
+    console.log('[getCurrentUser] Auth user found:', authUser.id, 'email:', authUser.email)
 
     const { data: userData, error } = await supabase
       .from('users')
@@ -63,15 +66,39 @@ export async function getCurrentUser(): Promise<UserWithRole | null> {
       .single()
 
     if (error) {
-      console.error('[getCurrentUser] Database error:', error.message)
+      console.error('[getCurrentUser] Database error:', error.message, 'for user:', authUser.id)
       return null
     }
 
     if (!userData) {
-      console.warn('[getCurrentUser] User auth exists but no users table record for', authUser.id)
-      return null
+      console.warn('[getCurrentUser] ⚠️ Auth user exists but NO database record! ID:', authUser.id, 'Email:', authUser.email)
+      // Auto-create user record if it's missing
+      console.log('[getCurrentUser] Attempting to create missing user record...')
+      try {
+        const { data: newUser, error: createError } = await (supabase.from('users') as any)
+          .insert({
+            user_id: authUser.id,
+            email: authUser.email || 'unknown',
+            username: (authUser.email || 'user').split('@')[0],
+            status: 'active',
+          })
+          .select()
+          .single()
+
+        if (createError) {
+          console.error('[getCurrentUser] Failed to create user record:', createError.message)
+          return null
+        }
+
+        console.log('[getCurrentUser] ✅ User record created successfully')
+        return newUser as UserWithRole
+      } catch (createErr) {
+        console.error('[getCurrentUser] Exception creating user record:', createErr)
+        return null
+      }
     }
 
+    console.log('[getCurrentUser] ✅ User found:', (userData as any).user_id)
     return userData as UserWithRole
   } catch (error) {
     console.error('[getCurrentUser] Exception:', error)

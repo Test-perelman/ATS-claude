@@ -10,6 +10,7 @@ import { redirect } from 'next/navigation';
 export async function signUp(email: string, password: string) {
   const supabase = await createClient();
 
+  // Step 1: Create auth user
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -19,7 +20,30 @@ export async function signUp(email: string, password: string) {
     return { error: error.message };
   }
 
-  return { data };
+  if (!data.user) {
+    return { error: 'Failed to create user' };
+  }
+
+  // Step 2: Create user record in database
+  try {
+    const { error: userError } = await (supabase.from('users') as any)
+      .insert({
+        user_id: data.user.id,
+        email: email,
+        username: email.split('@')[0],
+        status: 'active',
+      });
+
+    if (userError) {
+      console.error('Failed to create user record:', userError);
+      // Don't fail signup, but log the issue
+    }
+  } catch (err) {
+    console.error('Error creating user record:', err);
+    // Continue - user can still log in
+  }
+
+  return { success: true, data };
 }
 
 // ============================================================================
@@ -36,6 +60,37 @@ export async function signIn(email: string, password: string) {
 
   if (error) {
     return { error: error.message };
+  }
+
+  if (!data.user) {
+    return { error: 'Failed to sign in' };
+  }
+
+  // Ensure user record exists in database
+  try {
+    const { data: existingUser } = await (supabase.from('users') as any)
+      .select('user_id')
+      .eq('user_id', data.user.id)
+      .single();
+
+    // If user record doesn't exist, create it
+    if (!existingUser) {
+      const { error: createError } = await (supabase.from('users') as any)
+        .insert({
+          user_id: data.user.id,
+          email: email,
+          username: email.split('@')[0],
+          status: 'active',
+        });
+
+      if (createError) {
+        console.error('Failed to create user record on signin:', createError);
+        // Continue anyway - user auth is valid
+      }
+    }
+  } catch (err) {
+    console.error('Error ensuring user record exists:', err);
+    // Continue - user auth is valid
   }
 
   redirect('/dashboard');

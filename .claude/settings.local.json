@@ -86,7 +86,8 @@
       "Bash(\"d:\\Perelman-ATS-claude/DEPLOY_RLS_FIXES.sql\" )",
       "Bash(\"d:\\Perelman-ATS-claude/nul\" )",
       "Bash(\"d:\\Perelman-ATS-claude/tsconfig.tsbuildinfo\")",
-      "Bash(test:*)"
+      "Bash(test:*)",
+      "Bash(supabase status:*)"
     ],
     "deny": [],
     "ask": []
