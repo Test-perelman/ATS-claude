@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { apiPost, apiGet, apiPut, apiDelete } from '@/lib/api-client';
 
 export default function NewClientPage() {
   const router = useRouter();
@@ -74,11 +75,7 @@ export default function NewClientPage() {
       };
 
       // Call API with fetch
-      const response = await fetch('/api/clients', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(clientData),
-      });
+      const response = await apiPost('/api/clients', clientData);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -99,11 +96,7 @@ export default function NewClientPage() {
         if (confirmed) {
           setLoading(true);
           // Create with duplicate check skipped
-          const forceResponse = await fetch('/api/clients?skipDuplicateCheck=true', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(clientData),
-          });
+          const forceResponse = await apiPost('/api/clients?skipDuplicateCheck=true', clientData);
           if (!forceResponse.ok) {
             const errorData = await forceResponse.json();
             alert('Error creating client: ' + (errorData.error || 'Unknown error'));

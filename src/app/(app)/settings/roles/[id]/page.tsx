@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { useCanManageRoles } from '@/lib/utils/permission-hooks';
+import { apiGet, apiPost, apiPut } from '@/lib/api-client';
 import type { Database } from '@/types/database';
 
 type Role = Database['public']['Tables']['roles']['Row'];
@@ -45,7 +46,7 @@ export default function RoleEditorPage() {
       setLoading(true);
 
       // Load all permissions
-      const permResponse = await fetch('/api/permissions');
+      const permResponse = await apiGet('/api/permissions');
       if (permResponse.ok) {
         const { data } = await permResponse.json();
         setAllPermissions(data as any);

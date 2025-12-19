@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { apiPost, apiGet, apiPut, apiDelete } from '@/lib/api-client';
 
 export default function NewJobRequirementPage() {
   const router = useRouter();
@@ -111,11 +112,7 @@ export default function NewJobRequirementPage() {
         notes: formData.notes || null,
       };
 
-      const response = await fetch('/api/requirements', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(jobData),
-      });
+      const response = await apiPost('/api/requirements', jobData);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -132,11 +129,7 @@ export default function NewJobRequirementPage() {
 
         if (confirmed) {
           // Create with duplicate check skipped
-          const forceResponse = await fetch('/api/requirements?skipDuplicateCheck=true', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(jobData),
-          });
+          const forceResponse = await apiPost('/api/requirements?skipDuplicateCheck=true', jobData);
           if (!forceResponse.ok) {
             const errorData = await forceResponse.json();
             throw new Error(errorData.error || 'Failed to create job requirement');

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { apiPost, apiGet, apiPut, apiDelete } from '@/lib/api-client';
 
 export default function AccessRequestPage() {
   const router = useRouter();

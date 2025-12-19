@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { apiPost, apiGet, apiPut, apiDelete } from '@/lib/api-client';
 
 function NewInterviewForm() {
   const router = useRouter();
@@ -50,11 +51,7 @@ function NewInterviewForm() {
         throw new Error('User or team information not available');
       }
 
-      const response = await fetch('/api/interviews', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
+      const response = await apiPost('/api/interviews', formData);
 
       if (!response.ok) {
         const errorData = await response.json();

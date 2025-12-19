@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { apiPost, apiGet, apiPut, apiDelete } from '@/lib/api-client';
 
 export default function NewVendorPage() {
   const router = useRouter();
@@ -80,11 +81,7 @@ export default function NewVendorPage() {
         isActive: formData.isActive,
       };
 
-      const response = await fetch('/api/vendors', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(vendorData),
-      });
+      const response = await apiPost('/api/vendors', vendorData);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -101,11 +98,7 @@ export default function NewVendorPage() {
 
         if (confirmed) {
           // Create with duplicate check skipped
-          const forceResponse = await fetch('/api/vendors?skipDuplicateCheck=true', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(vendorData),
-          });
+          const forceResponse = await apiPost('/api/vendors?skipDuplicateCheck=true', vendorData);
           if (!forceResponse.ok) {
             const errorData = await forceResponse.json();
             throw new Error(errorData.error || 'Failed to create vendor');

@@ -45,6 +45,7 @@ export async function signIn(
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({
         userId: authData.user.id,
       }),
@@ -75,6 +76,7 @@ export async function signIn(
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           userId: authData.user.id,
         }),

@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { apiPost } from '@/lib/api-client';
 
 export default function NewCandidatePage() {
   const router = useRouter();
@@ -76,12 +77,8 @@ export default function NewCandidatePage() {
         notes: formData.notes || undefined,
       };
 
-      // Call API with fetch
-      const response = await fetch('/api/candidates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(candidateData),
-      });
+      // Call API with credentials
+      const response = await apiPost('/api/candidates', candidateData);
 
       if (!response.ok) {
         const errorData = await response.json();

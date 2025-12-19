@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { apiPost, apiGet, apiPut, apiDelete } from '@/lib/api-client';
 
 function NewSubmissionForm() {
   const router = useRouter();
@@ -126,11 +127,7 @@ function NewSubmissionForm() {
         submittedAt: new Date().toISOString(),
       };
 
-      const response = await fetch('/api/submissions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(submissionData),
-      });
+      const response = await apiPost('/api/submissions', submissionData);
 
       if (!response.ok) {
         const errorData = await response.json();
