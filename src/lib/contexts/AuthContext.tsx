@@ -73,6 +73,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const response = await fetch('/api/auth/session', {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
         });
 
         if (!response.ok) {

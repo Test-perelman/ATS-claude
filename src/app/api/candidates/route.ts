@@ -181,14 +181,18 @@ const createCandidateSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    console.log('[POST /candidates] Checking authentication...')
     // 1. Authenticate
     const user = await getCurrentUser()
     if (!user) {
+      console.log('[POST /candidates] User not authenticated')
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: 'User authentication required. Please log in again.' },
         { status: 401 }
       )
     }
+
+    console.log('[POST /candidates] User authenticated:', user.user_id)
 
     // 2. Get team context
     const teamContext = await getTeamContext(user.user_id)

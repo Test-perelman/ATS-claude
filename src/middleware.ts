@@ -11,6 +11,9 @@ export async function middleware(request: NextRequest) {
     request: { headers: request.headers },
   });
 
+  // API routes should not redirect - they should just refresh the session
+  const isApiRoute = pathname.startsWith('/api');
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -26,6 +29,11 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
+
+  // For API routes, just return the response with refreshed session cookies
+  if (isApiRoute) {
+    return response;
+  }
 
   // Public routes
   if (PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) {
@@ -59,11 +67,11 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api (API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * NOTE: API routes ARE included so sessions can be refreshed properly
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };

@@ -13,14 +13,18 @@ import { getRolePermissions } from '@/lib/utils/permissions'
  */
 export async function GET() {
   try {
+    console.log('[API /session] Checking authentication...')
     const user = await getCurrentUser()
 
     if (!user) {
+      console.log('[API /session] No authenticated user')
       return NextResponse.json(
         { success: true, data: null },
         { status: 200 }
       )
     }
+
+    console.log('[API /session] User authenticated:', user.user_id)
 
     // Get user's role name and permissions
     const roleName = (user.role as any)?.role_name || null

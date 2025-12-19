@@ -22,7 +22,13 @@ export async function getCurrentUser(): Promise<UserWithRole | null> {
       error: authError,
     } = await supabase.auth.getUser()
 
-    if (authError || !authUser) {
+    if (authError) {
+      console.error('[getCurrentUser] Auth error:', authError.message)
+      return null
+    }
+
+    if (!authUser) {
+      console.log('[getCurrentUser] No auth user - not logged in')
       return null
     }
 
@@ -56,13 +62,19 @@ export async function getCurrentUser(): Promise<UserWithRole | null> {
       .eq('user_id', authUser.id)
       .single()
 
-    if (error || !userData) {
+    if (error) {
+      console.error('[getCurrentUser] Database error:', error.message)
+      return null
+    }
+
+    if (!userData) {
+      console.warn('[getCurrentUser] User auth exists but no users table record for', authUser.id)
       return null
     }
 
     return userData as UserWithRole
   } catch (error) {
-    console.error('Get current user error:', error)
+    console.error('[getCurrentUser] Exception:', error)
     return null
   }
 }
