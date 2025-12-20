@@ -65,38 +65,17 @@ export async function getCurrentUser(): Promise<UserWithRole | null> {
       .eq('user_id', authUser.id)
       .single()
 
-    if (error) {
-      console.error('[getCurrentUser] Database error:', error.message, 'for user:', authUser.id)
-      return null
+    // Only ignore "no rows" error (PGRST116) - all other errors are unexpected
+    if (error && error.code !== 'PGRST116') {
+      // This is unexpected - data integrity issue
+      console.error('[getCurrentUser] Unexpected query error:', error.message, 'for user:', authUser.id)
+      throw error  // Don't hide this error
     }
 
     if (!userData) {
-      console.warn('[getCurrentUser] ⚠️ Auth user exists but NO database record! ID:', authUser.id, 'Email:', authUser.email)
-      // Auto-create user record using admin client to bypass RLS
-      console.log('[getCurrentUser] Attempting to create missing user record with admin client...')
-      try {
-        const adminSupabase = await createAdminClient()
-        const { data: newUser, error: createError } = await (adminSupabase.from('users') as any)
-          .insert({
-            user_id: authUser.id,
-            email: authUser.email || 'unknown',
-            username: (authUser.email || 'user').split('@')[0],
-            status: 'active',
-          })
-          .select()
-          .single()
-
-        if (createError) {
-          console.error('[getCurrentUser] Failed to create user record:', createError.message)
-          return null
-        }
-
-        console.log('[getCurrentUser] ✅ User record created successfully')
-        return newUser as UserWithRole
-      } catch (createErr) {
-        console.error('[getCurrentUser] Exception creating user record:', createErr)
-        return null
-      }
+      console.warn('[getCurrentUser] ⚠️ No user record found - user must complete signup or onboarding')
+      // Note: Users in "pending" state have team_id=null and role_id=null until they complete onboarding
+      return null
     }
 
     console.log('[getCurrentUser] ✅ User found:', (userData as any).user_id)
@@ -180,6 +159,9 @@ export async function teamSignUp(data: {
       // Step 3: Clone all role templates for this team
       console.log('Step 3: Cloning role templates...')
       const roleIds = await cloneRoleTemplatesForTeam(teamId)
+      if (!roleIds || roleIds.length === 0) {
+        throw new Error('Failed to clone role templates for team')
+      }
       console.log(`Created ${roleIds.length} roles for team`)
 
       // Step 4: Get the Local Admin role
@@ -193,14 +175,16 @@ export async function teamSignUp(data: {
       console.log('Local Admin role ID:', (localAdminRole as any).role_id)
 
       // Step 5: Create user record using admin client
+      // TEAM USER STATE: is_master_admin=false, team_id=<team>, role_id=<local_admin>
+      // User has full team access as Local Admin
       console.log('Step 5: Creating user record...')
       const { data: userData, error: userError } = await (supabase.from('users') as any)
         .insert({
           user_id: userId,
-          email: data.email,
-          username: data.email.split('@')[0],
-          first_name: data.firstName,
-          last_name: data.lastName,
+          email: data.email.trim().toLowerCase(),
+          username: data.email.trim().toLowerCase().split('@')[0],
+          first_name: data.firstName?.trim(),
+          last_name: data.lastName?.trim(),
           team_id: teamId,
           role_id: (localAdminRole as any).role_id,
           is_master_admin: false,
@@ -280,16 +264,16 @@ export async function createMasterAdmin(data: {
 
     try {
       // Step 2: Create user record as master admin
-      // team_id = NULL, role_id = NULL, is_master_admin = true
+      // MASTER ADMIN STATE: is_master_admin=true, team_id=null, role_id=null
+      // Master admin has system-wide access to all teams
       console.log('Creating master admin user record...')
-      const { data: userData, error: userError } = await supabase
-        .from('users')
+      const { data: userData, error: userError } = await (supabase.from('users') as any)
         .insert({
           user_id: userId,
-          email: data.email,
-          username: data.email.split('@')[0],
-          first_name: data.firstName,
-          last_name: data.lastName,
+          email: data.email.trim().toLowerCase(),
+          username: data.email.trim().toLowerCase().split('@')[0],
+          first_name: data.firstName?.trim(),
+          last_name: data.lastName?.trim(),
           team_id: null,
           role_id: null,
           is_master_admin: true,

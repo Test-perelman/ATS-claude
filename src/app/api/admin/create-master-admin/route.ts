@@ -1,94 +1,104 @@
 /**
- * Create Master Admin API Endpoint
+ * Create Master Admin API Route
  * POST /api/admin/create-master-admin
  *
- * Creates a system administrator with global access.
- * This endpoint should be secured and only accessible by existing master admins.
+ * ⚠️ SECURITY: Only for initial setup
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createMasterAdmin, getCurrentUser } from '@/lib/supabase/auth-server'
-import { z } from 'zod'
+import { createAdminClient } from '@/lib/supabase/server'
 
-// Validation schema
-const masterAdminSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-})
+const SETUP_TOKEN = process.env.ADMIN_SETUP_TOKEN
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Authenticate requesting user
-    const currentUser = await getCurrentUser()
-
-    if (!currentUser) {
+    // Validate env var is configured
+    if (!SETUP_TOKEN || SETUP_TOKEN === 'change-me-in-production') {
+      console.error('[SECURITY] ADMIN_SETUP_TOKEN not properly configured! Master admin creation disabled.')
       return NextResponse.json(
-        {
-          success: false,
-          error: 'Unauthorized',
-        },
-        { status: 401 }
+        { error: 'Server not properly configured for master admin creation' },
+        { status: 500 }
       )
     }
 
-    // 2. Verify requesting user is a master admin
-    if (!currentUser.is_master_admin) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Forbidden: Only master admins can create other master admins',
-        },
-        { status: 403 }
-      )
-    }
-
-    // 3. Parse and validate request body
     const body = await request.json()
-    const validationResult = masterAdminSchema.safeParse(body)
+    const { email, password, firstName, lastName, setupToken } = body
 
-    if (!validationResult.success) {
+    if (!email || !password || !firstName || !lastName) {
       return NextResponse.json(
-        {
-          success: false,
-          error: validationResult.error.errors[0].message,
-        },
+        { error: 'Missing required fields: email, password, firstName, lastName' },
         { status: 400 }
       )
     }
 
-    const data = validationResult.data
+    // Always validate the token
+    if (!setupToken || setupToken !== SETUP_TOKEN) {
+      return NextResponse.json(
+        { error: 'Invalid or missing setup token' },
+        { status: 401 }
+      )
+    }
 
-    // 4. Create master admin
-    const result = await createMasterAdmin({
-      email: data.email,
-      password: data.password,
-      firstName: data.firstName,
-      lastName: data.lastName,
+    console.log('[POST /admin/create-master-admin] Creating master admin:', email)
+
+    const supabase = await createAdminClient()
+
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        first_name: firstName,
+        last_name: lastName,
+      },
     })
 
-    if (!result.success || !result.data) {
+    if (authError || !authData.user) {
       return NextResponse.json(
-        {
-          success: false,
-          error: result.error || 'Failed to create master admin',
-        },
+        { error: authError?.message || 'Failed to create auth user' },
+        { status: 400 }
+      )
+    }
+
+    const userId = authData.user.id
+
+    const { data: userData, error: userError } = await (supabase.from('users') as any)
+      .insert({
+        user_id: userId,
+        email,
+        username: email.split('@')[0],
+        first_name: firstName,
+        last_name: lastName,
+        is_master_admin: true,
+        team_id: null,
+        role_id: null,
+        status: 'active',
+      })
+      .select()
+      .single()
+
+    if (userError || !userData) {
+      await supabase.auth.admin.deleteUser(userId)
+      return NextResponse.json(
+        { error: userError?.message || 'Failed to create user record' },
         { status: 400 }
       )
     }
 
     return NextResponse.json({
       success: true,
-      data: result.data,
+      message: 'Master admin created successfully',
+      data: {
+        user_id: userId,
+        email,
+        first_name: firstName,
+        last_name: lastName,
+      },
     })
   } catch (error) {
-    console.error('Create master admin API error:', error)
+    console.error('[POST /admin/create-master-admin] Error:', error)
     return NextResponse.json(
-      {
-        success: false,
-        error: 'An unexpected error occurred',
-      },
+      { error: error instanceof Error ? error.message : 'An unexpected error occurred' },
       { status: 500 }
     )
   }

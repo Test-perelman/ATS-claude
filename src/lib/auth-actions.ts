@@ -25,6 +25,8 @@ export async function signUp(email: string, password: string) {
   }
 
   // Step 2: Create user record in database using admin client to bypass RLS
+  // NEW USER STATE: is_master_admin=false, team_id=null, role_id=null (pending onboarding)
+  // After onboarding: user will be assigned team_id and role_id
   try {
     // Import admin client dynamically to avoid circular imports
     const { createAdminClient } = await import('@/lib/supabase/server');
@@ -33,8 +35,11 @@ export async function signUp(email: string, password: string) {
     const { error: userError } = await (adminSupabase.from('users') as any)
       .insert({
         user_id: data.user.id,
-        email: email,
-        username: email.split('@')[0],
+        email: email.trim().toLowerCase(),
+        username: email.trim().toLowerCase().split('@')[0],
+        is_master_admin: false,
+        team_id: null,
+        role_id: null,
         status: 'active',
       });
 
@@ -72,12 +77,21 @@ export async function signIn(email: string, password: string) {
 
   // Ensure user record exists in database
   try {
-    const { data: existingUser } = await (supabase.from('users') as any)
+    const { data: existingUser, error } = await (supabase.from('users') as any)
       .select('user_id')
       .eq('user_id', data.user.id)
       .single();
 
+    // Only ignore "no rows" error (PGRST116) - all other errors are unexpected
+    if (error && error.code !== 'PGRST116') {
+      // This is unexpected - data integrity issue
+      console.error('[signIn] Unexpected query error:', error.message);
+      throw error;  // Don't hide this error
+    }
+
     // If user record doesn't exist, create it using admin client
+    // NEW USER STATE: is_master_admin=false, team_id=null, role_id=null (pending onboarding)
+    // After onboarding: user will be assigned team_id and role_id
     if (!existingUser) {
       const { createAdminClient } = await import('@/lib/supabase/server');
       const adminSupabase = await createAdminClient();
@@ -85,19 +99,23 @@ export async function signIn(email: string, password: string) {
       const { error: createError } = await (adminSupabase.from('users') as any)
         .insert({
           user_id: data.user.id,
-          email: email,
-          username: email.split('@')[0],
+          email: email.trim().toLowerCase(),
+          username: email.trim().toLowerCase().split('@')[0],
+          is_master_admin: false,
+          team_id: null,
+          role_id: null,
           status: 'active',
         });
 
       if (createError) {
-        console.error('Failed to create user record on signin:', createError);
+        console.error('[signIn] Failed to create user record on signin:', createError);
         // Continue anyway - user auth is valid
       }
     }
   } catch (err) {
-    console.error('Error ensuring user record exists:', err);
-    // Continue - user auth is valid
+    console.error('[signIn] Failed to validate/create user record:', err);
+    // User is authenticated but record validation/creation failed
+    // Continue with caution - user may have issues
   }
 
   redirect('/dashboard');

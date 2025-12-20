@@ -331,8 +331,8 @@ export async function approveAccessRequest(requestId: string, teamId: string): P
     const { error: userError } = await (serverClient.from('users') as any)
       .insert({
         user_id: authUserId,
-        username: requestEmail.split('@')[0],
-        email: requestEmail,
+        username: requestEmail.trim().toLowerCase().split('@')[0],
+        email: requestEmail.trim().toLowerCase(),
         team_id: teamId,
         status: 'active',
       });
