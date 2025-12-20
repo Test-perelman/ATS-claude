@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const profileResult = await supabase
     .from('users')
     .select('is_master_admin')
-    .eq('id', user.id)
+    .eq('user_id', user.id)
     .single() as any;
   const profile = profileResult?.data as { is_master_admin: boolean } | null;
 
@@ -48,7 +48,7 @@ export async function PATCH(req: NextRequest) {
   const profileResult2 = await supabase
     .from('users')
     .select('is_master_admin')
-    .eq('id', user.id)
+    .eq('user_id', user.id)
     .single() as any;
   const profile2 = profileResult2?.data as { is_master_admin: boolean } | null;
 
@@ -62,7 +62,7 @@ export async function PATCH(req: NextRequest) {
   const updateResult = await (supabase
     .from('users') as any)
     .update({ is_master_admin })
-    .eq('id', user_id)
+    .eq('user_id', user_id)
     .select()
     .single() as any;
 

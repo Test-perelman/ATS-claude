@@ -1,4 +1,5 @@
-import { supabase, createServerClient, typedUpdate } from '@/lib/supabase/client';
+import { supabase, typedUpdate } from '@/lib/supabase/client';
+import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentUserTeamId } from '@/lib/supabase/auth-server';
 import type { Database } from '@/types/database';
 import type { ApiResponse, ApiArrayResponse, ApiVoidResponse } from '@/types/api';
@@ -197,7 +198,7 @@ export async function updateTeamMember(
  */
 export async function removeTeamMember(userId: string, teamId: string): Promise<ApiVoidResponse> {
   try {
-    const serverClient = createServerClient();
+    const serverClient = await createAdminClient();
 
     // Verify user is in this team
     const { data: user } = await serverClient
@@ -295,7 +296,7 @@ export async function getAccessRequests(status?: 'pending' | 'approved' | 'rejec
  */
 export async function approveAccessRequest(requestId: string, teamId: string): Promise<ApiVoidResponse> {
   try {
-    const serverClient = createServerClient();
+    const serverClient = await createAdminClient();
 
     // Get the request
     const { data: request, error: fetchError } = await serverClient
@@ -353,7 +354,7 @@ export async function approveAccessRequest(requestId: string, teamId: string): P
  */
 export async function rejectAccessRequest(requestId: string, teamId: string): Promise<ApiVoidResponse> {
   try {
-    const serverClient = createServerClient();
+    const serverClient = await createAdminClient();
 
     // Get the request
     const { data: request, error: fetchError } = await serverClient

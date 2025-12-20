@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   const result = await supabase
     .from('users')
     .select('team_id, is_master_admin')
-    .eq('id', user.id)
+    .eq('user_id', user.id)
     .single() as any;
   const userProfile = result?.data as { team_id: string; is_master_admin: boolean } | null;
 
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
   const userResult = await supabase
     .from('users')
     .select('team_id, is_master_admin, role_id')
-    .eq('id', user.id)
+    .eq('user_id', user.id)
     .single() as any;
   const userProfile = userResult?.data as { team_id: string; is_master_admin: boolean; role_id: string } | null;
 
@@ -68,11 +68,11 @@ export async function POST(req: NextRequest) {
     }
     const roleResult = await supabase
       .from('roles')
-      .select('is_admin')
-      .eq('id', userProfile.role_id)
+      .select('is_admin_role')
+      .eq('role_id', userProfile.role_id)
       .single() as any;
-    const role = roleResult?.data as { is_admin: boolean } | null;
-    if (!role?.is_admin) {
+    const role = roleResult?.data as { is_admin_role: boolean } | null;
+    if (!role?.is_admin_role) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
   }
@@ -105,7 +105,7 @@ export async function PATCH(req: NextRequest) {
   const roleResult = await supabase
     .from('roles')
     .select('team_id')
-    .eq('id', role_id)
+    .eq('role_id', role_id)
     .single() as any;
   const role = roleResult?.data as { team_id: string } | null;
 
@@ -115,7 +115,7 @@ export async function PATCH(req: NextRequest) {
   const userResult2 = await supabase
     .from('users')
     .select('team_id, is_master_admin')
-    .eq('id', user.id)
+    .eq('user_id', user.id)
     .single() as any;
   const userProfile2 = userResult2?.data as { team_id: string; is_master_admin: boolean } | null;
 

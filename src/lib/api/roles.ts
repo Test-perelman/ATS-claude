@@ -3,7 +3,8 @@
  * Functions to manage roles, permissions, and role-permission associations
  */
 
-import { supabase, createServerClient } from '@/lib/supabase/client';
+import { supabase } from '@/lib/supabase/client';
+import { createAdminClient } from '@/lib/supabase/server';
 import { getCurrentUserTeamId } from '@/lib/supabase/auth-server';
 import { isMasterAdmin } from '@/lib/utils/role-helpers';
 import type { Database } from '@/types/database';
@@ -87,7 +88,7 @@ export async function getRoleById(roleId: string): Promise<ApiResponse<RoleWithP
  */
 export async function createRole(name: string, description?: string): Promise<ApiResponse<Role>> {
   try {
-    const serverClient = createServerClient();
+    const serverClient = await createAdminClient();
 
     // Create the role
     const { data, error } = await (serverClient.from('roles') as any)
@@ -122,7 +123,7 @@ export async function updateRole(
   }
 ): Promise<ApiResponse<Role>> {
   try {
-    const serverClient = createServerClient();
+    const serverClient = await createAdminClient();
 
     const { data, error } = await (serverClient.from('roles') as any)
       .update(updates)
@@ -148,7 +149,7 @@ export async function updateRole(
  */
 export async function deleteRole(roleId: string): Promise<ApiVoidResponse> {
   try {
-    const serverClient = createServerClient();
+    const serverClient = await createAdminClient();
 
     // First, check if any users have this role
     const { count, error: countError } = await serverClient
@@ -252,7 +253,7 @@ export async function getRolePermissions(roleId: string): Promise<ApiArrayRespon
  */
 export async function assignPermissionToRole(roleId: string, permissionId: string): Promise<ApiArrayResponse<RolePermission>> {
   try {
-    const serverClient = createServerClient();
+    const serverClient = await createAdminClient();
 
     const { data, error } = await (serverClient.from('role_permissions') as any)
       .upsert({
@@ -279,7 +280,7 @@ export async function assignPermissionToRole(roleId: string, permissionId: strin
  */
 export async function revokePermissionFromRole(roleId: string, permissionId: string): Promise<ApiVoidResponse> {
   try {
-    const serverClient = createServerClient();
+    const serverClient = await createAdminClient();
 
     const { error } = await serverClient
       .from('role_permissions')
@@ -308,7 +309,7 @@ export async function assignPermissionsToRole(
   permissionIds: string[]
 ): Promise<ApiArrayResponse<RolePermission>> {
   try {
-    const serverClient = createServerClient();
+    const serverClient = await createAdminClient();
 
     // First, remove all existing permissions for this role
     await (serverClient.from('role_permissions') as any)
@@ -379,7 +380,7 @@ export async function createRoleFromTemplate(
   description?: string
 ): Promise<ApiResponse<Role>> {
   try {
-    const serverClient = createServerClient();
+    const serverClient = await createAdminClient();
 
     // Create new role
     const { data: newRole, error: roleError } = await (serverClient.from('roles') as any)

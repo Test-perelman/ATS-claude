@@ -102,7 +102,7 @@ export async function getUserPermissions(userId: string): Promise<string[]> {
   const userResult = await supabase
     .from('users')
     .select('is_master_admin, role_id')
-    .eq('id', userId)
+    .eq('user_id', userId)
     .single() as any;
   const user = userResult?.data as { is_master_admin: boolean; role_id: string } | null;
 

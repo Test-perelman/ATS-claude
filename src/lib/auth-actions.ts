@@ -192,7 +192,7 @@ export async function getCurrentUser() {
   const { data: profile } = await supabase
     .from('users')
     .select('*')
-    .eq('id', user.id)
+    .eq('user_id', user.id)
     .single();
 
   return {
@@ -227,7 +227,7 @@ export async function inviteUser(email: string) {
   const profileResult = await supabase
     .from('users')
     .select('is_master_admin')
-    .eq('id', user.id)
+    .eq('user_id', user.id)
     .single() as any;
   const profile = profileResult?.data as { is_master_admin: boolean } | null;
 

@@ -1,4 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
+/**
+ * Browser Supabase Client
+ * USE ONLY in client components ('use client')
+ *
+ * For server-side operations (API routes, server actions, server components):
+ * Import from '@/lib/supabase/server' instead
+ */
 import { createBrowserClient } from '@supabase/ssr';
 import type { Database } from '@/types/database';
 
@@ -9,19 +15,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Use SSR-compatible browser client for proper cookie handling with Next.js middleware
+/**
+ * Browser client for use in client components
+ * Handles cookie-based auth automatically via @supabase/ssr
+ */
 export const supabase = createBrowserClient<Database>(
   supabaseUrl,
   supabaseAnonKey
 );
-
-// Server-side client (for API routes)
-export const createServerClient = () => {
-  return createClient<Database>(
-    supabaseUrl,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey
-  );
-};
 
 // Typed helper functions for write operations
 // These helpers ensure proper TypeScript typing for Supabase insert/update operations

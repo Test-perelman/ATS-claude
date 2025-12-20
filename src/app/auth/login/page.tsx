@@ -2,9 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { signIn } from '@/lib/auth-actions';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase/client';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -16,7 +18,25 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await signIn(email, password);
+      // Use browser client for login - this properly sets cookies in the browser
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) {
+        setError(authError.message);
+        return;
+      }
+
+      if (!data.user) {
+        setError('Failed to sign in');
+        return;
+      }
+
+      // Redirect to dashboard after successful login
+      router.push('/dashboard');
+      router.refresh(); // Refresh to update server components with new auth state
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
