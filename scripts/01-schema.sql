@@ -66,9 +66,10 @@ CREATE TABLE users (
   is_master_admin BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
-  CONSTRAINT user_role_check CHECK (
-    (is_master_admin AND team_id IS NULL AND role_id IS NULL) OR
-    (NOT is_master_admin AND team_id IS NOT NULL AND role_id IS NOT NULL)
+  CONSTRAINT users_role_team_consistency CHECK (
+    (is_master_admin = true AND team_id IS NULL AND role_id IS NULL)
+    OR
+    (is_master_admin = false AND ((team_id IS NOT NULL AND role_id IS NOT NULL) OR (team_id IS NULL AND role_id IS NULL)))
   )
 );
 
