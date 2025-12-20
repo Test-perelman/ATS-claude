@@ -1,9 +1,32 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+
+  // Redirect to onboarding if user doesn't have a team
+  React.useEffect(() => {
+    if (!loading && user && !user.team_id) {
+      router.push('/onboarding');
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   const stats = [
     { title: 'Total Candidates', value: '248', change: '+12%', icon: '👥' },
     { title: 'On Bench', value: '32', change: '-5%', icon: '📋' },

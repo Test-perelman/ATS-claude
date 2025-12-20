@@ -32,8 +32,8 @@ export default function SignupPage() {
       } else {
         setSuccess(true);
         setTimeout(() => {
-          router.push('/dashboard');
-        }, 2000);
+          router.push('/onboarding');
+        }, 1000);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Signup failed');
@@ -55,7 +55,7 @@ export default function SignupPage() {
 
         {success && (
           <div className="mb-4 p-3 bg-green-50 text-green-600 rounded text-sm">
-            Account created! Redirecting to dashboard...
+            Account created! Setting up your team...
           </div>
         )}
 

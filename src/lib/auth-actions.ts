@@ -24,9 +24,13 @@ export async function signUp(email: string, password: string) {
     return { error: 'Failed to create user' };
   }
 
-  // Step 2: Create user record in database
+  // Step 2: Create user record in database using admin client to bypass RLS
   try {
-    const { error: userError } = await (supabase.from('users') as any)
+    // Import admin client dynamically to avoid circular imports
+    const { createAdminClient } = await import('@/lib/supabase/server');
+    const adminSupabase = await createAdminClient();
+
+    const { error: userError } = await (adminSupabase.from('users') as any)
       .insert({
         user_id: data.user.id,
         email: email,
@@ -36,7 +40,7 @@ export async function signUp(email: string, password: string) {
 
     if (userError) {
       console.error('Failed to create user record:', userError);
-      // Don't fail signup, but log the issue
+      // Don't fail signup - user can still log in and create record later
     }
   } catch (err) {
     console.error('Error creating user record:', err);
@@ -73,9 +77,12 @@ export async function signIn(email: string, password: string) {
       .eq('user_id', data.user.id)
       .single();
 
-    // If user record doesn't exist, create it
+    // If user record doesn't exist, create it using admin client
     if (!existingUser) {
-      const { error: createError } = await (supabase.from('users') as any)
+      const { createAdminClient } = await import('@/lib/supabase/server');
+      const adminSupabase = await createAdminClient();
+
+      const { error: createError } = await (adminSupabase.from('users') as any)
         .insert({
           user_id: data.user.id,
           email: email,

@@ -72,10 +72,11 @@ export async function getCurrentUser(): Promise<UserWithRole | null> {
 
     if (!userData) {
       console.warn('[getCurrentUser] ⚠️ Auth user exists but NO database record! ID:', authUser.id, 'Email:', authUser.email)
-      // Auto-create user record if it's missing
-      console.log('[getCurrentUser] Attempting to create missing user record...')
+      // Auto-create user record using admin client to bypass RLS
+      console.log('[getCurrentUser] Attempting to create missing user record with admin client...')
       try {
-        const { data: newUser, error: createError } = await (supabase.from('users') as any)
+        const adminSupabase = await createAdminClient()
+        const { data: newUser, error: createError } = await (adminSupabase.from('users') as any)
           .insert({
             user_id: authUser.id,
             email: authUser.email || 'unknown',
