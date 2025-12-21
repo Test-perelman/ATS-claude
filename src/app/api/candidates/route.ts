@@ -131,19 +131,25 @@ export async function GET(request: NextRequest) {
 }
 
 // Validation schema for creating candidate
+// MUST match the form data from NewCandidatePage (camelCase)
 const createCandidateSchema = z.object({
-  first_name: z.string().min(1, 'First name is required'),
-  last_name: z.string().min(1, 'Last name is required'),
-  email: z.string().email('Invalid email address').optional(),
-  phone: z.string().optional(),
-  status: z
-    .enum(['new', 'screening', 'interview', 'offered', 'rejected'])
-    .default('new'),
-  location: z.string().optional(),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  email: z.string().email('Invalid email').optional().or(z.literal('')),
+  phone: z.string().optional().or(z.literal('')),
+  linkedinUrl: z.string().optional().or(z.literal('')),
+  currentLocation: z.string().optional().or(z.literal('')),
+  workAuthorization: z.string().optional().or(z.literal('')),
+  resumeUrl: z.string().optional().or(z.literal('')),
+  currentTitle: z.string().optional().or(z.literal('')),
+  currentCompany: z.string().optional().or(z.literal('')),
+  experienceYears: z.number().optional(),
   skills: z.array(z.string()).default([]),
-  experience_years: z.number().min(0).optional(),
-  current_title: z.string().optional(),
-  current_employer: z.string().optional(),
+  desiredSalary: z.number().optional(),
+  status: z
+    .enum(['new', 'screening', 'interviewing', 'offered', 'hired', 'rejected', 'withdrawn'])
+    .default('new'),
+  notes: z.string().optional().or(z.literal('')),
 })
 
 /**
@@ -209,16 +215,16 @@ export async function POST(request: NextRequest) {
       .from('candidates') as any)
       .insert({
         team_id: teamContext.teamId,
-        first_name: data.first_name,
-        last_name: data.last_name,
-        email: data.email || null,
-        phone: data.phone || null,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email && data.email !== '' ? data.email : null,
+        phone: data.phone && data.phone !== '' ? data.phone : null,
+        location: data.currentLocation && data.currentLocation !== '' ? data.currentLocation : null,
+        skills: data.skills && data.skills.length > 0 ? data.skills : [],
+        experience_years: data.experienceYears || null,
+        current_title: data.currentTitle && data.currentTitle !== '' ? data.currentTitle : null,
+        current_employer: data.currentCompany && data.currentCompany !== '' ? data.currentCompany : null,
         status: data.status,
-        location: data.location || null,
-        skills: data.skills || [],
-        experience_years: data.experience_years || null,
-        current_title: data.current_title || null,
-        current_employer: data.current_employer || null,
         created_by: user.user_id,
       })
       .select()
