@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
 
-const PUBLIC_ROUTES = ['/auth/login', '/auth/signup', '/auth/reset-password'];
+const PUBLIC_ROUTES = ['/auth/login', '/auth/signup', '/auth/reset-password', '/auth/callback'];
 const ADMIN_ROUTES = ['/admin'];
 
 export async function middleware(request: NextRequest) {
@@ -37,7 +37,9 @@ export async function middleware(request: NextRequest) {
 
   // Public routes
   if (PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) {
-    if (user) return NextResponse.redirect(new URL('/dashboard', request.url));
+    if (user && !pathname.startsWith('/auth/callback')) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
     return response;
   }
 
