@@ -64,8 +64,8 @@ export default function RoleEditorPage() {
         const { data: roleData } = await roleResponse.json();
         const roleInfo = roleData as Role;
         setRole(roleInfo);
-        setRoleName(roleInfo.role_name);
-        setRoleDescription(roleInfo.description || '');
+        setRoleName(roleInfo.name);
+        setRoleDescription('');
 
         // Load role permissions
         const permResponse = await fetch(`/api/roles/${roleId}/permissions`);
@@ -74,7 +74,7 @@ export default function RoleEditorPage() {
           const selectedPerms = new Set<string>();
           if (permissions) {
             (permissions as any[]).forEach((rp) => {
-              selectedPerms.add(rp.permission_id || '');
+              selectedPerms.add(rp.id || '');
             });
           }
           setSelectedPermissions(selectedPerms);
@@ -101,14 +101,14 @@ export default function RoleEditorPage() {
   const handleSelectAllInModule = (modulePermissions: Permission[]) => {
     const newSelected = new Set(selectedPermissions);
     const allSelected = modulePermissions.every((p) =>
-      newSelected.has(p.permission_id)
+      newSelected.has(p.id)
     );
 
     modulePermissions.forEach((p) => {
       if (allSelected) {
-        newSelected.delete(p.permission_id);
+        newSelected.delete(p.id);
       } else {
-        newSelected.add(p.permission_id);
+        newSelected.add(p.id);
       }
     });
 
@@ -334,7 +334,7 @@ export default function RoleEditorPage() {
                   }
                 >
                   {permissions?.every((p) =>
-                    selectedPermissions.has(p.permission_id)
+                    selectedPermissions.has(p.id)
                   )
                     ? 'Deselect All'
                     : 'Select All'}
@@ -344,28 +344,26 @@ export default function RoleEditorPage() {
                 <div className="space-y-3">
                   {(permissions as Permission[]).map((permission) => (
                     <label
-                      key={permission.permission_id}
+                      key={permission.id}
                       className="flex items-start cursor-pointer"
                     >
                       <input
                         type="checkbox"
                         checked={selectedPermissions.has(
-                          permission.permission_id
+                          permission.id
                         )}
                         onChange={() =>
-                          handlePermissionToggle(permission.permission_id)
+                          handlePermissionToggle(permission.id)
                         }
                         className="mt-1 h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 cursor-pointer"
                       />
                       <div className="ml-3">
                         <p className="text-sm font-medium text-gray-900">
-                          {permission.permission_key}
+                          {permission.key}
                         </p>
-                        {permission.description && (
-                          <p className="text-xs text-gray-500">
-                            {permission.description}
-                          </p>
-                        )}
+                        <p className="text-xs text-gray-500">
+                          {permission.name}
+                        </p>
                       </div>
                     </label>
                   ))}

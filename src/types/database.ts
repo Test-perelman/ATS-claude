@@ -622,10 +622,6 @@ export interface UserWithRole {
   team_id: string | null
   role_id: string | null
   is_master_admin: boolean
-  status: 'active' | 'inactive' | 'suspended'
-  username: string | null
-  first_name: string | null
-  last_name: string | null
   created_at?: string
   updated_at?: string
   role?: {

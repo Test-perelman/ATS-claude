@@ -3,7 +3,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { Database } from '@/types/database';
 
-type UserWithRole = Database['public']['Tables']['users']['Row'] & {
+type UserWithRole = Omit<Database['public']['Tables']['users']['Row'], 'id'> & {
+  user_id: string;  // Map 'id' column to 'user_id' for app consistency
   role_id: Database['public']['Tables']['roles']['Row'] | null;
 };
 

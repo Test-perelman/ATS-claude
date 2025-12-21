@@ -36,7 +36,6 @@ export default function AccessRequestPage() {
       setFormData((prev) => ({
         ...prev,
         email: user.email || '',
-        firstName: user.username?.split('.')[0] || '',
       }));
     }
   }, [user]);
