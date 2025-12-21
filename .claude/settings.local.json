@@ -109,7 +109,11 @@
       "Bash(node scripts/setup-test-user.js:*)",
       "Bash(node scripts/diagnostic-api-test.js:*)",
       "Bash(node scripts/test-insert-via-form-data.js:*)",
-      "Bash(node scripts/test-create-candidate-via-api.js:*)"
+      "Bash(node scripts/test-create-candidate-via-api.js:*)",
+      "Bash(timeout 20 bash -c 'until curl -s http://localhost:3000 > /dev/null 2>&1; do sleep 1; done && curl -s -X POST http://localhost:3000/api/candidates -H \"\"Content-Type: application/json\"\" -d \"\"{\\\\\"\"firstName\\\\\"\":\\\\\"\"Test\\\\\"\",\\\\\"\"lastName\\\\\"\":\\\\\"\"User\\\\\"\",\\\\\"\"email\\\\\"\":\\\\\"\"test@test.com\\\\\"\",\\\\\"\"phone\\\\\"\":\\\\\"\"555-1234\\\\\"\",\\\\\"\"currentLocation\\\\\"\":\\\\\"\"NYC\\\\\"\",\\\\\"\"currentTitle\\\\\"\":\\\\\"\"Dev\\\\\"\",\\\\\"\"currentCompany\\\\\"\":\\\\\"\"Test\\\\\"\",\\\\\"\"experienceYears\\\\\"\":5,\\\\\"\"skills\\\\\"\":[],\\\\\"\"status\\\\\"\":\\\\\"\"new\\\\\"\"}\"\" 2>&1')",
+      "Bash(node scripts/test-full-flow.js:*)",
+      "Bash(node scripts/test-api-with-auth.js:*)",
+      "Bash(lsof:*)"
     ],
     "deny": [],
     "ask": []

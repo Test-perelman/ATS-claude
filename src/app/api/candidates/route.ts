@@ -187,9 +187,13 @@ export async function POST(request: NextRequest) {
 
     // 4. Validate request body
     const body = await request.json()
+    console.log('[POST /candidates] Request body:', JSON.stringify(body).substring(0, 500))
+
     const validationResult = createCandidateSchema.safeParse(body)
 
     if (!validationResult.success) {
+      console.log('[POST /candidates] Validation failed:', validationResult.error.errors[0].message)
+      console.log('[POST /candidates] Validation errors:', JSON.stringify(validationResult.error.errors).substring(0, 500))
       return NextResponse.json(
         {
           success: false,
@@ -211,6 +215,14 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createServerClient()
 
+    console.log('[POST /candidates] Inserting candidate:', {
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email,
+      teamId: teamContext.teamId,
+      userId: user.user_id,
+    })
+
     const { data: candidate, error } = await (supabase
       .from('candidates') as any)
       .insert({
@@ -231,13 +243,14 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Create candidate error:', error)
+      console.error('[POST /candidates] Insert error:', error)
       return NextResponse.json(
-        { success: false, error: 'Failed to create candidate' },
+        { success: false, error: 'Failed to create candidate: ' + error.message },
         { status: 400 }
       )
     }
 
+    console.log('[POST /candidates] ✅ Candidate created successfully:', candidate.id)
     return NextResponse.json({
       success: true,
       data: candidate,
