@@ -97,7 +97,12 @@
       "Bash(node -e:*)",
       "Bash(node run-verification.js:*)",
       "Bash(node test-complete-flow.js:*)",
-      "Bash(node verify-system-fixed.js:*)"
+      "Bash(node verify-system-fixed.js:*)",
+      "Bash(node debug-user-session.js:*)",
+      "Bash(node fix-user-record.js:*)",
+      "Bash(node test-user-creation.js:*)",
+      "Bash(node create-test-data.js:*)",
+      "Bash(node final-proof.js:*)"
     ],
     "deny": [],
     "ask": []
