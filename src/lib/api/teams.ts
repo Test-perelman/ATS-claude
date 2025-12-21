@@ -67,8 +67,8 @@ export async function updateTeam(updates: Database['public']['Tables']['teams'][
       return { error: 'User not associated with a team' };
     }
 
-    // Note: teams table uses id, not team_id
-    const { data, error } = await typedUpdate('teams', 'id', teamId, updates);
+    // Note: teams table uses team_id as primary key
+    const { data, error } = await typedUpdate('teams', 'team_id', teamId, updates);
 
     if (error) {
       return { error: error.message };
