@@ -58,33 +58,23 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('candidates')
       .select(`
-        candidate_id,
+        id,
         team_id,
         first_name,
         last_name,
         email,
         phone,
         status,
-        current_location,
-        preferred_locations,
-        work_authorization,
-        linkedin_url,
-        resume_url,
+        location,
         skills,
         experience_years,
         current_title,
-        current_company,
-        desired_salary,
-        available_from,
-        notes,
+        current_employer,
         created_by,
-        updated_by,
         created_at,
-        updated_at,
-        deleted_at
+        updated_at
       `)
       .eq('team_id', teamContext.teamId)
-      .is('deleted_at', null)
       .order('created_at', { ascending: false })
 
     // Apply filters

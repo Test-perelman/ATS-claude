@@ -95,7 +95,7 @@ export default function NewCandidatePage() {
       }
 
       // Success - redirect to candidate detail page
-      router.push(`/candidates/${result.data.candidate_id}`);
+      router.push(`/candidates/${result.data.id}`);
     } catch (error: any) {
       console.error('Error creating candidate:', error);
       alert('Error creating candidate: ' + (error.message || 'Unknown error'));

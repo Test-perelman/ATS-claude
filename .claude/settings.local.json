@@ -102,7 +102,9 @@
       "Bash(node fix-user-record.js:*)",
       "Bash(node test-user-creation.js:*)",
       "Bash(node create-test-data.js:*)",
-      "Bash(node final-proof.js:*)"
+      "Bash(node final-proof.js:*)",
+      "Bash(node verify-actual-schema.js:*)",
+      "Bash(node test-fixed-api.js:*)"
     ],
     "deny": [],
     "ask": []
