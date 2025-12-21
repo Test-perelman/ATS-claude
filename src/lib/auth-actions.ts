@@ -2,6 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import { randomUUID } from 'crypto';
 
 // ============================================================================
 // SIGN UP
@@ -24,31 +25,58 @@ export async function signUp(email: string, password: string) {
     return { error: 'Failed to create user' };
   }
 
-  // Step 2: Create user record in database using admin client to bypass RLS
-  // NEW USER STATE: is_master_admin=false, team_id=null, role_id=null (pending onboarding)
-  // After onboarding: user will be assigned team_id and role_id
+  // Step 2: Create user record + team + role using admin client
   try {
-    // Import admin client dynamically to avoid circular imports
     const { createAdminClient } = await import('@/lib/supabase/server');
     const adminSupabase = await createAdminClient();
 
-    // Note: users table uses id, not user_id; no username/status columns in actual schema
+    // Generate UUIDs for team and admin role
+    const teamId = randomUUID();
+    const roleId = randomUUID();
+
+    // Create team for this user
+    const { error: teamError } = await (adminSupabase.from('teams') as any)
+      .insert({
+        id: teamId,
+        name: `${email.split('@')[0]}'s Team`,
+      });
+
+    if (teamError) {
+      console.error('Failed to create team:', teamError);
+      return { error: 'Signup failed: Could not create team' };
+    }
+
+    // Create admin role for the team
+    const { error: roleError } = await (adminSupabase.from('roles') as any)
+      .insert({
+        id: roleId,
+        team_id: teamId,
+        name: 'Admin',
+        is_admin: true,
+      });
+
+    if (roleError) {
+      console.error('Failed to create admin role:', roleError);
+      return { error: 'Signup failed: Could not create admin role' };
+    }
+
+    // Create user record and assign to team with admin role
     const { error: userError } = await (adminSupabase.from('users') as any)
       .insert({
         id: data.user.id,
         email: email.trim().toLowerCase(),
         is_master_admin: false,
-        team_id: null,
-        role_id: null,
+        team_id: teamId,
+        role_id: roleId,
       });
 
     if (userError) {
       console.error('Failed to create user record:', userError);
-      // Don't fail signup - user can still log in and create record later
+      return { error: 'Signup failed: Could not create user record' };
     }
   } catch (err) {
-    console.error('Error creating user record:', err);
-    // Continue - user can still log in
+    console.error('Signup error:', err);
+    return { error: 'Signup failed. Please try again.' };
   }
 
   return { success: true, data };
@@ -75,7 +103,6 @@ export async function signIn(email: string, password: string) {
   }
 
   // Ensure user record exists in database
-  // Note: users table uses id, not user_id
   try {
     const { data: existingUser, error } = await (supabase.from('users') as any)
       .select('id')
@@ -84,37 +111,61 @@ export async function signIn(email: string, password: string) {
 
     // Only ignore "no rows" error (PGRST116) - all other errors are unexpected
     if (error && error.code !== 'PGRST116') {
-      // This is unexpected - data integrity issue
       console.error('[signIn] Unexpected query error:', error.message);
-      throw error;  // Don't hide this error
+      throw error;
     }
 
-    // If user record doesn't exist, create it using admin client
-    // NEW USER STATE: is_master_admin=false, team_id=null, role_id=null (pending onboarding)
-    // After onboarding: user will be assigned team_id and role_id
+    // If user record doesn't exist, create it with team + role
     if (!existingUser) {
       const { createAdminClient } = await import('@/lib/supabase/server');
       const adminSupabase = await createAdminClient();
 
-      // Note: users table uses id, not user_id; no username/status columns
-      const { error: createError } = await (adminSupabase.from('users') as any)
+      // Generate UUIDs for team and admin role
+      const teamId = randomUUID();
+      const roleId = randomUUID();
+
+      // Create team for this user
+      const { error: teamError } = await (adminSupabase.from('teams') as any)
         .insert({
-          id: data.user.id,
-          email: email.trim().toLowerCase(),
-          is_master_admin: false,
-          team_id: null,
-          role_id: null,
+          id: teamId,
+          name: `${email.split('@')[0]}'s Team`,
         });
 
-      if (createError) {
-        console.error('[signIn] Failed to create user record on signin:', createError);
-        // Continue anyway - user auth is valid
+      if (teamError) {
+        console.error('[signIn] Failed to create team:', teamError);
+        // Continue - user can log in but may have issues creating records
+      } else {
+        // Create admin role for the team
+        const { error: roleError } = await (adminSupabase.from('roles') as any)
+          .insert({
+            id: roleId,
+            team_id: teamId,
+            name: 'Admin',
+            is_admin: true,
+          });
+
+        if (roleError) {
+          console.error('[signIn] Failed to create admin role:', roleError);
+        } else {
+          // Create user record and assign to team with admin role
+          const { error: createError } = await (adminSupabase.from('users') as any)
+            .insert({
+              id: data.user.id,
+              email: email.trim().toLowerCase(),
+              is_master_admin: false,
+              team_id: teamId,
+              role_id: roleId,
+            });
+
+          if (createError) {
+            console.error('[signIn] Failed to create user record:', createError);
+          }
+        }
       }
     }
   } catch (err) {
     console.error('[signIn] Failed to validate/create user record:', err);
-    // User is authenticated but record validation/creation failed
-    // Continue with caution - user may have issues
+    // Continue anyway - user auth is valid
   }
 
   redirect('/dashboard');

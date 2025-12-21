@@ -150,29 +150,10 @@ const createCandidateSchema = z.object({
     .enum(['new', 'screening', 'interviewing', 'offered', 'hired', 'rejected', 'withdrawn'])
     .default('new'),
   currentLocation: z.string().optional(),
-  preferredLocations: z.array(z.string()).default([]),
-  workAuthorization: z
-    .enum([
-      'us_citizen',
-      'green_card',
-      'h1b',
-      'opt',
-      'cpt',
-      'ead',
-      'tn',
-      'other',
-      'requires_sponsorship',
-    ])
-    .optional(),
-  linkedinUrl: z.string().url().optional().or(z.literal('')),
-  resumeUrl: z.string().url().optional().or(z.literal('')),
   skills: z.array(z.string()).default([]),
   experienceYears: z.number().min(0).optional(),
   currentTitle: z.string().optional(),
   currentCompany: z.string().optional(),
-  desiredSalary: z.number().min(0).optional(),
-  availableFrom: z.string().optional(),
-  notes: z.string().optional(),
 })
 
 /**
@@ -243,18 +224,11 @@ export async function POST(request: NextRequest) {
         email: data.email || null,
         phone: data.phone || null,
         status: data.status,
-        current_location: data.currentLocation || null,
-        preferred_locations: data.preferredLocations,
-        work_authorization: data.workAuthorization || null,
-        linkedin_url: data.linkedinUrl || null,
-        resume_url: data.resumeUrl || null,
-        skills: data.skills,
+        location: data.currentLocation || null,
+        skills: data.skills || [],
         experience_years: data.experienceYears || null,
         current_title: data.currentTitle || null,
-        current_company: data.currentCompany || null,
-        desired_salary: data.desiredSalary || null,
-        available_from: data.availableFrom || null,
-        notes: data.notes || null,
+        current_employer: data.currentCompany || null,
         created_by: user.user_id,
       })
       .select()

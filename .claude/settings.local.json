@@ -90,7 +90,14 @@
       "Bash(supabase status:*)",
       "Bash(node:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nFix database constraint for user role/team consistency - Issue #4\n\nUpdated the users_role_team_consistency constraint in the schema to allow all 3 valid user states:\n1. Master admin: is_master_admin=true, team_id=null, role_id=null\n2. Team user: is_master_admin=false, team_id=<value>, role_id=<value>\n3. Pending user: is_master_admin=false, team_id=null, role_id=null \\(during signup/onboarding\\)\n\nPrevious constraint was too restrictive and prevented valid pending users from being created.\n\n🤖 Generated with Claude Code\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(node test-error-handling.js:*)"
+      "Bash(node test-error-handling.js:*)",
+      "Bash(node scripts/inspect-database.js:*)",
+      "Bash(node scripts/diagnostic-test.js:*)",
+      "Bash(node scripts/direct-db-test.js:*)",
+      "Bash(node -e:*)",
+      "Bash(node run-verification.js:*)",
+      "Bash(node test-complete-flow.js:*)",
+      "Bash(node verify-system-fixed.js:*)"
     ],
     "deny": [],
     "ask": []
