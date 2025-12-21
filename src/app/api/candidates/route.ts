@@ -132,18 +132,18 @@ export async function GET(request: NextRequest) {
 
 // Validation schema for creating candidate
 const createCandidateSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
+  first_name: z.string().min(1, 'First name is required'),
+  last_name: z.string().min(1, 'Last name is required'),
   email: z.string().email('Invalid email address').optional(),
   phone: z.string().optional(),
   status: z
-    .enum(['new', 'screening', 'interviewing', 'offered', 'hired', 'rejected', 'withdrawn'])
+    .enum(['new', 'screening', 'interview', 'offered', 'rejected'])
     .default('new'),
-  currentLocation: z.string().optional(),
+  location: z.string().optional(),
   skills: z.array(z.string()).default([]),
-  experienceYears: z.number().min(0).optional(),
-  currentTitle: z.string().optional(),
-  currentCompany: z.string().optional(),
+  experience_years: z.number().min(0).optional(),
+  current_title: z.string().optional(),
+  current_employer: z.string().optional(),
 })
 
 /**
@@ -209,16 +209,16 @@ export async function POST(request: NextRequest) {
       .from('candidates') as any)
       .insert({
         team_id: teamContext.teamId,
-        first_name: data.firstName,
-        last_name: data.lastName,
+        first_name: data.first_name,
+        last_name: data.last_name,
         email: data.email || null,
         phone: data.phone || null,
         status: data.status,
-        location: data.currentLocation || null,
+        location: data.location || null,
         skills: data.skills || [],
-        experience_years: data.experienceYears || null,
-        current_title: data.currentTitle || null,
-        current_employer: data.currentCompany || null,
+        experience_years: data.experience_years || null,
+        current_title: data.current_title || null,
+        current_employer: data.current_employer || null,
         created_by: user.user_id,
       })
       .select()
