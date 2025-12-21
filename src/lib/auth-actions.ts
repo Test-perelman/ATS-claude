@@ -32,15 +32,14 @@ export async function signUp(email: string, password: string) {
     const { createAdminClient } = await import('@/lib/supabase/server');
     const adminSupabase = await createAdminClient();
 
+    // Note: users table uses id, not user_id; no username/status columns in actual schema
     const { error: userError } = await (adminSupabase.from('users') as any)
       .insert({
-        user_id: data.user.id,
+        id: data.user.id,
         email: email.trim().toLowerCase(),
-        username: email.trim().toLowerCase().split('@')[0],
         is_master_admin: false,
         team_id: null,
         role_id: null,
-        status: 'active',
       });
 
     if (userError) {
@@ -76,10 +75,11 @@ export async function signIn(email: string, password: string) {
   }
 
   // Ensure user record exists in database
+  // Note: users table uses id, not user_id
   try {
     const { data: existingUser, error } = await (supabase.from('users') as any)
-      .select('user_id')
-      .eq('user_id', data.user.id)
+      .select('id')
+      .eq('id', data.user.id)
       .single();
 
     // Only ignore "no rows" error (PGRST116) - all other errors are unexpected
@@ -96,15 +96,14 @@ export async function signIn(email: string, password: string) {
       const { createAdminClient } = await import('@/lib/supabase/server');
       const adminSupabase = await createAdminClient();
 
+      // Note: users table uses id, not user_id; no username/status columns
       const { error: createError } = await (adminSupabase.from('users') as any)
         .insert({
-          user_id: data.user.id,
+          id: data.user.id,
           email: email.trim().toLowerCase(),
-          username: email.trim().toLowerCase().split('@')[0],
           is_master_admin: false,
           team_id: null,
           role_id: null,
-          status: 'active',
         });
 
       if (createError) {
@@ -189,10 +188,11 @@ export async function getCurrentUser() {
   }
 
   // Get user profile + claims
+  // Note: users table uses id, not user_id
   const { data: profile } = await supabase
     .from('users')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('id', user.id)
     .single();
 
   return {
@@ -224,10 +224,11 @@ export async function inviteUser(email: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: 'Not authenticated' };
 
+  // Note: users table uses id, not user_id
   const profileResult = await supabase
     .from('users')
     .select('is_master_admin')
-    .eq('user_id', user.id)
+    .eq('id', user.id)
     .single() as any;
   const profile = profileResult?.data as { is_master_admin: boolean } | null;
 

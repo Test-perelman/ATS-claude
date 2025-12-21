@@ -19,10 +19,11 @@ export async function GET(req: NextRequest) {
   }
 
   // Verify user can access this team
+  // Note: users table uses id, not user_id
   const result = await supabase
     .from('users')
     .select('team_id, is_master_admin')
-    .eq('user_id', user.id)
+    .eq('id', user.id)
     .single() as any;
   const userProfile = result?.data as { team_id: string; is_master_admin: boolean } | null;
 
@@ -55,10 +56,11 @@ export async function POST(req: NextRequest) {
   const { team_id, name, is_admin } = body;
 
   // Check if user is admin for this team
+  // Note: users table uses id, not user_id
   const userResult = await supabase
     .from('users')
     .select('team_id, is_master_admin, role_id')
-    .eq('user_id', user.id)
+    .eq('id', user.id)
     .single() as any;
   const userProfile = userResult?.data as { team_id: string; is_master_admin: boolean; role_id: string } | null;
 
@@ -66,13 +68,14 @@ export async function POST(req: NextRequest) {
     if (userProfile.team_id !== team_id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
+    // Note: roles table uses id/is_admin, not role_id/is_admin_role
     const roleResult = await supabase
       .from('roles')
-      .select('is_admin_role')
-      .eq('role_id', userProfile.role_id)
+      .select('is_admin')
+      .eq('id', userProfile.role_id)
       .single() as any;
-    const role = roleResult?.data as { is_admin_role: boolean } | null;
-    if (!role?.is_admin_role) {
+    const role = roleResult?.data as { is_admin: boolean } | null;
+    if (!role?.is_admin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
   }
@@ -102,20 +105,22 @@ export async function PATCH(req: NextRequest) {
   const { role_id, permission_ids } = body;
 
   // Get role
+  // Note: roles table uses id, not role_id
   const roleResult = await supabase
     .from('roles')
     .select('team_id')
-    .eq('role_id', role_id)
+    .eq('id', role_id)
     .single() as any;
   const role = roleResult?.data as { team_id: string } | null;
 
   if (!role) return NextResponse.json({ error: 'Role not found' }, { status: 404 });
 
   // Check permissions
+  // Note: users table uses id, not user_id
   const userResult2 = await supabase
     .from('users')
     .select('team_id, is_master_admin')
-    .eq('user_id', user.id)
+    .eq('id', user.id)
     .single() as any;
   const userProfile2 = userResult2?.data as { team_id: string; is_master_admin: boolean } | null;
 

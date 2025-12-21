@@ -49,12 +49,10 @@ export async function POST(request: NextRequest) {
     // 4. Create team using admin client
     const adminSupabase = await createAdminClient()
 
+    // Note: teams table uses id/name, not team_id/team_name; no company_name, subscription_tier, is_active columns
     const { data: teamData, error: teamError } = await (adminSupabase.from('teams') as any)
       .insert({
-        team_name: teamName,
-        company_name: companyName,
-        subscription_tier: 'free',
-        is_active: true,
+        name: teamName,
       })
       .select()
       .single()
@@ -67,7 +65,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const teamId = (teamData as any).team_id
+    // Note: teams table uses id, not team_id
+    const teamId = (teamData as any).id
     console.log('[POST /team-setup] Team created:', teamId)
 
     // 5. Clone role templates for this team
@@ -86,16 +85,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('[POST /team-setup] Local Admin role:', (localAdminRole as any).role_id)
+    // Note: roles table uses id, not role_id
+    console.log('[POST /team-setup] Local Admin role:', (localAdminRole as any).id)
 
     // 7. Update user record with team_id and role_id
+    // Note: users table uses id; roles table uses id, not role_id
     console.log('[POST /team-setup] Updating user record...')
     const { data: updatedUser, error: updateError } = await (adminSupabase.from('users') as any)
       .update({
         team_id: teamId,
-        role_id: (localAdminRole as any).role_id,
+        role_id: (localAdminRole as any).id,
       })
-      .eq('user_id', user.user_id)
+      .eq('id', user.user_id)
       .select()
       .single()
 

@@ -14,8 +14,7 @@ export async function getAllTeams(): Promise<ApiArrayResponse<Team>> {
     const { data, error } = await supabase
       .from('teams')
       .select('*')
-      .eq('is_active', true)
-      .order('team_name', { ascending: true });
+      .order('name', { ascending: true });
 
     if (error) {
       return { error: error.message };
@@ -39,10 +38,11 @@ export async function getTeam(): Promise<ApiResponse<Database['public']['Tables'
       return { error: 'User not associated with a team' };
     }
 
+    // Note: teams table uses id, not team_id
     const { data, error } = await supabase
       .from('teams')
       .select('*')
-      .eq('team_id', teamId)
+      .eq('id', teamId)
       .single();
 
     if (error) {
@@ -67,7 +67,8 @@ export async function updateTeam(updates: Database['public']['Tables']['teams'][
       return { error: 'User not associated with a team' };
     }
 
-    const { data, error } = await typedUpdate('teams', 'team_id', teamId, updates);
+    // Note: teams table uses id, not team_id
+    const { data, error } = await typedUpdate('teams', 'id', teamId, updates);
 
     if (error) {
       return { error: error.message };
@@ -95,9 +96,10 @@ export async function getTeamMembers(): Promise<ApiArrayResponse<any>> {
       return { error: 'User not associated with a team' };
     }
 
+    // Note: users table uses id, not user_id; no username/status columns in schema
     const { data, error } = await supabase
       .from('users')
-      .select('user_id, username, email, status, created_at, role_id(*)')
+      .select('id, email, created_at, role_id(*)')
       .eq('team_id', teamId)
       .order('created_at', { ascending: false });
 
@@ -123,10 +125,11 @@ export async function getTeamMember(userId: string): Promise<ApiResponse<Databas
       return { error: 'User not associated with a team' };
     }
 
+    // Note: users table uses id, not user_id
     const { data, error } = await supabase
       .from('users')
       .select('*')
-      .eq('user_id', userId)
+      .eq('id', userId)
       .eq('team_id', teamId)
       .single();
 
@@ -160,10 +163,11 @@ export async function updateTeamMember(
     }
 
     // Verify target user is in the same team
+    // Note: users table uses id, not user_id
     const { data: targetUser, error: fetchError } = await supabase
       .from('users')
       .select('team_id')
-      .eq('user_id', userId)
+      .eq('id', userId)
       .single();
 
     if (fetchError || !targetUser) {
@@ -175,9 +179,10 @@ export async function updateTeamMember(
       return { error: 'User not found in your team' };
     }
 
+    // Note: users table uses id, not user_id
     const { data, error } = await (supabase.from('users') as any)
       .update(updates)
-      .eq('user_id', userId)
+      .eq('id', userId)
       .eq('team_id', teamId)
       .select()
       .single();
@@ -201,10 +206,11 @@ export async function removeTeamMember(userId: string, teamId: string): Promise<
     const serverClient = await createAdminClient();
 
     // Verify user is in this team
+    // Note: users table uses id, not user_id
     const { data: user } = await serverClient
       .from('users')
-      .select('user_id')
-      .eq('user_id', userId)
+      .select('id')
+      .eq('id', userId)
       .eq('team_id', teamId)
       .single();
 
@@ -216,7 +222,7 @@ export async function removeTeamMember(userId: string, teamId: string): Promise<
     const { error } = await serverClient
       .from('users')
       .delete()
-      .eq('user_id', userId);
+      .eq('id', userId);
 
     if (error) {
       return { error: error.message };
@@ -328,14 +334,13 @@ export async function approveAccessRequest(requestId: string, teamId: string): P
     }
 
     // Create user record with team_id
+    // Note: users table uses id, not user_id; no username/status columns
     const requestEmail = (request as any).email;
     const { error: userError } = await (serverClient.from('users') as any)
       .insert({
-        user_id: authUserId,
-        username: requestEmail.trim().toLowerCase().split('@')[0],
+        id: authUserId,
         email: requestEmail.trim().toLowerCase(),
         team_id: teamId,
-        status: 'active',
       });
 
     if (userError) {

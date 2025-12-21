@@ -65,20 +65,21 @@ export async function getTeamContext(
   const supabase = await createServerClient()
 
   // Fetch user with role information
+  // Note: DB schema uses id/name/is_admin, not user_id/role_name/is_admin_role
   const { data: user, error } = await supabase
     .from('users')
     .select(`
-      user_id,
+      id,
       team_id,
       role_id,
       is_master_admin,
       role:roles (
-        role_id,
-        role_name,
-        is_admin_role
+        id,
+        name,
+        is_admin
       )
     `)
-    .eq('user_id', userId)
+    .eq('id', userId)
     .single()
 
   if (error || !user) {
@@ -101,11 +102,12 @@ export async function getTeamContext(
     effectiveTeamId = targetTeamId || null
 
     // If target team specified, validate it exists
+    // Note: teams table uses id, not team_id
     if (targetTeamId) {
       const { data: team, error: teamError } = await supabase
         .from('teams')
-        .select('team_id')
-        .eq('team_id', targetTeamId)
+        .select('id')
+        .eq('id', targetTeamId)
         .single()
 
       if (teamError || !team) {
@@ -131,36 +133,35 @@ export async function getTeamContext(
     throw new Error('User has no role assignment')
   }
 
-  // Validate user's team exists and is active
+  // Validate user's team exists
+  // Note: teams table uses id, not team_id; no is_active column in schema
   const { data: team, error: teamError } = await supabase
     .from('teams')
-    .select('team_id, is_active')
-    .eq('team_id', userTeamId)
+    .select('id')
+    .eq('id', userTeamId)
     .single()
 
   if (teamError || !team) {
     throw new Error('User team does not exist. Please contact your administrator.')
   }
 
-  if ((team as any).is_active === false) {
-    throw new Error('Your team is currently inactive. Please contact your administrator.')
-  }
-
   // Check if user is local admin
-  const isLocalAdmin = (user as any).role?.is_admin_role === true
+  // Note: roles table uses is_admin, not is_admin_role
+  const isLocalAdmin = (user as any).role?.is_admin === true
 
   // Get user permissions
+  // Note: permissions table uses key, not permission_key
   const { data: rolePermissions } = await supabase
     .from('role_permissions')
     .select(`
       permission:permissions (
-        permission_key
+        key
       )
     `)
     .eq('role_id', (user as any).role_id)
 
   const permissions = (rolePermissions as any)
-    ?.map((rp: any) => (rp.permission as any)?.permission_key)
+    ?.map((rp: any) => (rp.permission as any)?.key)
     .filter(Boolean) || []
 
   return {
@@ -268,10 +269,11 @@ export async function getAccessibleTeamIds(userId: string): Promise<string[]> {
   const supabase = await createServerClient()
 
   // Get user info
+  // Note: users table uses id, not user_id
   const { data: user } = await supabase
     .from('users')
     .select('team_id, is_master_admin')
-    .eq('user_id', userId)
+    .eq('id', userId)
     .single()
 
   if (!user) {
@@ -279,13 +281,13 @@ export async function getAccessibleTeamIds(userId: string): Promise<string[]> {
   }
 
   // Master admin can access all teams
+  // Note: teams table uses id, not team_id; no is_active column
   if ((user as any).is_master_admin) {
     const { data: teams } = await supabase
       .from('teams')
-      .select('team_id')
-      .eq('is_active', true)
+      .select('id')
 
-    return (teams as any)?.map((t: any) => t.team_id) || []
+    return (teams as any)?.map((t: any) => t.id) || []
   }
 
   // Regular user can only access their team
@@ -316,10 +318,11 @@ export async function canAccessTeam(
 export async function getTeamInfo(teamId: string) {
   const supabase = await createServerClient()
 
+  // Note: teams table uses id/name, not team_id/team_name; no company_name, is_active, subscription_tier, settings columns
   const { data, error } = await supabase
     .from('teams')
-    .select('team_id, team_name, company_name, is_active, subscription_tier, settings')
-    .eq('team_id', teamId)
+    .select('id, name')
+    .eq('id', teamId)
     .single()
 
   if (error || !data) {
@@ -338,21 +341,18 @@ export async function getTeamInfo(teamId: string) {
 export async function getUserTeam(userId: string) {
   const supabase = await createServerClient()
 
+  // Note: users table uses id; teams table uses id/name, not team_id/team_name
   const { data: user } = await supabase
     .from('users')
     .select(`
       team_id,
       is_master_admin,
       team:teams (
-        team_id,
-        team_name,
-        company_name,
-        subscription_tier,
-        is_active,
-        settings
+        id,
+        name
       )
     `)
-    .eq('user_id', userId)
+    .eq('id', userId)
     .single()
 
   if (!user || (user as any).is_master_admin) {
@@ -378,10 +378,11 @@ export async function listAllTeams(userId: string) {
 
   const supabase = await createServerClient()
 
+  // Note: teams table uses id/name, not team_id/team_name
   const { data, error } = await supabase
     .from('teams')
-    .select('team_id, team_name, company_name, subscription_tier, is_active, created_at, updated_at')
-    .order('team_name')
+    .select('id, name, created_at, updated_at')
+    .order('name')
 
   if (error) {
     throw new Error(`Failed to fetch teams: ${error.message}`)
@@ -400,10 +401,11 @@ export async function listAllTeams(userId: string) {
 export async function requireTeamMembership(userId: string): Promise<string> {
   const supabase = await createServerClient()
 
+  // Note: users table uses id, not user_id
   const { data: user } = await supabase
     .from('users')
-    .select('user_id, team_id, is_master_admin')
-    .eq('user_id', userId)
+    .select('id, team_id, is_master_admin')
+    .eq('id', userId)
     .single()
 
   if (!user) {

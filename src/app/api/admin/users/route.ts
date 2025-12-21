@@ -12,10 +12,11 @@ export async function GET(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  // Note: users table has column "id", not "user_id"
   const profileResult = await supabase
     .from('users')
     .select('is_master_admin')
-    .eq('user_id', user.id)
+    .eq('id', user.id)
     .single() as any;
   const profile = profileResult?.data as { is_master_admin: boolean } | null;
 
@@ -45,10 +46,11 @@ export async function PATCH(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  // Note: users table has column "id", not "user_id"
   const profileResult2 = await supabase
     .from('users')
     .select('is_master_admin')
-    .eq('user_id', user.id)
+    .eq('id', user.id)
     .single() as any;
   const profile2 = profileResult2?.data as { is_master_admin: boolean } | null;
 
@@ -59,10 +61,11 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json();
   const { user_id, is_master_admin } = body;
 
+  // Note: users table has column "id", not "user_id"
   const updateResult = await (supabase
     .from('users') as any)
     .update({ is_master_admin })
-    .eq('user_id', user_id)
+    .eq('id', user_id)
     .select()
     .single() as any;
 

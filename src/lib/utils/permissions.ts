@@ -26,18 +26,19 @@ export async function checkPermission(
   const supabase = await createServerClient()
 
   // Get user with role information
+  // Note: users table uses id; roles table uses id/is_admin
   const { data: user, error } = await supabase
     .from('users')
     .select(`
-      user_id,
+      id,
       role_id,
       is_master_admin,
       role:roles (
-        role_id,
-        is_admin_role
+        id,
+        is_admin
       )
     `)
-    .eq('user_id', userId)
+    .eq('id', userId)
     .single()
 
   if (error || !user) {
@@ -50,7 +51,8 @@ export async function checkPermission(
   }
 
   // Local admin has all permissions within their team
-  if ((user as any).role?.is_admin_role === true) {
+  // Note: roles table uses is_admin, not is_admin_role
+  if ((user as any).role?.is_admin === true) {
     return true
   }
 
@@ -89,18 +91,19 @@ export async function getUserPermissions(userId: string): Promise<string[]> {
   const supabase = await createServerClient()
 
   // Get user with role information
+  // Note: users table uses id; roles table uses id/is_admin
   const { data: user } = await supabase
     .from('users')
     .select(`
-      user_id,
+      id,
       role_id,
       is_master_admin,
       role:roles (
-        role_id,
-        is_admin_role
+        id,
+        is_admin
       )
     `)
-    .eq('user_id', userId)
+    .eq('id', userId)
     .single()
 
   if (!user) {
@@ -108,13 +111,14 @@ export async function getUserPermissions(userId: string): Promise<string[]> {
   }
 
   // Master admins and local admins have all permissions
-  if ((user as any).is_master_admin || (user as any).role?.is_admin_role === true) {
+  // Note: roles table uses is_admin; permissions table uses key
+  if ((user as any).is_master_admin || (user as any).role?.is_admin === true) {
     // Return all permission keys
     const { data: allPermissions } = await supabase
       .from('permissions')
-      .select('permission_key')
+      .select('key')
 
-    return (allPermissions as any)?.map((p: any) => p.permission_key) || []
+    return (allPermissions as any)?.map((p: any) => p.key) || []
   }
 
   // Get role-specific permissions
@@ -122,17 +126,18 @@ export async function getUserPermissions(userId: string): Promise<string[]> {
     return []
   }
 
+  // Note: permissions table uses key, not permission_key
   const { data: rolePermissions } = await supabase
     .from('role_permissions')
     .select(`
       permission:permissions (
-        permission_key
+        key
       )
     `)
     .eq('role_id', (user as any).role_id)
 
   return (rolePermissions as any)
-    ?.map((rp: any) => (rp.permission as any)?.permission_key)
+    ?.map((rp: any) => (rp.permission as any)?.key)
     .filter(Boolean) || []
 }
 
@@ -150,10 +155,11 @@ export async function checkAnyPermission(
   const supabase = await createServerClient()
 
   // Get user info
+  // Note: users table uses id; roles table uses is_admin
   const { data: user } = await supabase
     .from('users')
-    .select('user_id, is_master_admin, role:roles(is_admin_role)')
-    .eq('user_id', userId)
+    .select('id, is_master_admin, role:roles(is_admin)')
+    .eq('id', userId)
     .single()
 
   if (!user) {
@@ -161,7 +167,7 @@ export async function checkAnyPermission(
   }
 
   // Master admin and local admin have all permissions
-  if ((user as any).is_master_admin || (user as any).role?.is_admin_role === true) {
+  if ((user as any).is_master_admin || (user as any).role?.is_admin === true) {
     return true
   }
 
@@ -189,10 +195,11 @@ export async function checkAllPermissions(
   const supabase = await createServerClient()
 
   // Get user info
+  // Note: users table uses id; roles table uses is_admin
   const { data: user } = await supabase
     .from('users')
-    .select('user_id, is_master_admin, role:roles(is_admin_role)')
-    .eq('user_id', userId)
+    .select('id, is_master_admin, role:roles(is_admin)')
+    .eq('id', userId)
     .single()
 
   if (!user) {
@@ -200,7 +207,7 @@ export async function checkAllPermissions(
   }
 
   // Master admin and local admin have all permissions
-  if ((user as any).is_master_admin || (user as any).role?.is_admin_role === true) {
+  if ((user as any).is_master_admin || (user as any).role?.is_admin === true) {
     return true
   }
 
@@ -223,16 +230,17 @@ export async function checkAllPermissions(
 export async function isLocalAdmin(userId: string): Promise<boolean> {
   const supabase = await createServerClient()
 
+  // Note: users table uses id; roles table uses is_admin
   const { data: user } = await supabase
     .from('users')
     .select(`
-      user_id,
+      id,
       is_master_admin,
       role:roles (
-        is_admin_role
+        is_admin
       )
     `)
-    .eq('user_id', userId)
+    .eq('id', userId)
     .single()
 
   if (!user) {
@@ -244,7 +252,7 @@ export async function isLocalAdmin(userId: string): Promise<boolean> {
     return false
   }
 
-  return (user as any).role?.is_admin_role === true
+  return (user as any).role?.is_admin === true
 }
 
 /**
@@ -256,10 +264,11 @@ export async function isLocalAdmin(userId: string): Promise<boolean> {
 export async function isMasterAdmin(userId: string): Promise<boolean> {
   const supabase = await createServerClient()
 
+  // Note: users table uses id, not user_id
   const { data: user } = await supabase
     .from('users')
-    .select('user_id, is_master_admin')
-    .eq('user_id', userId)
+    .select('id, is_master_admin')
+    .eq('id', userId)
     .single()
 
   return (user as any)?.is_master_admin === true
@@ -273,10 +282,11 @@ export async function isMasterAdmin(userId: string): Promise<boolean> {
 export async function getAllPermissionsGrouped(): Promise<Record<string, PermissionModule['permissions']>> {
   const supabase = await createServerClient()
 
+  // Note: permissions table uses key, not permission_key
   const { data, error } = await supabase
     .from('permissions')
     .select('*')
-    .order('module, permission_key')
+    .order('module, key')
 
   if (error || !data) {
     return {}
@@ -284,16 +294,17 @@ export async function getAllPermissionsGrouped(): Promise<Record<string, Permiss
 
   const grouped: Record<string, PermissionModule['permissions']> = {}
 
-  data.forEach((permission: Database['public']['Tables']['permissions']['Row']) => {
+  // Note: permissions table uses id/key/name, not permission_id/permission_key/permission_name
+  data.forEach((permission: any) => {
     const module = permission.module || 'other'
     if (!grouped[module]) {
       grouped[module] = []
     }
     grouped[module].push({
-      permission_id: permission.permission_id,
-      permission_key: permission.permission_key,
-      permission_name: permission.permission_name,
-      description: permission.description,
+      permission_id: permission.id,
+      permission_key: permission.key,
+      permission_name: permission.name,
+      description: null, // no description column in schema
     })
   })
 
@@ -309,17 +320,18 @@ export async function getAllPermissionsGrouped(): Promise<Record<string, Permiss
 export async function getRolePermissions(roleId: string): Promise<string[]> {
   const supabase = await createServerClient()
 
+  // Note: permissions table uses key, not permission_key
   const { data } = await supabase
     .from('role_permissions')
     .select(`
       permission:permissions (
-        permission_key
+        key
       )
     `)
     .eq('role_id', roleId)
 
   return (data as any)
-    ?.map((rp: any) => (rp.permission as any)?.permission_key)
+    ?.map((rp: any) => (rp.permission as any)?.key)
     .filter(Boolean) || []
 }
 

@@ -20,9 +20,10 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createAdminClient()
 
+    // Note: users table uses id, not user_id; no last_login column in schema
     const { error } = await (supabase.from('users') as any)
-      .update({ last_login: new Date().toISOString() })
-      .eq('user_id', userId)
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', userId)
 
     if (error) {
       console.error('Error updating last login:', error)

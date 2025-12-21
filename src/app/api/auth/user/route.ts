@@ -21,34 +21,28 @@ export async function POST(request: NextRequest) {
     // Use admin client to bypass RLS
     const supabase = await createAdminClient()
 
+    // Note: users table uses id; roles/teams tables use id/name, not role_id/role_name etc
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select(`
-        user_id,
+        id,
         team_id,
         role_id,
         email,
-        username,
-        first_name,
-        last_name,
         is_master_admin,
-        status,
         created_at,
         updated_at,
-        last_login,
-        avatar_url,
         role:roles (
-          role_id,
-          role_name,
-          is_admin_role
+          id,
+          name,
+          is_admin
         ),
         team:teams (
-          team_id,
-          team_name,
-          company_name
+          id,
+          name
         )
       `)
-      .eq('user_id', userId)
+      .eq('id', userId)
       .single()
 
     // If user row doesn't exist, return success with null data
