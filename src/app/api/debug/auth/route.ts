@@ -57,10 +57,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Step 4: Check if user record exists in database
+    // Note: users table has column "id", not "user_id"
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('user_id, team_id, role_id, email, is_master_admin, status')
-      .eq('user_id', authUser.id)
+      .select('id, team_id, role_id, email, is_master_admin')
+      .eq('id', authUser.id)
       .single()
 
     diagnostics.steps.push({
@@ -77,8 +78,8 @@ export async function GET(request: NextRequest) {
       const adminClient = await createAdminClient()
       const { data: adminUserData, error: adminError } = await adminClient
         .from('users')
-        .select('user_id, team_id, role_id, email, is_master_admin, status')
-        .eq('user_id', authUser.id)
+        .select('id, team_id, role_id, email, is_master_admin')
+        .eq('id', authUser.id)
         .single()
 
       diagnostics.steps.push({
@@ -115,10 +116,11 @@ export async function GET(request: NextRequest) {
       }
     } else {
       // Step 6: Check team exists
+      // Note: teams table has columns: id, name (not team_id, team_name)
       const { data: teamData, error: teamError } = await supabase
         .from('teams')
-        .select('team_id, team_name')
-        .eq('team_id', userRecord.team_id)
+        .select('id, name')
+        .eq('id', userRecord.team_id)
         .single()
 
       diagnostics.steps.push({

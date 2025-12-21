@@ -35,34 +35,28 @@ export async function getCurrentUser(): Promise<UserWithRole | null> {
 
     console.log('[getCurrentUser] Auth user found:', authUser.id, 'email:', authUser.email)
 
+    // Query using actual database column names (id, not user_id)
     const { data: userData, error } = await supabase
       .from('users')
       .select(`
-        user_id,
+        id,
         team_id,
         role_id,
         email,
-        username,
-        first_name,
-        last_name,
         is_master_admin,
-        status,
         created_at,
         updated_at,
-        last_login,
-        avatar_url,
         role:roles (
-          role_id,
-          role_name,
-          is_admin_role
+          id,
+          name,
+          is_admin
         ),
         team:teams (
-          team_id,
-          team_name,
-          company_name
+          id,
+          name
         )
       `)
-      .eq('user_id', authUser.id)
+      .eq('id', authUser.id)
       .single()
 
     // Only ignore "no rows" error (PGRST116) - all other errors are unexpected
@@ -78,8 +72,30 @@ export async function getCurrentUser(): Promise<UserWithRole | null> {
       return null
     }
 
-    console.log('[getCurrentUser] ✅ User found:', (userData as any).user_id)
-    return userData as UserWithRole
+    console.log('[getCurrentUser] ✅ User found:', (userData as any).id)
+    // Map database column names to expected UserWithRole interface
+    const userWithRole = {
+      user_id: (userData as any).id,
+      team_id: (userData as any).team_id,
+      role_id: (userData as any).role_id,
+      email: (userData as any).email,
+      username: null,
+      first_name: null,
+      last_name: null,
+      is_master_admin: (userData as any).is_master_admin,
+      status: 'active' as const,
+      role: (userData as any).role ? {
+        role_id: (userData as any).role.id,
+        role_name: (userData as any).role.name,
+        is_admin_role: (userData as any).role.is_admin,
+      } : null,
+      team: (userData as any).team ? {
+        team_id: (userData as any).team.id,
+        team_name: (userData as any).team.name,
+        company_name: (userData as any).team.name,
+      } : null,
+    }
+    return userWithRole as UserWithRole
   } catch (error) {
     console.error('[getCurrentUser] Exception:', error)
     return null
@@ -137,13 +153,11 @@ export async function teamSignUp(data: {
 
     try {
       // Step 2: Create team using admin client
+      // Note: teams table has columns: id, name (not team_name, company_name)
       console.log('Step 2: Creating team...')
       const { data: teamData, error: teamError } = await (supabase.from('teams') as any)
         .insert({
-          team_name: data.teamName || data.companyName,
-          company_name: data.companyName,
-          subscription_tier: 'free',
-          is_active: true,
+          name: data.teamName || data.companyName,
         })
         .select()
         .single()
@@ -153,7 +167,7 @@ export async function teamSignUp(data: {
         throw new Error(`Failed to create team: ${teamError?.message}`)
       }
 
-      const teamId = (teamData as any).team_id
+      const teamId = (teamData as any).id
       console.log('Team created:', teamId)
 
       // Step 3: Clone all role templates for this team
@@ -172,23 +186,19 @@ export async function teamSignUp(data: {
         throw new Error('Local Admin role not found after template cloning')
       }
 
-      console.log('Local Admin role ID:', (localAdminRole as any).role_id)
+      console.log('Local Admin role ID:', (localAdminRole as any).id)
 
       // Step 5: Create user record using admin client
+      // Note: users table has columns: id, email, team_id, role_id, is_master_admin
       // TEAM USER STATE: is_master_admin=false, team_id=<team>, role_id=<local_admin>
-      // User has full team access as Local Admin
       console.log('Step 5: Creating user record...')
       const { data: userData, error: userError } = await (supabase.from('users') as any)
         .insert({
-          user_id: userId,
+          id: userId,
           email: data.email.trim().toLowerCase(),
-          username: data.email.trim().toLowerCase().split('@')[0],
-          first_name: data.firstName?.trim(),
-          last_name: data.lastName?.trim(),
           team_id: teamId,
-          role_id: (localAdminRole as any).role_id,
+          role_id: (localAdminRole as any).id,
           is_master_admin: false,
-          status: 'active',
         })
         .select()
         .single()
@@ -264,35 +274,25 @@ export async function createMasterAdmin(data: {
 
     try {
       // Step 2: Create user record as master admin
+      // Note: users table has columns: id, email, team_id, role_id, is_master_admin
       // MASTER ADMIN STATE: is_master_admin=true, team_id=null, role_id=null
-      // Master admin has system-wide access to all teams
       console.log('Creating master admin user record...')
       const { data: userData, error: userError } = await (supabase.from('users') as any)
         .insert({
-          user_id: userId,
+          id: userId,
           email: data.email.trim().toLowerCase(),
-          username: data.email.trim().toLowerCase().split('@')[0],
-          first_name: data.firstName?.trim(),
-          last_name: data.lastName?.trim(),
           team_id: null,
           role_id: null,
           is_master_admin: true,
-          status: 'active',
         } as any)
         .select(`
-          user_id,
+          id,
           team_id,
           role_id,
           email,
-          username,
-          first_name,
-          last_name,
           is_master_admin,
-          status,
           created_at,
-          updated_at,
-          last_login,
-          avatar_url
+          updated_at
         `)
         .single()
 
@@ -357,31 +357,15 @@ export async function updateUserProfile(
     const { data, error } = await (supabase as any)
       .from('users')
       .update(updates)
-      .eq('user_id', userId)
+      .eq('id', userId)
       .select(`
-        user_id,
+        id,
         team_id,
         role_id,
         email,
-        username,
-        first_name,
-        last_name,
         is_master_admin,
-        status,
         created_at,
-        updated_at,
-        last_login,
-        avatar_url,
-        role:roles (
-          role_id,
-          role_name,
-          is_admin_role
-        ),
-        team:teams (
-          team_id,
-          team_name,
-          company_name
-        )
+        updated_at
       `)
       .single()
 

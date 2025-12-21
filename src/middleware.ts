@@ -51,8 +51,8 @@ export async function middleware(request: NextRequest) {
   // Get user profile
   const { data: profile } = await supabase
     .from('users')
-    .select('is_master_admin, role:roles(is_admin_role)')
-    .eq('user_id', user.id)
+    .select('is_master_admin, role:roles(is_admin)')
+    .eq('id', user.id)
     .single();
 
   // Admin routes: Master admin only
