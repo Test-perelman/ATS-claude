@@ -104,7 +104,9 @@
       "Bash(node create-test-data.js:*)",
       "Bash(node final-proof.js:*)",
       "Bash(node verify-actual-schema.js:*)",
-      "Bash(node test-fixed-api.js:*)"
+      "Bash(node test-fixed-api.js:*)",
+      "Bash(node scripts/create-mock-data-and-verify.js:*)",
+      "Bash(node scripts/setup-test-user.js:*)"
     ],
     "deny": [],
     "ask": []
