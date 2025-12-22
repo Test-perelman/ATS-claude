@@ -6,6 +6,10 @@
 import { createServerClient, createAdminClient } from './server'
 import type { UserWithRole, ApiResponse } from '@/types/database'
 import { cloneRoleTemplatesForTeam, getLocalAdminRole } from '@/lib/utils/role-helpers'
+import {
+  validateUserTeamConsistency,
+  validateMembershipState,
+} from '@/lib/utils/invariant-guards'
 
 /**
  * Get current authenticated user with role and team information
@@ -103,112 +107,155 @@ export async function getCurrentUser(): Promise<UserWithRole | null> {
 }
 
 /**
- * Team Sign Up - Creates a new team with first admin user
+ * Create Team As Local Admin (v2)
+ *
+ * REPLACES: teamSignUp()
  *
  * Workflow:
- * 1. Create Supabase auth user
+ * 1. Validate auth user exists
  * 2. Create team
  * 3. Clone all role templates for the team
- * 4. Assign user as Local Admin
- * 5. Return user + team
+ * 4. Create user record with team_id and local admin role
+ * 5. Create approved membership (auto-approve for team creator)
+ * 6. Validate user and membership state with invariant guards
+ * 7. Return user + team
  *
- * @param data - Sign up data
+ * Called after user has verified email and chosen "Create Team"
+ *
+ * @param data - Team creation data
  * @returns User and team data or error
  */
-export async function teamSignUp(data: {
+export async function createTeamAsLocalAdmin(data: {
+  authUserId: string
   email: string
-  password: string
+  teamName: string
   firstName: string
   lastName: string
-  companyName: string
-  teamName?: string
 }): Promise<ApiResponse<{ user: UserWithRole; team: any }>> {
   try {
     // Use admin client to bypass RLS for signup operations
     const supabase = await createAdminClient()
-    console.log('Admin client created with service role key:', !!process.env.SUPABASE_SERVICE_ROLE_KEY)
+    console.log('[createTeamAsLocalAdmin] Starting for auth user:', data.authUserId)
 
-    // Step 1: Create Supabase auth user
-    console.log('Step 1: Creating auth user...')
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email: data.email,
-      password: data.password,
-      email_confirm: true, // Auto-confirm email
-      user_metadata: {
-        first_name: data.firstName,
-        last_name: data.lastName,
-      },
-    })
-
-    if (authError || !authData.user) {
-      console.error('Auth user creation failed:', authError)
-      return {
-        success: false,
-        error: authError?.message || 'Failed to create auth user'
-      }
-    }
-
-    const userId = authData.user.id
-    console.log('Auth user created:', userId)
+    const userId = data.authUserId
 
     try {
-      // Step 2: Create team using admin client
+      // Step 1: Create team using admin client
       // Note: teams table has columns: id, name (not team_name, company_name)
-      console.log('Step 2: Creating team...')
+      console.log('[createTeamAsLocalAdmin] Step 1: Creating team...')
       const { data: teamData, error: teamError } = await (supabase.from('teams') as any)
         .insert({
-          name: data.teamName || data.companyName,
+          name: data.teamName,
         })
         .select()
         .single()
 
       if (teamError || !teamData) {
-        console.error('Team creation failed:', teamError)
+        console.error('[createTeamAsLocalAdmin] Team creation failed:', teamError)
         throw new Error(`Failed to create team: ${teamError?.message}`)
       }
 
       const teamId = (teamData as any).id
-      console.log('Team created:', teamId)
+      console.log('[createTeamAsLocalAdmin] ✅ Team created:', teamId)
 
-      // Step 3: Clone all role templates for this team
-      console.log('Step 3: Cloning role templates...')
+      // Step 2: Clone all role templates for this team
+      console.log('[createTeamAsLocalAdmin] Step 2: Cloning role templates...')
       const roleIds = await cloneRoleTemplatesForTeam(teamId)
       if (!roleIds || roleIds.length === 0) {
         throw new Error('Failed to clone role templates for team')
       }
-      console.log(`Created ${roleIds.length} roles for team`)
+      console.log('[createTeamAsLocalAdmin] Created roles:', roleIds.length)
 
-      // Step 4: Get the Local Admin role
-      console.log('Step 4: Getting Local Admin role...')
+      // Step 3: Get the Local Admin role
+      console.log('[createTeamAsLocalAdmin] Step 3: Getting Local Admin role...')
       const localAdminRole = await getLocalAdminRole(teamId)
 
       if (!localAdminRole) {
         throw new Error('Local Admin role not found after template cloning')
       }
 
-      console.log('Local Admin role ID:', (localAdminRole as any).id)
+      const localAdminRoleId = (localAdminRole as any).id
+      console.log('[createTeamAsLocalAdmin] Local Admin role ID:', localAdminRoleId)
 
-      // Step 5: Create user record using admin client
+      // Step 4: Create user record using admin client
       // Note: users table has columns: id, email, team_id, role_id, is_master_admin
       // TEAM USER STATE: is_master_admin=false, team_id=<team>, role_id=<local_admin>
-      console.log('Step 5: Creating user record...')
+      console.log('[createTeamAsLocalAdmin] Step 4: Creating user record...')
       const { data: userData, error: userError } = await (supabase.from('users') as any)
         .insert({
           id: userId,
           email: data.email.trim().toLowerCase(),
           team_id: teamId,
-          role_id: (localAdminRole as any).id,
+          role_id: localAdminRoleId,
           is_master_admin: false,
         })
         .select()
         .single()
 
       if (userError || !userData) {
-        console.error('User record creation failed:', userError)
+        console.error('[createTeamAsLocalAdmin] User record creation failed:', userError)
         throw new Error(`Failed to create user: ${userError?.message}`)
       }
 
-      console.log('User record created successfully')
+      console.log('[createTeamAsLocalAdmin] ✅ User record created:', userId)
+
+      // Step 5: Create approved membership (auto-approve for team creator)
+      console.log('[createTeamAsLocalAdmin] Step 5: Creating team membership...')
+      const now = new Date().toISOString()
+      const { data: membershipData, error: membershipError } = await (
+        supabase.from('team_memberships') as any
+      )
+        .insert({
+          user_id: userId,
+          team_id: teamId,
+          status: 'approved',
+          requested_at: now,
+          approved_at: now,
+          approved_by: userId,
+          requested_role_id: localAdminRoleId,
+        })
+        .select()
+        .single()
+
+      if (membershipError || !membershipData) {
+        console.error('[createTeamAsLocalAdmin] Membership creation failed:', membershipError)
+        throw new Error(`Failed to create membership: ${membershipError?.message}`)
+      }
+
+      console.log('[createTeamAsLocalAdmin] ✅ Team membership record created with status=approved')
+
+      // Step 6: Validate user state with invariant guards
+      console.log('[createTeamAsLocalAdmin] Step 6: Validating user state invariants...')
+      try {
+        validateUserTeamConsistency({
+          id: userId,
+          is_master_admin: false,
+          team_id: teamId,
+          role_id: localAdminRoleId,
+        })
+        console.log('[createTeamAsLocalAdmin] ✅ User state invariants validated')
+      } catch (invariantError) {
+        console.error('[createTeamAsLocalAdmin] User invariant validation failed:', invariantError)
+        throw invariantError
+      }
+
+      // Step 7: Validate membership state with invariant guards
+      console.log('[createTeamAsLocalAdmin] Step 7: Validating membership state invariants...')
+      try {
+        validateMembershipState({
+          id: (membershipData as any).id,
+          status: 'approved',
+          approved_at: now,
+          approved_by: userId,
+          rejected_at: null,
+        })
+        console.log('[createTeamAsLocalAdmin] ✅ Membership state invariants validated')
+      } catch (invariantError) {
+        console.error('[createTeamAsLocalAdmin] Membership invariant validation failed:', invariantError)
+        throw invariantError
+      }
+
+      console.log('[createTeamAsLocalAdmin] ✅ All invariants validated successfully')
 
       return {
         success: true,
@@ -219,12 +266,11 @@ export async function teamSignUp(data: {
       }
     } catch (setupError) {
       // Cleanup: Delete auth user if setup fails
-      console.error('Setup failed, cleaning up auth user:', setupError)
-      await supabase.auth.admin.deleteUser(userId)
+      console.error('[createTeamAsLocalAdmin] Setup failed, error:', setupError)
       throw setupError
     }
   } catch (error) {
-    console.error('Team signup error:', error)
+    console.error('[createTeamAsLocalAdmin] Error:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'An unexpected error occurred',
