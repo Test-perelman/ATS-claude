@@ -33,14 +33,18 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.timesheets TO service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.invoices TO service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.immigration TO service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.notes TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.team_memberships TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.team_settings TO service_role;
 
 -- ============================================================================
 -- STEP 2: Grant execute on helper functions to service_role
 -- ============================================================================
 
-GRANT EXECUTE ON FUNCTION public._rls_current_user_id() TO service_role;
-GRANT EXECUTE ON FUNCTION public._rls_current_user_team_id() TO service_role;
-GRANT EXECUTE ON FUNCTION public._rls_is_master_admin() TO service_role;
+-- Grant execute on the helper functions we created
+GRANT EXECUTE ON FUNCTION public.is_master_admin(UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_user_team_id(UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.is_membership_approved(UUID, UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION public.is_admin_for_team(UUID) TO service_role;
 
 -- ============================================================================
 -- STEP 3: Verify RLS is still enabled on all tables
