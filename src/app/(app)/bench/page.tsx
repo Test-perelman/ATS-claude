@@ -135,33 +135,35 @@ export default function BenchPage() {
                 </thead>
                 <tbody className="divide-y">
                   {candidates.map((candidate) => (
-                    <tr key={candidate.candidate_id} className="hover:bg-gray-50">
+                    <tr key={candidate.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <Link
-                          href={`/candidates/${candidate.candidate_id}`}
+                          href={`/candidates/${candidate.id}`}
                           className="font-medium text-blue-600 hover:underline"
                         >
                           {candidate.first_name} {candidate.last_name}
                         </Link>
-                        <div className="text-xs text-gray-500">{candidate.email_address}</div>
+                        <div className="text-xs text-gray-500">{candidate.email}</div>
                       </td>
-                      <td className="px-4 py-3 text-sm">{candidate.skills_primary || '-'}</td>
                       <td className="px-4 py-3 text-sm">
-                        <Badge variant="info">{candidate.visa_status?.visa_name || 'N/A'}</Badge>
+                        {Array.isArray(candidate.skills) ? candidate.skills.join(', ') : candidate.skills || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <Badge variant="info">{'N/A'}</Badge>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant={getBenchBadgeVariant(candidate.bench_status)}>
-                          {candidate.bench_status?.replace('_', ' ') || 'N/A'}
+                        <Badge variant={getBenchBadgeVariant(candidate.status)}>
+                          {candidate.status?.replace('_', ' ') || 'N/A'}
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {candidate.bench_added_date ? formatDate(candidate.bench_added_date) : '-'}
+                        {candidate.created_at ? formatDate(candidate.created_at) : '-'}
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {candidate.current_location || '-'}
+                        {candidate.location || '-'}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Link href={`/candidates/${candidate.candidate_id}`}>
+                        <Link href={`/candidates/${candidate.id}`}>
                           <Button size="sm" variant="outline">
                             View
                           </Button>

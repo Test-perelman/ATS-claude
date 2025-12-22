@@ -8,8 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { TeamFilter } from '@/components/ui/TeamFilter';
-import { TeamBadge } from '@/components/ui/TeamBadge';
-import { formatDate, formatPhoneNumber } from '@/lib/utils/format';
+import { formatDate } from '@/lib/utils/format';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function ClientsPage() {
@@ -155,44 +154,41 @@ export default function ClientsPage() {
                 </thead>
                 <tbody className="divide-y">
                   {clients.map((client) => (
-                    <tr key={client.client_id} className="hover:bg-gray-50">
+                    <tr key={client.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <Link
-                          href={`/clients/${client.client_id}`}
+                          href={`/clients/${client.id}`}
                           className="font-medium text-blue-600 hover:underline"
                         >
-                          {client.client_name}
+                          {client.name}
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        <div>{client.primary_contact_name || '-'}</div>
-                        <div className="text-gray-500 text-xs">{client.primary_contact_email}</div>
+                        <div>{client.contact_name || '-'}</div>
+                        <div className="text-gray-500 text-xs">{client.contact_email || '-'}</div>
                       </td>
                       <td className="px-4 py-3 text-sm">
                         <Badge variant="default">{client.industry || '-'}</Badge>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {formatPhoneNumber(client.primary_contact_phone)}
+                        {'-'}
                       </td>
                       <td className="px-4 py-3">
                         <Badge
                           variant="status"
-                          status={client.is_active ? 'active' : 'inactive'}
+                          status={client.status || 'inactive'}
                         />
                       </td>
                       {isMasterAdmin && (
                         <td className="px-4 py-3">
-                          <TeamBadge
-                            teamName={client.team?.team_name}
-                            companyName={client.team?.company_name}
-                          />
+                          <span className="text-sm text-gray-600">Team {client.team_id}</span>
                         </td>
                       )}
                       <td className="px-4 py-3 text-sm text-gray-500">
                         {formatDate(client.created_at)}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Link href={`/clients/${client.client_id}`}>
+                        <Link href={`/clients/${client.id}`}>
                           <Button size="sm" variant="outline">
                             View
                           </Button>

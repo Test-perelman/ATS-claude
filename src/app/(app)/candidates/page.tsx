@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { TeamFilter } from '@/components/ui/TeamFilter';
-import { TeamBadge } from '@/components/ui/TeamBadge';
 import { formatDate, formatPhoneNumber } from '@/lib/utils/format';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
@@ -149,45 +148,42 @@ export default function CandidatesPage() {
                 </thead>
                 <tbody className="divide-y">
                   {candidates.map((candidate) => (
-                    <tr key={candidate.candidate_id} className="hover:bg-gray-50">
+                    <tr key={candidate.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <Link
-                          href={`/candidates/${candidate.candidate_id}`}
+                          href={`/candidates/${candidate.id}`}
                           className="font-medium text-blue-600 hover:underline"
                         >
                           {candidate.first_name} {candidate.last_name}
                         </Link>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        <div>{candidate.email_address || '-'}</div>
+                        <div>{candidate.email || '-'}</div>
                         <div className="text-gray-500">
-                          {formatPhoneNumber(candidate.phone_number)}
+                          {formatPhoneNumber(candidate.phone)}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        <div className="max-w-xs truncate" title={candidate.skills_primary}>
-                          {candidate.skills_primary || '-'}
+                        <div className="max-w-xs truncate" title={Array.isArray(candidate.skills) ? candidate.skills.join(', ') : candidate.skills}>
+                          {Array.isArray(candidate.skills) ? candidate.skills.join(', ') : candidate.skills || '-'}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {candidate.visa_status?.visa_name || '-'}
+                        {'-'}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant="status" status={candidate.bench_status} />
+                        <Badge variant="status" status={candidate.status} />
                       </td>
                       {isMasterAdmin && (
                         <td className="px-4 py-3">
-                          <TeamBadge
-                            teamName={candidate.team?.team_name}
-                            companyName={candidate.team?.company_name}
-                          />
+                          <span className="text-sm text-gray-600">Team {candidate.team_id}</span>
                         </td>
                       )}
                       <td className="px-4 py-3 text-sm text-gray-500">
                         {formatDate(candidate.created_at)}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Link href={`/candidates/${candidate.candidate_id}`}>
+                        <Link href={`/candidates/${candidate.id}`}>
                           <Button size="sm" variant="outline">
                             View
                           </Button>

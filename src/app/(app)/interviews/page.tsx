@@ -160,11 +160,11 @@ export default function InterviewsPage() {
                 </thead>
                 <tbody className="divide-y">
                   {interviews.map((interview) => (
-                    <tr key={interview.interview_id} className="hover:bg-gray-50">
+                    <tr key={interview.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
                         {interview.submission?.candidate ? (
                           <Link
-                            href={`/candidates/${interview.submission.candidate.candidate_id}`}
+                            href={`/candidates/${interview.submission.candidate_id}`}
                             className="font-medium text-blue-600 hover:underline"
                           >
                             {interview.submission.candidate.first_name}{' '}
@@ -175,11 +175,11 @@ export default function InterviewsPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {interview.submission?.job ? (
+                        {interview.submission?.job_requirement ? (
                           <div>
-                            <div className="font-medium">{interview.submission.job.job_title}</div>
+                            <div className="font-medium">{interview.submission.job_requirement.title}</div>
                             <div className="text-gray-500">
-                              {interview.submission.job.client?.client_name}
+                              {'-'}
                             </div>
                           </div>
                         ) : (
@@ -187,22 +187,22 @@ export default function InterviewsPage() {
                         )}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant={getInterviewRoundBadge(interview.interview_round)}>
-                          {interview.interview_round}
+                        <Badge variant={getInterviewRoundBadge('-')}>
+                          {'-'}
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {formatDateTime(interview.scheduled_time)}
+                        {formatDateTime(interview.scheduled_at)}
                       </td>
-                      <td className="px-4 py-3 text-sm">{interview.interviewer_name || '-'}</td>
-                      <td className="px-4 py-3 text-sm">{interview.interview_mode || '-'}</td>
+                      <td className="px-4 py-3 text-sm">{'-'}</td>
+                      <td className="px-4 py-3 text-sm">{'-'}</td>
                       <td className="px-4 py-3">
-                        <Badge variant={getResultBadgeVariant(interview.result)}>
-                          {interview.result || 'Pending'}
+                        <Badge variant={getResultBadgeVariant(interview.outcome)}>
+                          {interview.outcome || 'Pending'}
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Link href={`/interviews/${interview.interview_id}`}>
+                        <Link href={`/interviews/${interview.id}`}>
                           <Button size="sm" variant="outline">
                             View
                           </Button>

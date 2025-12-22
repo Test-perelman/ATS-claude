@@ -8,8 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Badge } from '@/components/ui/Badge';
 import { TeamFilter } from '@/components/ui/TeamFilter';
-import { TeamBadge } from '@/components/ui/TeamBadge';
-import { formatDate, formatCurrency } from '@/lib/utils/format';
+import { formatDate } from '@/lib/utils/format';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
 export default function RequirementsPage() {
@@ -172,54 +171,34 @@ export default function RequirementsPage() {
                 </thead>
                 <tbody className="divide-y">
                   {requirements.map((job) => (
-                    <tr key={job.job_id} className="hover:bg-gray-50">
+                    <tr key={job.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3">
                         <Link
-                          href={`/requirements/${job.job_id}`}
+                          href={`/requirements/${job.id}`}
                           className="font-medium text-blue-600 hover:underline"
                         >
-                          {job.job_title}
+                          {job.title}
                         </Link>
                         <div className="text-xs text-gray-500 mt-1">
-                          {job.work_mode} • {job.employment_type}
+                          {'-'} • {'-'}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {job.client ? (
-                          <Link
-                            href={`/clients/${job.client.client_id}`}
-                            className="text-blue-600 hover:underline"
-                          >
-                            {job.client.client_name}
-                          </Link>
-                        ) : (
-                          '-'
-                        )}
+                        {'-'}
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {job.vendor ? (
-                          <Link
-                            href={`/vendors/${job.vendor.vendor_id}`}
-                            className="text-blue-600 hover:underline"
-                          >
-                            {job.vendor.vendor_name}
-                          </Link>
-                        ) : (
-                          '-'
-                        )}
+                        {'-'}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-sm font-medium ${getPriorityColor(job.priority)}`}>
-                          {job.priority}
+                        <span className={`text-sm font-medium ${getPriorityColor('-')}`}>
+                          {'-'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {job.bill_rate_range_min && job.bill_rate_range_max
-                          ? `${formatCurrency(job.bill_rate_range_min)}-${formatCurrency(job.bill_rate_range_max)}`
-                          : '-'}
+                        {'-'}
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        <div>{job.location || '-'}</div>
+                        <div>{'-'}</div>
                       </td>
                       <td className="px-4 py-3">
                         <Badge variant="status" status={getStatusBadgeVariant(job.status)}>
@@ -228,14 +207,11 @@ export default function RequirementsPage() {
                       </td>
                       {isMasterAdmin && (
                         <td className="px-4 py-3">
-                          <TeamBadge
-                            teamName={job.team?.team_name}
-                            companyName={job.team?.company_name}
-                          />
+                          <span className="text-sm text-gray-600">Team {job.team_id}</span>
                         </td>
                       )}
                       <td className="px-4 py-3 text-right">
-                        <Link href={`/requirements/${job.job_id}`}>
+                        <Link href={`/requirements/${job.id}`}>
                           <Button size="sm" variant="outline">View</Button>
                         </Link>
                       </td>

@@ -95,7 +95,7 @@ export default function SubmissionsPage() {
   }
 
   function getSubmissionsByStatus(status: string) {
-    return submissions.filter(s => s.submission_status === status);
+    return submissions.filter(s => s.status === status);
   }
 
   function getStatusBadgeVariant(status: string): 'active' | 'inactive' {
@@ -207,8 +207,8 @@ export default function SubmissionsPage() {
                       <div className="space-y-2 max-h-[600px] overflow-y-auto">
                         {statusSubmissions.map((submission) => (
                           <Link
-                            key={submission.submission_id}
-                            href={`/submissions/${submission.submission_id}`}
+                            key={submission.id}
+                            href={`/submissions/${submission.id}`}
                           >
                             <Card className="hover:shadow-md transition-shadow cursor-pointer bg-white">
                               <CardContent className="p-4">
@@ -216,18 +216,13 @@ export default function SubmissionsPage() {
                                   {submission.candidate?.first_name} {submission.candidate?.last_name}
                                 </div>
                                 <div className="text-xs text-gray-600 mb-2">
-                                  {submission.job?.job_title}
+                                  {submission.job_requirement?.title || '-'}
                                 </div>
                                 <div className="text-xs text-gray-500">
-                                  {submission.client?.client?.client_name || '-'}
+                                  {'-'}
                                 </div>
-                                {submission.bill_rate_offered && (
-                                  <div className="text-xs font-medium text-green-600 mt-2">
-                                    {formatCurrency(submission.bill_rate_offered)}/hr
-                                  </div>
-                                )}
                                 <div className="text-xs text-gray-400 mt-2">
-                                  {formatDate(submission.submitted_at)}
+                                  {formatDate(submission.created_at)}
                                 </div>
                               </CardContent>
                             </Card>
@@ -277,10 +272,10 @@ export default function SubmissionsPage() {
                   </thead>
                   <tbody className="divide-y">
                     {submissions.map((submission) => (
-                      <tr key={submission.submission_id} className="hover:bg-gray-50">
+                      <tr key={submission.id} className="hover:bg-gray-50">
                         <td className="px-4 py-3">
                           <Link
-                            href={`/candidates/${submission.candidate?.candidate_id}`}
+                            href={`/candidates/${submission.candidate_id}`}
                             className="font-medium text-blue-600 hover:underline"
                           >
                             {submission.candidate?.first_name} {submission.candidate?.last_name}
@@ -288,28 +283,28 @@ export default function SubmissionsPage() {
                         </td>
                         <td className="px-4 py-3 text-sm">
                           <Link
-                            href={`/requirements/${submission.job?.job_id}`}
+                            href={`/requirements/${submission.requirement_id}`}
                             className="text-blue-600 hover:underline"
                           >
-                            {submission.job?.job_title}
+                            {submission.job_requirement?.title || '-'}
                           </Link>
                         </td>
                         <td className="px-4 py-3 text-sm">
-                          {submission.client?.client?.client_name || '-'}
+                          {'-'}
                         </td>
                         <td className="px-4 py-3">
-                          <Badge variant="status" status={getStatusBadgeVariant(submission.submission_status)}>
-                            {submission.submission_status}
+                          <Badge variant="status" status={getStatusBadgeVariant(submission.status)}>
+                            {submission.status}
                           </Badge>
                         </td>
                         <td className="px-4 py-3 text-sm">
-                          {submission.bill_rate_offered ? formatCurrency(submission.bill_rate_offered) : '-'}
+                          {'-'}
                         </td>
                         <td className="px-4 py-3 text-sm">
-                          {formatDate(submission.submitted_at)}
+                          {formatDate(submission.created_at)}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <Link href={`/submissions/${submission.submission_id}`}>
+                          <Link href={`/submissions/${submission.id}`}>
                             <Button size="sm" variant="outline">View</Button>
                           </Link>
                         </td>
