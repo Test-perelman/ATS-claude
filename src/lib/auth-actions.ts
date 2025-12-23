@@ -175,6 +175,92 @@ export async function signIn(email: string, password: string) {
 }
 
 // ============================================================================
+// ENSURE USER RECORD EXISTS (OAuth/Social Login)
+// ============================================================================
+
+export async function ensureUserRecord() {
+  const supabase = await createClient();
+
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return { error: 'Not authenticated' };
+  }
+
+  // Check if user record already exists
+  try {
+    const { data: existingUser, error } = await (supabase.from('users') as any)
+      .select('id')
+      .eq('id', user.id)
+      .single();
+
+    // Only ignore "no rows" error (PGRST116) - all other errors are unexpected
+    if (error && error.code !== 'PGRST116') {
+      console.error('[ensureUserRecord] Unexpected query error:', error.message);
+      return { error: 'Failed to check user record' };
+    }
+
+    // If user record exists, we're done
+    if (existingUser) {
+      return { success: true };
+    }
+
+    // Create user record for OAuth users
+    const { createAdminClient } = await import('@/lib/supabase/server');
+    const adminSupabase = await createAdminClient();
+
+    const teamId = randomUUID();
+    const roleId = randomUUID();
+
+    // Create team
+    const { error: teamError } = await (adminSupabase.from('teams') as any)
+      .insert({
+        id: teamId,
+        name: `${user.email?.split('@')[0] || 'Team'}'s Team`,
+      });
+
+    if (teamError) {
+      console.error('[ensureUserRecord] Failed to create team:', teamError);
+      return { error: 'Failed to create team' };
+    }
+
+    // Create admin role
+    const { error: roleError } = await (adminSupabase.from('roles') as any)
+      .insert({
+        id: roleId,
+        team_id: teamId,
+        name: 'Admin',
+        is_admin: true,
+      });
+
+    if (roleError) {
+      console.error('[ensureUserRecord] Failed to create role:', roleError);
+      return { error: 'Failed to create role' };
+    }
+
+    // Create user record
+    const { error: createError } = await (adminSupabase.from('users') as any)
+      .insert({
+        id: user.id,
+        email: (user.email || '').trim().toLowerCase(),
+        is_master_admin: false,
+        team_id: teamId,
+        role_id: roleId,
+      });
+
+    if (createError) {
+      console.error('[ensureUserRecord] Failed to create user record:', createError);
+      return { error: 'Failed to create user record' };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error('[ensureUserRecord] Unexpected error:', err);
+    return { error: 'An unexpected error occurred' };
+  }
+}
+
+// ============================================================================
 // SIGN IN WITH OTP (Magic Link)
 // ============================================================================
 
