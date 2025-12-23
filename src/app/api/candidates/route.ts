@@ -18,8 +18,34 @@ import { z } from 'zod'
  */
 export async function GET(request: NextRequest) {
   try {
-    // 1. Authenticate
-    const user = await getCurrentUser()
+    // 1. Authenticate - support both cookies and Bearer token
+    let user = await getCurrentUser()
+
+    // If no user from cookies and we have a Bearer token, try to use the session API
+    if (!user) {
+      const authHeader = request.headers.get('authorization')
+      if (authHeader?.startsWith('Bearer ')) {
+        console.log('[GET /candidates] No user from cookies, checking /api/auth/session with token...')
+        try {
+          const sessionResponse = await fetch(`${request.nextUrl.origin}/api/auth/session`, {
+            method: 'GET',
+            headers: {
+              'Authorization': authHeader,
+              'Content-Type': 'application/json',
+            },
+          })
+
+          const sessionData = await sessionResponse.json()
+          if (sessionData.data?.user) {
+            user = sessionData.data.user
+            console.log('[GET /candidates] User authenticated via token:', user.user_id)
+          }
+        } catch (err) {
+          console.error('[GET /candidates] Token session check failed:', err)
+        }
+      }
+    }
+
     if (!user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -159,8 +185,33 @@ const createCandidateSchema = z.object({
 export async function POST(request: NextRequest) {
   try {
     console.log('[POST /candidates] Checking authentication...')
-    // 1. Authenticate
-    const user = await getCurrentUser()
+
+    // Check for Authorization header as fallback
+    const authHeader = request.headers.get('authorization')
+    let user = await getCurrentUser()
+
+    // If no user from cookies and we have a Bearer token, try to use the session API
+    if (!user && authHeader?.startsWith('Bearer ')) {
+      console.log('[POST /candidates] No user from cookies, checking /api/auth/session with token...')
+      try {
+        const sessionResponse = await fetch(`${request.nextUrl.origin}/api/auth/session`, {
+          method: 'GET',
+          headers: {
+            'Authorization': authHeader,
+            'Content-Type': 'application/json',
+          },
+        })
+
+        const sessionData = await sessionResponse.json()
+        if (sessionData.data?.user) {
+          user = sessionData.data.user
+          console.log('[POST /candidates] User authenticated via token:', user.user_id)
+        }
+      } catch (err) {
+        console.error('[POST /candidates] Token session check failed:', err)
+      }
+    }
+
     if (!user) {
       console.log('[POST /candidates] User not authenticated')
       return NextResponse.json(
