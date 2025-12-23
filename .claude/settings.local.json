@@ -136,7 +136,19 @@
       "Bash(npm test:*)",
       "Bash(git reset:*)",
       "Bash(node test-create-team-invariants.js:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "Bash(supabase link --help:*)",
+      "Bash(env)",
+      "Bash(supabase link:*)",
+      "Bash(supabase db pull:*)",
+      "Bash(supabase projects:*)",
+      "Bash(node comprehensive_verification.js:*)",
+      "Bash(node cleanup_and_setup.js:*)",
+      "Bash(node cleanup_and_setup_v2.js:*)",
+      "Bash(node verify_setup.js:*)",
+      "Bash(node test_frontend_pages.js:*)",
+      "Bash(node test_signup_flow.js:*)",
+      "Bash(node test_signup_flow_v2.js:*)"
     ],
     "deny": [],
     "ask": []
