@@ -60,9 +60,9 @@ export async function signUp(email: string, password: string) {
       return { error: 'Signup failed: Could not create admin role' };
     }
 
-    // Create user record and assign to team with admin role
+    // Update user record and assign to team with admin role (use UPSERT since auto-created)
     const { error: userError } = await (adminSupabase.from('users') as any)
-      .insert({
+      .upsert({
         id: data.user.id,
         email: email.trim().toLowerCase(),
         is_master_admin: false,
