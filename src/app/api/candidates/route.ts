@@ -171,12 +171,16 @@ export async function POST(request: NextRequest) {
 
     console.log('[POST /candidates] User authenticated:', user.user_id)
 
+    // Ensure user_id is a string (fallback handling for type safety with auth ID mismatch)
+    const userId = String(user.user_id)
+    console.log('[POST /candidates] User ID (as string):', userId)
+
     // 2. Get team context
-    const teamContext = await getTeamContext(user.user_id)
+    const teamContext = await getTeamContext(userId)
 
     // 3. Check permissions (skip if master admin or local admin)
     if (!teamContext.isMasterAdmin && !teamContext.isLocalAdmin) {
-      const hasPermission = await checkPermission(user.user_id, 'candidates.create')
+      const hasPermission = await checkPermission(userId, 'candidates.create')
       if (!hasPermission) {
         return NextResponse.json(
           { success: false, error: 'Forbidden: Insufficient permissions' },
@@ -220,7 +224,7 @@ export async function POST(request: NextRequest) {
       lastName: data.lastName,
       email: data.email,
       teamId: teamContext.teamId,
-      userId: user.user_id,
+      userId: userId,
     })
 
     const { data: candidate, error } = await (supabase
@@ -237,7 +241,7 @@ export async function POST(request: NextRequest) {
         current_title: data.currentTitle && data.currentTitle !== '' ? data.currentTitle : null,
         current_employer: data.currentCompany && data.currentCompany !== '' ? data.currentCompany : null,
         status: data.status,
-        created_by: user.user_id,
+        created_by: userId,
       })
       .select()
       .single()

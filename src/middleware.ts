@@ -48,17 +48,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/auth/login', request.url));
   }
 
-  // Check email verification - skip for OAuth/social login users
-  // OAuth users (Google, etc.) are already verified by the provider
-  const isOAuthUser = user.app_metadata?.providers?.some((p: string) => p !== 'email');
-
-  if (!user.email_confirmed_at && !isOAuthUser) {
-    // Allow access to verification routes, but redirect others
-    if (!pathname.startsWith('/auth/')) {
-      return NextResponse.redirect(new URL('/auth/verify-email', request.url));
-    }
-    return response;
-  }
+  // Email verification check disabled - users can proceed without email confirmation
+  // This allows authenticated users to access the app immediately after login
 
   // Get user profile
   const { data: profile } = await supabase

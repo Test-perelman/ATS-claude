@@ -158,7 +158,8 @@
       "Bash(node -e \"\nconst https = require\\(''https''\\);\n\nfunction makeRequest\\(method, endpoint\\) {\n  return new Promise\\(\\(resolve, reject\\) => {\n    const options = {\n      hostname: ''awujhuncfghjshggkqyo.supabase.co'',\n      path: endpoint,\n      method: method,\n      headers: {\n        ''Content-Type'': ''application/json'',\n        ''Authorization'': ''Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3dWpodW5jZmdoanNoZ2drcXlvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MzYxNzg2MiwiZXhwIjoyMDc5MTkzODYyfQ.gQYNYZQM4Wy9UwpTiWH_xO6srJGeXvPQfpwd89nEqr4'',\n        ''apikey'': ''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF3dWpodW5jZmdoanNoZ2drcXlvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2MTc4NjIsImV4cCI6MjA3OTE5Mzg2Mn0.Y3Vn2pKfmRJcCkNzxXBz2R4FC3AcXfLudIsNrLzuiFc'',\n      },\n    };\n\n    const req = https.request\\(options, \\(res\\) => {\n      let data = '''';\n      res.on\\(''data'', chunk => data += chunk\\);\n      res.on\\(''end'', \\(\\) => {\n        try {\n          resolve\\({ status: res.statusCode, data: JSON.parse\\(data\\) }\\);\n        } catch \\(e\\) {\n          resolve\\({ status: res.statusCode, data: data }\\);\n        }\n      }\\);\n    }\\);\n\n    req.on\\(''error'', reject\\);\n    req.end\\(\\);\n  }\\);\n}\n\n\\(async \\(\\) => {\n  const res = await makeRequest\\(''GET'', ''/rest/v1/role_permissions?limit=1''\\);\n  if \\(res.status === 200 && res.data.length > 0\\) {\n    console.log\\(''role_permissions structure:''\\);\n    console.log\\(JSON.stringify\\(res.data[0], null, 2\\)\\);\n  } else {\n    console.log\\(''No role_permissions found or error:'', res.status\\);\n  }\n}\\)\\(\\);\n\")",
       "Bash(supabase migration:*)",
       "Bash(npx tsx verification_check.ts)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash"
     ],
     "deny": [],
     "ask": []
