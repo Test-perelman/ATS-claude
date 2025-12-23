@@ -48,8 +48,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/auth/login', request.url));
   }
 
-  // Check email verification
-  if (!user.email_confirmed_at) {
+  // Check email verification - skip for OAuth/social login users
+  // OAuth users (Google, etc.) are already verified by the provider
+  const isOAuthUser = user.app_metadata?.providers?.some((p: string) => p !== 'email');
+
+  if (!user.email_confirmed_at && !isOAuthUser) {
     // Allow access to verification routes, but redirect others
     if (!pathname.startsWith('/auth/')) {
       return NextResponse.redirect(new URL('/auth/verify-email', request.url));
