@@ -13,9 +13,35 @@ ALTER TABLE team_memberships ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS users_master_admin ON users;
 DROP POLICY IF EXISTS users_own_team ON users;
 DROP POLICY IF EXISTS users_own_profile ON users;
+DROP POLICY IF EXISTS users_view_self ON users;
+DROP POLICY IF EXISTS users_view_team_members ON users;
+DROP POLICY IF EXISTS users_view_all_as_admin ON users;
+DROP POLICY IF EXISTS users_update_self ON users;
 
 DROP POLICY IF EXISTS teams_master_admin ON teams;
 DROP POLICY IF EXISTS teams_own_team ON teams;
+DROP POLICY IF EXISTS teams_view_own ON teams;
+DROP POLICY IF EXISTS teams_view_all_as_admin ON teams;
+
+DROP POLICY IF EXISTS roles_view_team ON roles;
+DROP POLICY IF EXISTS candidates_view_own_team ON candidates;
+DROP POLICY IF EXISTS candidates_create_own_team ON candidates;
+DROP POLICY IF EXISTS team_memberships_view_self ON team_memberships;
+DROP POLICY IF EXISTS team_memberships_manage_as_admin ON team_memberships;
+
+-- Step 2.5: Create helper function FIRST before policies use it
+CREATE OR REPLACE FUNCTION is_admin() RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM users u
+    JOIN roles r ON u.role_id = r.id
+    WHERE u.id = auth.uid()::text
+      AND (r.is_admin = true OR u.is_master_admin = true)
+  );
+END;
+$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION is_admin() TO authenticated, service_role;
 
 -- Step 3: Grant basic permissions to authenticated role
 GRANT SELECT, INSERT, UPDATE ON users TO authenticated;
@@ -31,7 +57,7 @@ GRANT SELECT, INSERT, UPDATE ON team_memberships TO authenticated;
 -- Users table: Allow authenticated users to see their own record
 CREATE POLICY users_view_self ON users
   FOR SELECT
-  USING (id = auth.uid());
+  USING (id = auth.uid()::text);
 
 -- Users table: Allow authenticated users to see team members (same team)
 CREATE POLICY users_view_team_members ON users
@@ -39,7 +65,7 @@ CREATE POLICY users_view_team_members ON users
   USING (
     EXISTS (
       SELECT 1 FROM team_memberships tm
-      WHERE tm.user_id = auth.uid()
+      WHERE tm.user_id = auth.uid()::text
         AND tm.team_id = users.team_id
         AND tm.status = 'approved'
     )
@@ -51,7 +77,7 @@ CREATE POLICY users_view_all_as_admin ON users
   USING (
     EXISTS (
       SELECT 1 FROM users admin
-      WHERE admin.id = auth.uid()
+      WHERE admin.id = auth.uid()::text
         AND admin.is_master_admin = true
     )
   );
@@ -59,8 +85,8 @@ CREATE POLICY users_view_all_as_admin ON users
 -- Users table: Allow authenticated users to update their own record
 CREATE POLICY users_update_self ON users
   FOR UPDATE
-  USING (id = auth.uid())
-  WITH CHECK (id = auth.uid());
+  USING (id = auth.uid()::text)
+  WITH CHECK (id = auth.uid()::text);
 
 -- Teams table: Allow authenticated users to see their own team
 CREATE POLICY teams_view_own ON teams
@@ -68,7 +94,7 @@ CREATE POLICY teams_view_own ON teams
   USING (
     EXISTS (
       SELECT 1 FROM team_memberships tm
-      WHERE tm.user_id = auth.uid()
+      WHERE tm.user_id = auth.uid()::text
         AND tm.team_id = teams.id
         AND tm.status = 'approved'
     )
@@ -80,7 +106,7 @@ CREATE POLICY teams_view_all_as_admin ON teams
   USING (
     EXISTS (
       SELECT 1 FROM users admin
-      WHERE admin.id = auth.uid()
+      WHERE admin.id = auth.uid()::text
         AND admin.is_master_admin = true
     )
   );
@@ -91,7 +117,7 @@ CREATE POLICY roles_view_team ON roles
   USING (
     EXISTS (
       SELECT 1 FROM team_memberships tm
-      WHERE tm.user_id = auth.uid()
+      WHERE tm.user_id = auth.uid()::text
         AND tm.team_id = roles.team_id
         AND tm.status = 'approved'
     )
@@ -103,7 +129,7 @@ CREATE POLICY candidates_view_own_team ON candidates
   USING (
     EXISTS (
       SELECT 1 FROM team_memberships tm
-      WHERE tm.user_id = auth.uid()
+      WHERE tm.user_id = auth.uid()::text
         AND tm.team_id = candidates.team_id
         AND tm.status = 'approved'
     )
@@ -115,7 +141,7 @@ CREATE POLICY candidates_create_own_team ON candidates
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM team_memberships tm
-      WHERE tm.user_id = auth.uid()
+      WHERE tm.user_id = auth.uid()::text
         AND tm.team_id = candidates.team_id
         AND tm.status = 'approved'
     )
@@ -124,24 +150,10 @@ CREATE POLICY candidates_create_own_team ON candidates
 -- Team memberships: Users can view their own memberships
 CREATE POLICY team_memberships_view_self ON team_memberships
   FOR SELECT
-  USING (user_id = auth.uid() OR is_admin());
+  USING (user_id = auth.uid()::text OR is_admin());
 
 -- Team memberships: Admins can manage memberships
 CREATE POLICY team_memberships_manage_as_admin ON team_memberships
   FOR ALL
   USING (is_admin())
   WITH CHECK (is_admin());
-
--- Helper function to check if current user is admin
-CREATE OR REPLACE FUNCTION is_admin() RETURNS BOOLEAN AS $$
-BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM users u
-    JOIN roles r ON u.role_id = r.id
-    WHERE u.id = auth.uid()
-      AND (r.is_admin = true OR u.is_master_admin = true)
-  );
-END;
-$$ LANGUAGE plpgsql STABLE SECURITY DEFINER;
-
-GRANT EXECUTE ON FUNCTION is_admin() TO authenticated, service_role;

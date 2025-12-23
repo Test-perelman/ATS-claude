@@ -36,7 +36,7 @@ CREATE POLICY role_templates_insert ON role_templates
   FOR INSERT WITH CHECK (
     EXISTS (
       SELECT 1 FROM users
-      WHERE id = auth.uid() AND is_master_admin = true
+      WHERE id = auth.uid()::text AND is_master_admin = true
     )
   );
 
@@ -44,7 +44,7 @@ CREATE POLICY role_templates_update ON role_templates
   FOR UPDATE USING (
     EXISTS (
       SELECT 1 FROM users
-      WHERE id = auth.uid() AND is_master_admin = true
+      WHERE id = auth.uid()::text AND is_master_admin = true
     )
   );
 
@@ -56,7 +56,7 @@ CREATE POLICY template_permissions_insert ON template_permissions
   FOR INSERT WITH CHECK (
     EXISTS (
       SELECT 1 FROM users
-      WHERE id = auth.uid() AND is_master_admin = true
+      WHERE id = auth.uid()::text AND is_master_admin = true
     )
   );
 
@@ -64,7 +64,7 @@ CREATE POLICY template_permissions_update ON template_permissions
   FOR UPDATE USING (
     EXISTS (
       SELECT 1 FROM users
-      WHERE id = auth.uid() AND is_master_admin = true
+      WHERE id = auth.uid()::text AND is_master_admin = true
     )
   );
 
