@@ -159,7 +159,8 @@
       "Bash(supabase migration:*)",
       "Bash(npx tsx verification_check.ts)",
       "Bash(npx tsx:*)",
-      "Bash"
+      "Bash",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

@@ -30,6 +30,13 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
+  // Log auth status for debugging
+  if (user) {
+    console.log('[middleware] User authenticated:', user.id, user.email);
+  } else {
+    console.log('[middleware] No authenticated user');
+  }
+
   // For API routes, just return the response with refreshed session cookies
   if (isApiRoute) {
     return response;
@@ -51,11 +58,11 @@ export async function middleware(request: NextRequest) {
   // Email verification check disabled - users can proceed without email confirmation
   // This allows authenticated users to access the app immediately after login
 
-  // Get user profile
+  // Get user profile (convert UUID to TEXT for id field)
   const { data: profile } = await supabase
     .from('users')
     .select('is_master_admin, role:roles(is_admin)')
-    .eq('id', user.id)
+    .eq('id', user.id.toString())
     .single();
 
   // Admin routes: Master admin only
