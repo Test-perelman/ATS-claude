@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextRequest, NextResponse } from 'next/server';
 
-const PUBLIC_ROUTES = ['/auth/login', '/auth/signup', '/auth/reset-password', '/auth/callback'];
+const PUBLIC_ROUTES = ['/auth/login', '/auth/signup', '/auth/reset-password', '/auth/callback', '/auth/verify-email'];
 const ADMIN_ROUTES = ['/admin'];
 
 export async function middleware(request: NextRequest) {
@@ -46,6 +46,15 @@ export async function middleware(request: NextRequest) {
   // Require authentication
   if (!user) {
     return NextResponse.redirect(new URL('/auth/login', request.url));
+  }
+
+  // Check email verification
+  if (!user.email_confirmed_at) {
+    // Allow access to verification routes, but redirect others
+    if (!pathname.startsWith('/auth/')) {
+      return NextResponse.redirect(new URL('/auth/verify-email', request.url));
+    }
+    return response;
   }
 
   // Get user profile

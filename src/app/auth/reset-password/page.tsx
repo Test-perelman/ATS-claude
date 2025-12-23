@@ -92,7 +92,7 @@ function ResetPasswordContent() {
 
       // Redirect to login after 3 seconds
       setTimeout(() => {
-        setRedirectUrl('/admin/login')
+        setRedirectUrl('/auth/login')
       }, 3000)
     } catch (err) {
       console.error('Reset password error:', err)
@@ -123,7 +123,7 @@ function ResetPasswordContent() {
               Password reset successfully! You will be redirected to login in a moment...
             </p>
           </div>
-          <Link href="/admin/login" className="text-amber-600 hover:underline">
+          <Link href="/auth/login" className="text-amber-600 hover:underline">
             Click here if you're not redirected
           </Link>
         </div>
@@ -133,7 +133,7 @@ function ResetPasswordContent() {
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-red-800 text-sm font-medium mb-3">{error}</p>
               {error.includes('expired') && (
-                <Link href="/admin/login" className="text-red-600 hover:underline text-sm">
+                <Link href="/auth/login" className="text-red-600 hover:underline text-sm">
                   Go back to login and try again
                 </Link>
               )}
@@ -202,7 +202,7 @@ function ResetPasswordContent() {
           {/* Back to login link */}
           {!success && (
             <p className="text-center text-purple-600 text-sm mt-6">
-              <Link href="/admin/login" className="text-amber-600 hover:underline font-medium">
+              <Link href="/auth/login" className="text-amber-600 hover:underline font-medium">
                 Back to Login
               </Link>
             </p>
