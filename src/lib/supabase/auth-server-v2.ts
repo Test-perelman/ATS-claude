@@ -90,7 +90,7 @@ export async function getCurrentUser(): Promise<UserWithRole | null> {
       role: (userData as any).role ? {
         role_id: (userData as any).role.id,
         role_name: (userData as any).role.name,
-        is_admin_role: (userData as any).role.is_admin,
+        is_admin: (userData as any).role.is_admin,  // FIXED: was is_admin_role
       } : null,
       team: (userData as any).team ? {
         team_id: (userData as any).team.id,
@@ -142,13 +142,50 @@ export async function createTeamAsLocalAdmin(data: {
       const teamId = (teamData as any).id
       console.log('[createTeamAsLocalAdmin] Team created:', teamId)
 
-      // Step 2: Clone role templates
-      console.log('[createTeamAsLocalAdmin] Step 2: Cloning role templates...')
-      const roleIds = await cloneRoleTemplatesForTeam(teamId)
-      if (!roleIds || roleIds.length === 0) {
-        throw new Error('Failed to clone role templates for team')
+      // Step 2: Create default roles for team
+      console.log('[createTeamAsLocalAdmin] Step 2: Creating default roles...')
+      let roleIds: string[] = []
+
+      try {
+        // Try to clone from templates if they exist
+        roleIds = await cloneRoleTemplatesForTeam(teamId)
+        console.log(`[createTeamAsLocalAdmin] Cloned ${roleIds.length} role templates`)
+      } catch (templateError) {
+        // If templates don't exist, create basic roles directly
+        console.log('[createTeamAsLocalAdmin] Role templates not available, creating default roles...')
+
+        const defaultRoles = [
+          { name: 'Local Admin', is_admin: true },
+          { name: 'Sales Manager', is_admin: false },
+          { name: 'Recruiter', is_admin: false },
+          { name: 'Manager', is_admin: false },
+          { name: 'Finance', is_admin: false },
+          { name: 'View-Only', is_admin: false },
+        ]
+
+        for (const roleTemplate of defaultRoles) {
+          const { data: role, error: roleError } = await (supabase.from('roles') as any)
+            .insert({
+              team_id: teamId,
+              name: roleTemplate.name,
+              is_admin: roleTemplate.is_admin,
+            })
+            .select('id')
+            .single()
+
+          if (roleError || !role) {
+            console.error('[createTeamAsLocalAdmin] Failed to create role:', roleTemplate.name, roleError)
+            continue
+          }
+          roleIds.push((role as any).id)
+        }
+
+        if (roleIds.length === 0) {
+          throw new Error('Failed to create default roles for team')
+        }
+
+        console.log(`[createTeamAsLocalAdmin] Created ${roleIds.length} default roles`)
       }
-      console.log(`[createTeamAsLocalAdmin] Created ${roleIds.length} roles for team`)
 
       // Step 3: Get local admin role
       console.log('[createTeamAsLocalAdmin] Step 3: Getting Local Admin role...')

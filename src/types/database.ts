@@ -627,7 +627,7 @@ export interface UserWithRole {
   role?: {
     role_id: string
     role_name: string
-    is_admin_role: boolean
+    is_admin: boolean  // FIXED: was is_admin_role, now matches database column name
   } | null
   team?: {
     team_id: string

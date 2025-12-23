@@ -33,12 +33,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 2: Verify user is admin
-    if (!user.is_master_admin && !user.role?.is_admin_role) {
+    if (!user.is_master_admin && !user.role?.is_admin) {
       return NextResponse.json(
         { error: 'Only administrators can reject memberships' },
         { status: 403 }
       )
-    }
+    }  // FIXED: is_admin_role -> is_admin
 
     // Step 3: Parse request
     const body = await request.json()

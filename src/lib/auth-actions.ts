@@ -35,15 +35,16 @@ export async function signUp(email: string, password: string) {
     const roleId = randomUUID();
 
     // Create team for this user
-    const { error: teamError } = await (adminSupabase.from('teams') as any)
+    const { error: teamError, data: teamData } = await (adminSupabase.from('teams') as any)
       .insert({
         id: teamId,
         name: `${email.split('@')[0]}'s Team`,
-      });
+      })
+      .select();
 
     if (teamError) {
-      console.error('Failed to create team:', teamError);
-      return { error: 'Signup failed: Could not create team' };
+      console.error('Failed to create team:', JSON.stringify(teamError));
+      return { error: `Signup failed: ${teamError.message || 'Could not create team'}` };
     }
 
     // Create admin role for the team
@@ -53,11 +54,12 @@ export async function signUp(email: string, password: string) {
         team_id: teamId,
         name: 'Admin',
         is_admin: true,
-      });
+      })
+      .select();
 
     if (roleError) {
-      console.error('Failed to create admin role:', roleError);
-      return { error: 'Signup failed: Could not create admin role' };
+      console.error('Failed to create admin role:', JSON.stringify(roleError));
+      return { error: `Signup failed: ${roleError.message || 'Could not create admin role'}` };
     }
 
     // Update user record and assign to team with admin role (use UPSERT since auto-created)
@@ -68,11 +70,12 @@ export async function signUp(email: string, password: string) {
         is_master_admin: false,
         team_id: teamId,
         role_id: roleId,
-      });
+      })
+      .select();
 
     if (userError) {
-      console.error('Failed to create user record:', userError);
-      return { error: 'Signup failed: Could not create user record' };
+      console.error('Failed to create user record:', JSON.stringify(userError));
+      return { error: `Signup failed: ${userError.message || 'Could not create user record'}` };
     }
   } catch (err) {
     console.error('Signup error:', err);

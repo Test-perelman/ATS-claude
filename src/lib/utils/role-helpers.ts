@@ -23,35 +23,35 @@ export async function getTeamRoles(teamId: string): Promise<RoleWithPermissions[
   const { data: roles, error } = await supabase
     .from('roles')
     .select(`
-      role_id,
+      id,
       team_id,
-      role_name,
+      name,
       description,
-      is_admin_role,
+      is_admin,
       is_custom,
       based_on_template,
       role_permissions (
         permission:permissions (
-          permission_id,
-          permission_key,
-          permission_name,
+          id,
+          key,
+          name,
           module
         )
       )
     `)
     .eq('team_id', teamId)
-    .order('role_name')
+    .order('name')
 
   if (error || !roles) {
     return []
   }
 
   return (roles as any).map((role: any) => ({
-    role_id: role.role_id,
+    role_id: role.id,
     team_id: role.team_id,
-    role_name: role.role_name,
+    role_name: role.name,
     description: role.description,
-    is_admin_role: role.is_admin_role,
+    is_admin_role: role.is_admin,
     is_custom: role.is_custom,
     based_on_template: role.based_on_template,
     permissions: (role.role_permissions as any[])
@@ -72,23 +72,23 @@ export async function getRoleWithPermissions(roleId: string): Promise<RoleWithPe
   const { data: role, error } = await supabase
     .from('roles')
     .select(`
-      role_id,
+      id,
       team_id,
-      role_name,
+      name,
       description,
-      is_admin_role,
+      is_admin,
       is_custom,
       based_on_template,
       role_permissions (
         permission:permissions (
-          permission_id,
-          permission_key,
-          permission_name,
+          id,
+          key,
+          name,
           module
         )
       )
     `)
-    .eq('role_id', roleId)
+    .eq('id', roleId)
     .single()
 
   if (error || !role) {
@@ -96,11 +96,11 @@ export async function getRoleWithPermissions(roleId: string): Promise<RoleWithPe
   }
 
   return {
-    role_id: (role as any).role_id,
+    role_id: (role as any).id,
     team_id: (role as any).team_id,
-    role_name: (role as any).role_name,
+    role_name: (role as any).name,
     description: (role as any).description,
-    is_admin_role: (role as any).is_admin_role,
+    is_admin_role: (role as any).is_admin,
     is_custom: (role as any).is_custom,
     based_on_template: (role as any).based_on_template,
     permissions: ((role as any).role_permissions as any[])
@@ -119,60 +119,83 @@ export async function getRoleWithPermissions(roleId: string): Promise<RoleWithPe
 export async function cloneRoleTemplatesForTeam(teamId: string): Promise<string[]> {
   const supabase = await createServerClient()
 
+  console.log('[cloneRoleTemplatesForTeam] Fetching role templates...')
+
   // Get all role templates
-  const { data: templates } = await supabase
+  const { data: templates, error: templatesError } = await supabase
     .from('role_templates')
     .select('*')
     .eq('is_system_template', true)
+
+  if (templatesError) {
+    console.error('[cloneRoleTemplatesForTeam] Error fetching templates:', templatesError)
+    throw templatesError
+  }
 
   if (!templates || templates.length === 0) {
     throw new Error('No role templates found')
   }
 
+  console.log(`[cloneRoleTemplatesForTeam] Found ${templates.length} templates to clone`)
+
   const createdRoleIds: string[] = []
 
   // Clone each template
   for (const template of templates) {
+    console.log(`[cloneRoleTemplatesForTeam] Cloning template: ${(template as any).template_name}`)
+
     // Create team-specific role
+    // NOTE: Database columns are 'name' and 'is_admin', not 'role_name' and 'is_admin_role'
     const { data: newRole, error: roleError } = await supabase
       .from('roles')
       .insert({
         team_id: teamId,
-        role_name: (template as any).template_name,
-        description: (template as any).description,
-        is_admin_role: (template as any).is_admin_role,
-        is_custom: false,
-        based_on_template: (template as any).template_id,
+        name: (template as any).template_name,
+        is_admin: (template as any).is_admin_role,
       } as any)
-      .select('role_id')
+      .select('id')
       .single()
 
     if (roleError || !newRole) {
-      console.error('Error creating role:', roleError)
+      console.error('[cloneRoleTemplatesForTeam] Error creating role:', roleError)
       continue
     }
 
-    createdRoleIds.push((newRole as any).role_id)
+    const roleId = (newRole as any).id
+    console.log(`[cloneRoleTemplatesForTeam] Role created: ${roleId}`)
+    createdRoleIds.push(roleId)
 
     // Get template permissions
-    const { data: templatePermissions } = await supabase
+    const { data: templatePermissions, error: permError } = await supabase
       .from('template_permissions')
       .select('permission_id')
       .eq('template_id', (template as any).template_id)
 
+    if (permError) {
+      console.error('[cloneRoleTemplatesForTeam] Error fetching permissions:', permError)
+      continue
+    }
+
     if (templatePermissions && templatePermissions.length > 0) {
+      console.log(`[cloneRoleTemplatesForTeam] Assigning ${templatePermissions.length} permissions to role`)
+
       // Clone permissions for the new role
-      await supabase
+      const { error: insertError } = await supabase
         .from('role_permissions')
         .insert(
           (templatePermissions as any).map((tp: any) => ({
-            role_id: (newRole as any).role_id,
-            permission_id: tp.permission_id,
+            role_id: roleId,
+            permission_id: (tp as any).permission_id,
           })) as any
         )
+
+      if (insertError) {
+        console.error('[cloneRoleTemplatesForTeam] Error assigning permissions:', insertError)
+      }
     }
   }
 
+  console.log(`[cloneRoleTemplatesForTeam] Created ${createdRoleIds.length} roles`)
   return createdRoleIds
 }
 
@@ -200,9 +223,9 @@ export async function createCustomRole(
     .from('roles')
     .insert({
       team_id: teamId,
-      role_name: roleName,
+      name: roleName,
       description,
-      is_admin_role: false,
+      is_admin: false,
       is_custom: true,
       based_on_template: null,
     } as any)
@@ -220,7 +243,7 @@ export async function createCustomRole(
       .from('role_permissions')
       .insert(
         permissionIds.map(permissionId => ({
-          role_id: (role as any).role_id,
+          role_id: (role as any).id,
           permission_id: permissionId,
           granted_by: createdBy || null,
         })) as any
@@ -251,7 +274,7 @@ export async function cloneRole(
   const { data: sourceRole } = await supabase
     .from('roles')
     .select('*')
-    .eq('role_id', sourceRoleId)
+    .eq('id', sourceRoleId)
     .eq('team_id', teamId)
     .single()
 
@@ -270,9 +293,9 @@ export async function cloneRole(
     .from('roles')
     .insert({
       team_id: teamId,
-      role_name: newRoleName,
-      description: `Cloned from ${(sourceRole as any).role_name}`,
-      is_admin_role: false, // Cloned roles are never admin roles
+      name: newRoleName,
+      description: `Cloned from ${(sourceRole as any).name}`,
+      is_admin: false, // Cloned roles are never admin roles
       is_custom: true,
       based_on_template: (sourceRole as any).based_on_template,
     } as any)
@@ -290,7 +313,7 @@ export async function cloneRole(
       .from('role_permissions')
       .insert(
         (sourcePermissions as any).map((sp: any) => ({
-          role_id: (newRole as any).role_id,
+          role_id: (newRole as any).id,
           permission_id: sp.permission_id,
           granted_by: createdBy || null,
         })) as any
@@ -317,8 +340,8 @@ export async function updateRolePermissions(
   // Verify role exists and is not an admin role
   const { data: role } = await supabase
     .from('roles')
-    .select('role_id, is_admin_role')
-    .eq('role_id', roleId)
+    .select('id, is_admin')
+    .eq('id', roleId)
     .single()
 
   if (!role) {
@@ -326,7 +349,7 @@ export async function updateRolePermissions(
   }
 
   // Admin roles cannot have their permissions modified
-  if ((role as any).is_admin_role) {
+  if ((role as any).is_admin) {
     return { success: false, error: 'Cannot modify admin role permissions' }
   }
 
@@ -377,8 +400,8 @@ export async function deleteCustomRole(
   // Get role to verify it's deletable
   const { data: role } = await supabase
     .from('roles')
-    .select('role_id, team_id, is_custom, is_admin_role, based_on_template')
-    .eq('role_id', roleId)
+    .select('id, team_id, is_custom, is_admin, based_on_template')
+    .eq('id', roleId)
     .eq('team_id', teamId)
     .single()
 
@@ -387,7 +410,7 @@ export async function deleteCustomRole(
   }
 
   // Cannot delete admin roles
-  if ((role as any).is_admin_role) {
+  if ((role as any).is_admin) {
     return { success: false, error: 'Cannot delete admin roles' }
   }
 
@@ -399,7 +422,7 @@ export async function deleteCustomRole(
   // Check if any users are assigned to this role
   const { data: usersWithRole, error: usersError } = await supabase
     .from('users')
-    .select('user_id')
+    .select('id')
     .eq('role_id', roleId)
     .limit(1)
 
@@ -415,7 +438,7 @@ export async function deleteCustomRole(
   const { error: deleteError } = await supabase
     .from('roles')
     .delete()
-    .eq('role_id', roleId)
+    .eq('id', roleId)
 
   if (deleteError) {
     return { success: false, error: deleteError.message }
@@ -437,7 +460,7 @@ export async function getLocalAdminRole(teamId: string) {
     .from('roles')
     .select('*')
     .eq('team_id', teamId)
-    .eq('is_admin_role', true)
+    .eq('is_admin', true)
     .single()
 
   return role
@@ -460,12 +483,12 @@ export async function isRoleNameAvailable(
 
   let query = supabase
     .from('roles')
-    .select('role_id')
+    .select('id')
     .eq('team_id', teamId)
-    .eq('role_name', roleName)
+    .eq('name', roleName)
 
   if (excludeRoleId) {
-    query = query.neq('role_id', excludeRoleId)
+    query = query.neq('id', excludeRoleId)
   }
 
   const { data } = await query.limit(1)
@@ -517,7 +540,7 @@ export function isMasterAdmin(user: UserWithRole | null): boolean {
  */
 export function isLocalAdmin(user: UserWithRole | null): boolean {
   if (!user || !user.role) return false
-  return user.role.is_admin_role === true
+  return user.role.is_admin === true
 }
 
 /**
@@ -532,7 +555,7 @@ export function isAdmin(user: UserWithRole | null): boolean {
  */
 export function getUserRoleName(user: UserWithRole | null): string | null {
   if (!user || !user.role) return null
-  return user.role.role_name || null
+  return user.role.role_name || null  // Note: role_name is in UserWithRole, not the DB
 }
 
 /**
@@ -588,6 +611,14 @@ export function canManageTeamData(user: UserWithRole | null, teamId: string | nu
   }
 
   return false
+}
+
+/**
+ * Check if user is any type of admin (Master or Local) in their team
+ */
+export function isTeamAdmin(user: UserWithRole | null): boolean {
+  if (!user) return false
+  return user.is_master_admin || (user.role?.is_admin === true)
 }
 
 /**
