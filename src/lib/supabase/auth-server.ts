@@ -29,7 +29,9 @@ export async function getCurrentUser(): Promise<UserWithRole | null> {
 
     if (authError) {
       console.error('[getCurrentUser] Auth error:', authError.message)
-      return null
+      console.error('[getCurrentUser] Auth error code:', (authError as any).code)
+      // Don't return null immediately - auth errors in Vercel might be transient
+      // Continue to see if we can get user data another way
     }
 
     if (!authUser) {
@@ -86,7 +88,6 @@ export async function getCurrentUser(): Promise<UserWithRole | null> {
         team_id: null,
         role_id: null,
         is_master_admin: false,
-        status: 'active' as const,
         username: null,
         first_name: null,
         last_name: null,
