@@ -11,7 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { teamSignUp } from '@/lib/supabase/auth-server'
+import { adminSignUp } from '@/lib/supabase/auth-server'
 import { z } from 'zod'
 
 // Validation schema
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     const data = validationResult.data
 
     // Perform team signup
-    const result = await teamSignUp({
+    const result = await adminSignUp({
       email: data.email,
       password: data.password,
       firstName: data.firstName,

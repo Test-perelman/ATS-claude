@@ -310,10 +310,13 @@ export async function POST(request: NextRequest) {
       success: true,
       data: candidate,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Create candidate API error:', error)
+    console.error('Error type:', error?.constructor?.name)
+    console.error('Error message:', error?.message)
+    console.error('Error details:', JSON.stringify(error).substring(0, 500))
     return NextResponse.json(
-      { success: false, error: 'An unexpected error occurred' },
+      { success: false, error: 'An unexpected error occurred: ' + (error?.message || 'Unknown error') },
       { status: 500 }
     )
   }
