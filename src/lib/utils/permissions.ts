@@ -65,7 +65,7 @@ export async function checkPermission(
     .from('role_permissions')
     .select(`
       permission:permissions (
-        permission_key
+        key
       )
     `)
     .eq('role_id', (user as any).role_id)
@@ -75,7 +75,7 @@ export async function checkPermission(
   }
 
   const permissions = (rolePermissions as any)
-    .map((rp: any) => (rp.permission as any)?.permission_key)
+    .map((rp: any) => (rp.permission as any)?.key)
     .filter(Boolean)
 
   return permissions.includes(permissionKey)
