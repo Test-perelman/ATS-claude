@@ -65,7 +65,8 @@ export async function getTeamContext(
   const supabase = await createServerClient()
 
   // Fetch user with role information
-  // Note: DB schema uses id/name/is_admin, not user_id/role_name/is_admin_role
+  // Note: DB schema uses id (TEXT)/name/is_admin, not user_id/role_name/is_admin_role
+  // userId is a UUID string, so no conversion needed - it's already TEXT when passed in
   const { data: user, error } = await supabase
     .from('users')
     .select(`
@@ -82,9 +83,17 @@ export async function getTeamContext(
     .eq('id', userId)
     .single()
 
-  if (error || !user) {
+  if (error) {
+    console.error('[getTeamContext] User query error:', error)
+    throw new Error(`User query failed: ${error.message}`)
+  }
+
+  if (!user) {
+    console.error('[getTeamContext] User not found for userId:', userId)
     throw new Error('User not found or not authenticated')
   }
+
+  console.log('[getTeamContext] User found:', (user as any).id, 'team_id:', (user as any).team_id)
 
   const isMasterAdmin = (user as any).is_master_admin === true
   const userTeamId = (user as any).team_id
