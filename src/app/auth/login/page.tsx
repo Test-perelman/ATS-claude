@@ -45,12 +45,14 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = async (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
     setError('');
     setGoogleLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`,
@@ -58,11 +60,23 @@ export default function LoginPage() {
       });
 
       if (error) {
-        setError(error.message);
+        console.error('[Google Sign-in Error]:', error);
+        setError(error.message || 'Failed to sign in with Google');
         setGoogleLoading(false);
+        return;
       }
-      // If successful, the redirect to Google will happen automatically
+
+      if (!data?.url) {
+        console.error('[Google Sign-in Error]: No OAuth URL returned');
+        setError('Failed to get Google login URL');
+        setGoogleLoading(false);
+        return;
+      }
+
+      // Redirect to Google OAuth URL
+      window.location.href = data.url;
     } catch (err) {
+      console.error('[Google Sign-in Error]:', err);
       setError(err instanceof Error ? err.message : 'Google sign-in failed');
       setGoogleLoading(false);
     }
