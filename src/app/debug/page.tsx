@@ -7,6 +7,7 @@ export default function DebugPage() {
   const [logs, setLogs] = useState<string[]>([]);
   const [session, setSession] = useState<any>(null);
   const [cookies, setCookies] = useState<string>('');
+  const [apiResponse, setApiResponse] = useState<any>(null);
 
   const log = (msg: string) => {
     console.log(`[DEBUG] ${msg}`);
@@ -42,8 +43,36 @@ export default function DebugPage() {
         log(`   ❌ No cookies found`);
       }
 
-      // 3. Test API call
-      log('3. Testing POST /api/candidates with logging');
+      // 3. Test /api/auth/session (server reads cookies)
+      log('3. Testing GET /api/auth/session (server-side auth)');
+      try {
+        log(`   Making request to /api/auth/session with cookies`);
+        const response = await fetch('/api/auth/session', {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        log(`   Status: ${response.status}`);
+        const data = await response.json();
+        log(`   Response: ${JSON.stringify(data).substring(0, 150)}...`);
+        setApiResponse(data);
+
+        if (!response.ok) {
+          log(`   ❌ Error: ${data.error}`);
+        } else if (data.data?.user) {
+          log(`   ✅ Server auth SUCCESS! User: ${data.data.user.user_id}`);
+        } else {
+          log(`   ⚠️ No user in response`);
+        }
+      } catch (err) {
+        log(`   ❌ Fetch error: ${err instanceof Error ? err.message : String(err)}`);
+      }
+
+      // 4. Test API call
+      log('4. Testing POST /api/candidates with logging');
       const testData = {
         firstName: 'Debug',
         lastName: 'Test',
@@ -128,6 +157,30 @@ export default function DebugPage() {
         <p style={{ wordBreak: 'break-all', background: '#2d2d2d', padding: '10px' }}>
           {cookies || '❌ No cookies'}
         </p>
+      </div>
+
+      <div style={{ marginBottom: '20px' }}>
+        <h2>Server Authentication Response</h2>
+        {apiResponse ? (
+          <div style={{ background: '#2d2d2d', padding: '10px', wordBreak: 'break-all' }}>
+            {apiResponse.data?.user ? (
+              <div style={{ color: '#4ec9b0' }}>
+                <p>✅ <strong>Server-side auth is working!</strong></p>
+                <p>User: {apiResponse.data.user.user_id}</p>
+                <p>Email: {apiResponse.data.user.email}</p>
+                <p>Team: {apiResponse.data.teamName || 'N/A'}</p>
+                <p>Role: {apiResponse.data.userRole || 'N/A'}</p>
+              </div>
+            ) : (
+              <div style={{ color: '#f48771' }}>
+                <p>❌ Server auth failed or returned null</p>
+                <p>{JSON.stringify(apiResponse, null, 2)}</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p>No response yet - check logs below</p>
+        )}
       </div>
 
       <div style={{ marginBottom: '20px' }}>
