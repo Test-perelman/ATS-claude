@@ -184,15 +184,19 @@ const createCandidateSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    console.log('[POST /candidates] Checking authentication...')
+    console.log('[POST /candidates] ========== AUTHENTICATION CHECK ==========')
+    console.log('[POST /candidates] Time:', new Date().toISOString())
 
     // Check for Authorization header as fallback
     const authHeader = request.headers.get('authorization')
+    console.log('[POST /candidates] Auth header present:', !!authHeader)
+
     let user = await getCurrentUser()
+    console.log('[POST /candidates] getCurrentUser() result:', user ? `User ${user.user_id}` : 'NULL - THIS IS THE PROBLEM')
 
     // If no user from cookies and we have a Bearer token, try to use the session API
     if (!user && authHeader?.startsWith('Bearer ')) {
-      console.log('[POST /candidates] No user from cookies, checking /api/auth/session with token...')
+      console.log('[POST /candidates] Attempting token-based auth...')
       try {
         const sessionResponse = await fetch(`${request.nextUrl.origin}/api/auth/session`, {
           method: 'GET',
@@ -213,7 +217,8 @@ export async function POST(request: NextRequest) {
     }
 
     if (!user) {
-      console.log('[POST /candidates] User not authenticated')
+      console.log('[POST /candidates] ❌ FAILED: getCurrentUser() returned null')
+      console.log('[POST /candidates] ========== END ==========')
       return NextResponse.json(
         { success: false, error: 'User authentication required. Please log in again.' },
         { status: 401 }
