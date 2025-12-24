@@ -1,0 +1,155 @@
+================================================================================
+INFINITE RECURSION FLOW - RLS Policies on public.users Table
+================================================================================
+
+PROBLEM SCENARIO: getTeamContext() tries to query users table
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  CLIENT CODE (TypeScript)                                                  │
+│  ========================                                                   │
+│                                                                             │
+│  const teamContext = await getTeamContext(userId);                         │
+│                     ↓                                                       │
+│                     Calls Supabase query:                                  │
+│                     .from('users')                                         │
+│                     .select('...')                                         │
+│                     .eq('id', userId)                                      │
+│                     .single()                                              │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  SUPABASE / PostgreSQL                                                     │
+│  ======================                                                     │
+│                                                                             │
+│  SELECT id, team_id, role_id, is_master_admin, ... FROM users              │
+│         WHERE id = 'user-uuid'                                             │
+│                                                                             │
+│  PostgreSQL now evaluates RLS policies for this query                      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  RLS POLICY: users_own_team (from migration 20251222003)                   │
+│  =======================================================                    │
+│                                                                             │
+│  CREATE POLICY users_own_team ON users                                     │
+│    USING (                                                                 │
+│      id = auth.uid()::TEXT                                                │
+│      OR (                                                                  │
+│        team_id = get_user_team_id(auth.uid())                             │
+│        AND is_membership_approved(auth.uid(), team_id)                    │
+│        AND is_admin_for_team(auth.uid())  <-- FUNCTION CALL               │
+│      )                                                                     │
+│    )                                                                       │
+│                                                                             │
+│  PostgreSQL evaluates: is_admin_for_team(auth.uid())                      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  FUNCTION: is_admin_for_team(user_id UUID)                                │
+│  =========================================                                  │
+│                                                                             │
+│  CREATE OR REPLACE FUNCTION is_admin_for_team(user_id UUID)               │
+│  RETURNS BOOLEAN AS $$                                                    │
+│    SELECT EXISTS (                                                         │
+│      SELECT 1 FROM users u                 <-- QUERIES USERS TABLE!      │
+│      JOIN roles r ON u.role_id = r.id                                    │
+│      WHERE u.id = user_id::TEXT                                          │
+│        AND r.is_admin = true                                             │
+│    )                                                                       │
+│  $$ LANGUAGE sql STABLE SECURITY DEFINER;   <-- NO row_security = off!   │
+│                                                                             │
+│  This inner query ALSO needs to evaluate RLS policies!                    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  RLS POLICY: users_own_team (TRIGGERED AGAIN!)                            │
+│  =============================================                              │
+│                                                                             │
+│  PostgreSQL evaluates the RLS policy AGAIN for the nested query           │
+│  This triggers is_admin_for_team() again...                               │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐  │
+│  │ RLS POLICY: users_own_team (TRIGGERED AGAIN!)                      │  │
+│  │ ...which calls is_admin_for_team() again                           │  │
+│  │                                                                      │  │
+│  │ ┌──────────────────────────────────────────────────────────────┐   │  │
+│  │ │ RLS POLICY: users_own_team (TRIGGERED AGAIN!)               │   │  │
+│  │ │ ...which calls is_admin_for_team() again                    │   │  │
+│  │ │                                                               │   │  │
+│  │ │ ┌────────────────────────────────────────────────────────┐   │   │  │
+│  │ │ │ RLS POLICY: users_own_team (TRIGGERED AGAIN!)         │   │   │  │
+│  │ │ │ INFINITE RECURSION!!! ❌❌❌                            │   │   │  │
+│  │ │ │                                                         │   │   │  │
+│  │ │ └────────────────────────────────────────────────────────┘   │   │  │
+│  │ │                                                               │   │  │
+│  │ └──────────────────────────────────────────────────────────────┘   │  │
+│  │                                                                      │  │
+│  └─────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+                            ERROR THROWN:
+                    "infinite recursion detected in policy
+                         for relation users"
+
+================================================================================
+SOLUTION: Add SET row_security = off to Helper Functions
+================================================================================
+
+FIXED FUNCTION:
+
+  CREATE OR REPLACE FUNCTION is_admin_for_team(user_id UUID)
+  RETURNS BOOLEAN AS $$
+    SELECT EXISTS (
+      SELECT 1 FROM users u
+      JOIN roles r ON u.role_id = r.id
+      WHERE u.id = user_id::TEXT
+        AND r.is_admin = true
+    )
+  $$ LANGUAGE sql STABLE SECURITY DEFINER SET row_security = off;
+                                            ^^^^^^^^^^^^^^^^^^^
+                                   This new clause tells PostgreSQL:
+                                   "When this function queries tables,
+                                   BYPASS RLS policy enforcement"
+
+CORRECTED FLOW:
+
+  CLIENT CODE
+      ↓
+  RLS POLICY: users_own_team evaluates
+      ↓
+  Function: is_admin_for_team(auth.uid()) called
+      ↓
+  FUNCTION QUERIES: SELECT FROM users
+      ↓
+  RLS POLICY: BYPASSED (thanks to SET row_security = off)
+      ↓
+  Function returns result
+      ↓
+  RLS POLICY: continues evaluation
+      ↓
+  Query completes successfully ✓
+
+================================================================================
+KEY PRINCIPLE
+================================================================================
+
+SECURITY DEFINER: Runs with function owner's (postgres) privileges
+SET row_security = off: Bypasses RLS policy evaluation
+
+This combination ensures:
+  - Functions can query their helper tables without infinite recursion
+  - RLS is still enforced for direct user queries
+  - No security vulnerability (postgres is the owner)
+  - Standard PostgreSQL best practice
+
+================================================================================
