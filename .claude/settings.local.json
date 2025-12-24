@@ -169,7 +169,9 @@
       "Bash(node test_sql_syntax.js:*)",
       "Bash(node execute_migration_safely.js:*)",
       "Bash(node check_table_status.js:*)",
-      "Bash(node verify_team_access_requests.js:*)"
+      "Bash(node verify_team_access_requests.js:*)",
+      "Bash(node get_test_credentials.js:*)",
+      "Bash(node test_full_app_flow.js:*)"
     ],
     "deny": [],
     "ask": []
