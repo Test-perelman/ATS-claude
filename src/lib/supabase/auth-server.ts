@@ -19,31 +19,43 @@ import {
  */
 export async function getCurrentUser(): Promise<UserWithRole | null> {
   try {
-    console.log('[getCurrentUser] Starting...')
+    console.log('[getCurrentUser] ========== STARTING ==========')
+    console.log('[getCurrentUser] Timestamp:', new Date().toISOString())
+
     const supabase = await createServerClient()
+    console.log('[getCurrentUser] ✅ Created Supabase server client')
 
     const {
       data: { user: authUser },
       error: authError,
     } = await supabase.auth.getUser()
 
+    console.log('[getCurrentUser] Auth result:', {
+      hasUser: !!authUser,
+      userId: authUser?.id,
+      email: authUser?.email,
+      error: authError?.message,
+    })
+
     if (authError) {
-      console.error('[getCurrentUser] Auth error:', authError.message)
+      console.error('[getCurrentUser] ❌ Auth error:', authError.message)
       console.error('[getCurrentUser] Auth error code:', (authError as any).code)
       // Don't return null immediately - auth errors in Vercel might be transient
       // Continue to see if we can get user data another way
     }
 
     if (!authUser) {
-      console.log('[getCurrentUser] No auth user - not logged in')
+      console.log('[getCurrentUser] ❌ No auth user - not logged in')
       return null
     }
 
-    console.log('[getCurrentUser] Auth user found:', authUser.id, 'email:', authUser.email)
+    console.log('[getCurrentUser] ✅ Auth user found:', authUser.id, 'email:', authUser.email)
 
     // Query using actual database column names (id, not user_id)
     // Explicitly convert authUser.id to string to handle UUID type mismatch
     const userIdString = authUser.id.toString()
+    console.log('[getCurrentUser] Querying public.users for ID:', userIdString)
+
     const { data: userData, error } = await supabase
       .from('users')
       .select(`
@@ -67,10 +79,18 @@ export async function getCurrentUser(): Promise<UserWithRole | null> {
       .eq('id', userIdString)
       .single()
 
+    console.log('[getCurrentUser] Public users query result:', {
+      found: !!userData,
+      email: (userData as any)?.email,
+      teamId: (userData as any)?.team_id,
+      error: error?.message,
+      errorCode: error?.code,
+    })
+
     // Only ignore "no rows" error (PGRST116) - all other errors are unexpected
     if (error && error.code !== 'PGRST116') {
       // This is unexpected - data integrity issue
-      console.error('[getCurrentUser] Unexpected query error:', error.message, 'for user:', authUser.id)
+      console.error('[getCurrentUser] ❌ Unexpected query error:', error.message, 'for user:', authUser.id)
       throw error  // Don't hide this error
     }
 
@@ -121,9 +141,11 @@ export async function getCurrentUser(): Promise<UserWithRole | null> {
         company_name: (userData as any).team.name,
       } : null,
     }
+    console.log('[getCurrentUser] ========== SUCCESS ==========')
+    console.log('[getCurrentUser] Returning user:', userWithRole.user_id, userWithRole.email)
     return userWithRole as UserWithRole
   } catch (error) {
-    console.error('[getCurrentUser] Exception:', error)
+    console.error('[getCurrentUser] ❌ Exception caught:', error)
     return null
   }
 }
