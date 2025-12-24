@@ -1,25 +1,43 @@
 /**
  * API Client Utility
  * Provides fetch wrapper with automatic credential handling for authenticated API calls
- * Ensures cookies are sent with all API requests from client-side code
- * ALSO sends Bearer token as fallback for session verification on Vercel
+ * On Vercel, sends Supabase access token as Bearer header since cookies don't work reliably
  */
+
+import { supabase } from '@/lib/supabase/client'
 
 export async function apiFetch(
   url: string,
   options: RequestInit = {}
 ): Promise<Response> {
-  // Try to get the session token from Supabase as a fallback
+  // Get the current session synchronously from localStorage
+  // This is set by Supabase and is immediately available after login
   let authHeader: string | undefined = undefined
+  
   try {
-    const { supabase } = await import('@/lib/supabase/client')
-    const { data: sessionData } = await supabase.auth.getSession()
-    if (sessionData?.session?.access_token) {
-      authHeader = `Bearer ${sessionData.session.access_token}`
+    // Try to get session - this works in browser
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (session?.access_token) {
+      authHeader = `Bearer ${session.access_token}`
+      console.log('[apiFetch] Sending Bearer token')
     }
   } catch (err) {
-    // Silently fail if we can't get token - rely on cookies instead
-    // console.log('[apiFetch] Token retrieval failed, using cookies')
+    console.log('[apiFetch] Session retrieval failed, trying localStorage fallback')
+    
+    // Fallback: check localStorage directly (Supabase stores it there)
+    try {
+      const session = localStorage.getItem('sb-awujhuncfghjshggkqyo-auth-token');
+      if (session) {
+        const parsed = JSON.parse(session);
+        if (parsed?.access_token) {
+          authHeader = `Bearer ${parsed.access_token}`
+          console.log('[apiFetch] Got token from localStorage')
+        }
+      }
+    } catch (e) {
+      // localStorage unavailable or session not parseable
+    }
   }
 
   const headers: Record<string, string> = {
@@ -27,9 +45,12 @@ export async function apiFetch(
     ...((options.headers as Record<string, string>) || {}),
   }
 
-  // Add Bearer token if available and not already set
+  // Add Bearer token if available
   if (authHeader && !headers['Authorization']) {
     headers['Authorization'] = authHeader
+    console.log('[apiFetch] Added Authorization header')
+  } else if (!authHeader) {
+    console.log('[apiFetch] No token found, relying on cookies')
   }
 
   return fetch(url, {
