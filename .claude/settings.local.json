@@ -165,7 +165,10 @@
       "Bash(bash:*)",
       "Bash(node apply_missing_table.js:*)",
       "Bash(node verify_rls_functions.js:*)",
-      "Bash(node test_comprehensive_flow.js:*)"
+      "Bash(node test_comprehensive_flow.js:*)",
+      "Bash(node test_sql_syntax.js:*)",
+      "Bash(node execute_migration_safely.js:*)",
+      "Bash(node check_table_status.js:*)"
     ],
     "deny": [],
     "ask": []

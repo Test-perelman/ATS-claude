@@ -32,11 +32,13 @@ ALTER TABLE team_access_requests ENABLE ROW LEVEL SECURITY;
 CREATE POLICY team_access_requests_select ON team_access_requests
   FOR SELECT
   USING (
-    requested_team_id = (SELECT team_id FROM users WHERE id = auth.uid()::text)
-    AND
-    (SELECT r.is_admin FROM users u 
-     JOIN roles r ON u.role_id = r.id 
-     WHERE u.id = auth.uid()::text)
+    (
+      requested_team_id = (SELECT team_id FROM users WHERE id = auth.uid()::text)
+      AND
+      COALESCE((SELECT r.is_admin FROM users u
+                 JOIN roles r ON u.role_id = r.id
+                 WHERE u.id = auth.uid()::text), FALSE)
+    )
     OR
     (SELECT is_master_admin FROM users WHERE id = auth.uid()::text)
   );
@@ -44,18 +46,20 @@ CREATE POLICY team_access_requests_select ON team_access_requests
 -- Allow authenticated users to insert their own requests
 CREATE POLICY team_access_requests_insert ON team_access_requests
   FOR INSERT
-  WITH CHECK (auth.uid()::text IS NOT NULL)
-  TO authenticated;
+  TO authenticated
+  WITH CHECK (auth.uid()::text IS NOT NULL);
 
 -- Allow team admins and system to update requests
 CREATE POLICY team_access_requests_update ON team_access_requests
   FOR UPDATE
   USING (
-    requested_team_id = (SELECT team_id FROM users WHERE id = auth.uid()::text)
-    AND
-    (SELECT r.is_admin FROM users u 
-     JOIN roles r ON u.role_id = r.id 
-     WHERE u.id = auth.uid()::text)
+    (
+      requested_team_id = (SELECT team_id FROM users WHERE id = auth.uid()::text)
+      AND
+      COALESCE((SELECT r.is_admin FROM users u
+                 JOIN roles r ON u.role_id = r.id
+                 WHERE u.id = auth.uid()::text), FALSE)
+    )
     OR
     (SELECT is_master_admin FROM users WHERE id = auth.uid()::text)
   );
