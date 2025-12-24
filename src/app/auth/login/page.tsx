@@ -36,8 +36,10 @@ export default function LoginPage() {
       }
 
       // Redirect to dashboard after successful login
-      router.push('/dashboard');
-      router.refresh(); // Refresh to update server components with new auth state
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      router.refresh();
+      await new Promise(resolve => setTimeout(resolve, 500));
+      router.push("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {

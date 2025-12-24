@@ -171,7 +171,8 @@
       "Bash(node check_table_status.js:*)",
       "Bash(node verify_team_access_requests.js:*)",
       "Bash(node get_test_credentials.js:*)",
-      "Bash(node test_full_app_flow.js:*)"
+      "Bash(node test_full_app_flow.js:*)",
+      "Bash(node create_test_user.js:*)"
     ],
     "deny": [],
     "ask": []
