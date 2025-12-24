@@ -11,15 +11,21 @@ import type { Database } from '@/types/database'
 export async function createClient() {
   const cookieStore = cookies()
 
+  console.log('[createClient] Getting cookies from request...')
+  console.log('[createClient] All cookies:', cookieStore.getAll().map(c => c.name).join(', '))
+
   return createSupabaseServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         get(name) {
-          return cookieStore.get(name)?.value
+          const value = cookieStore.get(name)?.value
+          console.log(`[createClient] get("${name}"):`, value ? `found (${value.substring(0, 50)}...)` : 'NOT FOUND')
+          return value
         },
         setAll(cookiesToSet) {
+          console.log('[createClient] setAll called with', cookiesToSet.length, 'cookies')
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
