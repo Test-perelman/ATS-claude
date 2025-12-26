@@ -174,7 +174,9 @@
       "Bash(node test_full_app_flow.js:*)",
       "Bash(node create_test_user.js:*)",
       "Bash(dir d:Perelman-ATS-claude)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(node test_rls_isolation.js:*)",
+      "Bash(node test_login_comprehensive.js:*)"
     ],
     "deny": [],
     "ask": []
