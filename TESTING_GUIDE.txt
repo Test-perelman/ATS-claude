@@ -1,0 +1,214 @@
+================================================================================
+QUICK TESTING GUIDE - Authentication Fix Verification
+================================================================================
+
+1. START THE DEV SERVER
+   ────────────────────
+   npm run dev
+   
+   Expected: Server starts on http://localhost:3000
+   Check: Terminal shows middleware logs when you navigate
+
+
+2. TEST LOGIN FLOW
+   ────────────────
+   a) Open http://localhost:3000/auth/login
+   b) Sign in with test credentials
+   c) Check terminal for middleware logs:
+      
+      [Middleware] Processing POST /auth/callback
+      [Middleware] Request cookies: sb-awujhuncfghjshggkqyo-auth-token
+      [Middleware] ✅ User authenticated: <uuid>
+
+
+3. TEST DIAGNOSTIC ENDPOINT (NEW)
+   ──────────────────────────────
+   a) Make a POST request to test endpoint:
+      
+      curl -X POST http://localhost:3000/api/test-auth-flow \
+        -H "Content-Type: application/json" \
+        -b "sb-awujhuncfghjshggkqyo-auth-token=<your-token>"
+   
+   OR use browser DevTools console:
+   
+      fetch('/api/test-auth-flow', {method: 'POST'})
+        .then(r => r.json())
+        .then(d => console.log(JSON.stringify(d, null, 2)))
+   
+   Expected Response:
+   {
+     "success": true,
+     "diagnostics": {
+       "A1": "PASS - Env vars present",
+       "B1": "PASS - Found Supabase cookie(s): sb-...",
+       "D2": "PASS - Client initialized with cookies",
+       "user": {
+         "authenticated": true,
+         "userId": "<uuid>",
+         "email": "user@example.com"
+       }
+     }
+   }
+   
+   If cookies missing:
+   {
+     "cookies": {
+       "total": 0,
+       "names": "NONE"
+     },
+     "user": {
+       "authenticated": false,
+       "message": "Not authenticated - this is the root cause"
+     }
+   }
+
+
+4. TEST CANDIDATES API
+   ────────────────────
+   a) In browser console (after login):
+   
+      fetch('/api/candidates')
+        .then(r => r.json())
+        .then(d => console.log(JSON.stringify(d, null, 2)))
+   
+   b) Check terminal logs:
+      
+      [Middleware] Processing GET /api/candidates
+      [Middleware] Request cookies: sb-awujhuncfghjshggkqyo-auth-token
+      [Middleware] ✅ User authenticated: <uuid>
+      
+      [API GET /candidates] ========== COOKIE DEBUG ==========
+      [API GET /candidates] Available cookies: sb-awujhuncfghjshggkqyo-auth-token
+      [API GET /candidates] Total cookie count: 1
+      
+      [createClient] Total cookies available: 1
+      [getCurrentUser] Auth result: { "hasUser": true, "userId": "<uuid>" }
+   
+   Expected: 200 with candidate list
+   {
+     "success": true,
+     "data": [...],
+     "pagination": {...}
+   }
+
+
+5. INTERPRET THE LOGS
+   ───────────────────
+   
+   SCENARIO 1: Everything works (Expected)
+   ────────────────────────────────────────
+   [Middleware] Request cookies: sb-...
+   [Middleware] ✅ User authenticated: <uuid>
+   [API GET /candidates] Available cookies: sb-...
+   [createClient] Total cookies available: 1
+   [getCurrentUser] Auth result: { "hasUser": true, ... }
+   Response: 200 with data
+   
+   → FIX IS WORKING ✅
+   
+   
+   SCENARIO 2: Cookies missing at API (BAD)
+   ──────────────────────────────────────────
+   [Middleware] Request cookies: sb-...
+   [Middleware] ✅ User authenticated: <uuid>
+   [API GET /candidates] Available cookies: NONE  ← PROBLEM HERE
+   [createClient] Total cookies available: 0
+   [getCurrentUser] Auth result: { "hasUser": false, ... }
+   Response: 401 Unauthorized
+   
+   → Middleware not forwarding cookies to API route
+   → Check middleware.ts setAll() implementation
+   
+   
+   SCENARIO 3: Cookies missing at Middleware (BAD)
+   ───────────────────────────────────────────────
+   [Middleware] Request cookies: NONE  ← PROBLEM HERE
+   [Middleware] ❌ No authenticated user
+   [API GET /candidates] Available cookies: NONE
+   Response: 401 Unauthorized
+   
+   → Browser not sending cookies
+   → Check: Browser DevTools > Application > Cookies
+   → Check: Is cookie Domain/SameSite correct?
+   → Check: Is HTTPS being used?
+
+
+6. BROWSER DEBUGGING
+   ──────────────────
+   a) Open DevTools (F12)
+   
+   b) Go to Application > Cookies > http://localhost:3000
+      Should see: sb-awujhuncfghjshggkqyo-auth-token
+      
+      Check these fields:
+      - Domain: localhost (or .localhost)
+      - Path: /
+      - Expires: Some future date
+      - HttpOnly: Checked (good for security)
+      - Secure: NOT checked (OK for localhost)
+      - SameSite: Lax or Strict
+   
+   c) Go to Network tab
+      Make a request to /api/candidates
+      Click on the request
+      Look for "Cookie" header in Request Headers
+      Should show: Cookie: sb-awujhuncfghjshggkqyo-auth-token=<token>
+      
+      Look for "Set-Cookie" in Response Headers
+      May show updated token (normal during refresh)
+
+
+7. IF FIX ISN'T WORKING
+   ────────────────────
+   
+   a) Check middleware logs show cookie names
+      If "NONE", issue is browser → server transmission
+      If names shown, issue is middleware → API transmission
+   
+   b) Check API route logs show cookie names
+      If "NONE", middleware not forwarding (fixable)
+      If names shown, problem is in getUser() validation
+   
+   c) Check createClient logs
+      If "Total cookies available: 0", that's the issue
+      If "Total cookies available: 1", token may be invalid
+   
+   d) Check getCurrentUser logs
+      If error shown, see what error code it is
+      If null returned, fallback user mechanism is triggering
+
+
+8. TESTING CHECKLIST
+   ──────────────────
+   
+   □ npm run dev starts without errors
+   □ Can login at /auth/login
+   □ Middleware logs show cookies after login
+   □ /api/test-auth-flow returns authenticated user
+   □ /api/candidates GET returns 200 with data
+   □ Can create new candidate (POST /api/candidates)
+   □ /api/auth/session returns authenticated user
+   □ Refresh page - still authenticated
+   □ Browser cookies show auth token with correct domain
+   □ Network tab shows Cookie header in requests
+   □ All debug logs appear in terminal
+
+================================================================================
+NOTES FOR VERCEL DEPLOYMENT
+================================================================================
+
+After deploying to Vercel, view logs:
+   vercel logs <project-name> --follow
+
+Should see same logs in production. Key differences:
+   - Domain will be: ats-claude.vercel.app (not localhost)
+   - HTTPS will be used (not http)
+   - Middleware may be faster (edge function)
+
+If auth fails in production but works locally:
+   1. Check NEXT_PUBLIC_SUPABASE_URL in Vercel env vars
+   2. Check Supabase Dashboard > Auth > URL Configuration
+      Ensure Site URL = https://ats-claude.vercel.app
+   3. Verify NEXT_PUBLIC_SUPABASE_ANON_KEY is set correctly
+   4. Check function logs for the debug messages
+

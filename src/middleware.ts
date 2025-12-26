@@ -7,34 +7,58 @@ const ADMIN_ROUTES = ['/admin'];
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  const response = NextResponse.next({
+  // Create a new response object that will carry the updated cookies
+  let response = NextResponse.next({
     request: { headers: request.headers },
   });
 
   // API routes should not redirect - they should just refresh the session
   const isApiRoute = pathname.startsWith('/api');
 
+  console.log(`[Middleware] Processing ${request.method} ${pathname}`);
+  console.log('[Middleware] Request cookies:', request.cookies.getAll().map(c => c.name));
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: (cookiesToSet) =>
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          ),
+        getAll: () => {
+          const cookies = request.cookies.getAll();
+          console.log('[Middleware] getAll() called, returning:', cookies.map(c => c.name));
+          return cookies;
+        },
+        setAll: (cookiesToSet) => {
+          console.log('[Middleware] setAll() called with', cookiesToSet.length, 'cookies');
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              console.log(`[Middleware] Setting cookie: ${name}`);
+              response.cookies.set(name, value, options);
+            });
+          } catch (error) {
+            console.error('[Middleware] Error setting cookies:', error);
+          }
+        },
       },
     }
   );
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // Refresh session and update cookies in response
+  console.log('[Middleware] Calling supabase.auth.getUser()...');
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError) {
+    console.error('[Middleware] Auth error:', authError.message);
+  }
+
+  console.log('[Middleware] Forwarding cookies:', response.cookies.getSetCookie().length, 'cookie headers');
+  console.log('[Middleware] Available cookies after auth:', request.cookies.getAll().map(c => c.name));
 
   // Log auth status for debugging
   if (user) {
-    console.log('[middleware] User authenticated:', user.id, user.email);
+    console.log('[Middleware] ✅ User authenticated:', user.id, user.email);
   } else {
-    console.log('[middleware] No authenticated user');
+    console.log('[Middleware] ❌ No authenticated user');
   }
 
   // For API routes, just return the response with refreshed session cookies

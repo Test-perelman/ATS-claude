@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { cookies } from 'next/headers'
 import { getCurrentUser } from '@/lib/supabase/auth-server'
 import { getTeamContext } from '@/lib/utils/team-context'
 import { checkPermission } from '@/lib/utils/permissions'
@@ -18,6 +19,16 @@ import { z } from 'zod'
  */
 export async function GET(request: NextRequest) {
   try {
+    // DEBUG: Check available cookies immediately
+    const cookieStore = cookies()
+    const availableCookies = cookieStore.getAll()
+    console.log('[API GET /candidates] ========== COOKIE DEBUG ==========')
+    console.log('[API GET /candidates] Available cookies:', availableCookies.map(c => c.name).join(', ') || 'NONE')
+    console.log('[API GET /candidates] Total cookie count:', availableCookies.length)
+    availableCookies.forEach(c => {
+      console.log(`[API GET /candidates]   - ${c.name}: ${c.value.length} bytes`)
+    })
+
     // 1. Authenticate - support both cookies and Bearer token
     let user = await getCurrentUser()
 
@@ -184,6 +195,16 @@ const createCandidateSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    // DEBUG: Check available cookies immediately
+    const cookieStore = cookies()
+    const availableCookies = cookieStore.getAll()
+    console.log('[API POST /candidates] ========== COOKIE DEBUG ==========')
+    console.log('[API POST /candidates] Available cookies:', availableCookies.map(c => c.name).join(', ') || 'NONE')
+    console.log('[API POST /candidates] Total cookie count:', availableCookies.length)
+    availableCookies.forEach(c => {
+      console.log(`[API POST /candidates]   - ${c.name}: ${c.value.length} bytes`)
+    })
+
     console.log('[POST /candidates] ========== AUTHENTICATION CHECK ==========')
     console.log('[POST /candidates] Time:', new Date().toISOString())
 

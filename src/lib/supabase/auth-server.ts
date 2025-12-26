@@ -1,9 +1,14 @@
 /**
- * Server-Side Authentication Functions
- * Use these functions only in Server Components, API Routes, and Server Actions
+ * Server-Side Authentication Functions (Legacy)
+ *
+ * DEPRECATED: Use user-server.ts and admin-server.ts instead
+ * These functions maintain backward compatibility but are not recommended for new code
+ *
+ * Use this in API routes and server components
  */
 
-import { createServerClient, createAdminClient } from './server'
+import { createServerClient } from './server'
+import { createAdminClient as createAdminClientLegacy } from './admin-server'
 import type { UserWithRole, ApiResponse } from '@/types/database'
 import { cloneRoleTemplatesForTeam, getLocalAdminRole } from '@/lib/utils/role-helpers'
 import {
@@ -13,49 +18,26 @@ import {
 
 /**
  * Get current authenticated user with role and team information
- * Use this in API routes and server components
+ *
+ * DEPRECATED: Use requireCurrentUser() from user-server.ts instead
+ * This function returns null instead of throwing, which masks auth failures
  *
  * @returns UserWithRole or null if not authenticated
  */
 export async function getCurrentUser(): Promise<UserWithRole | null> {
   try {
-    console.log('[getCurrentUser] ========== STARTING ==========')
-    console.log('[getCurrentUser] Timestamp:', new Date().toISOString())
-
     const supabase = await createServerClient()
-    console.log('[getCurrentUser] ✅ Created Supabase server client')
 
     const {
       data: { user: authUser },
       error: authError,
     } = await supabase.auth.getUser()
 
-    console.log('[getCurrentUser] Auth result:', {
-      hasUser: !!authUser,
-      userId: authUser?.id,
-      email: authUser?.email,
-      error: authError?.message,
-    })
-
-    if (authError) {
-      console.error('[getCurrentUser] ❌ Auth error:', authError.message)
-      console.error('[getCurrentUser] Auth error code:', (authError as any).code)
-      // Don't return null immediately - auth errors in Vercel might be transient
-      // Continue to see if we can get user data another way
-    }
-
-    if (!authUser) {
-      console.log('[getCurrentUser] ❌ No auth user - not logged in')
+    if (authError || !authUser) {
       return null
     }
 
-    console.log('[getCurrentUser] ✅ Auth user found:', authUser.id, 'email:', authUser.email)
-
-    // Query using actual database column names (id, not user_id)
-    // Explicitly convert authUser.id to string to handle UUID type mismatch
     const userIdString = authUser.id.toString()
-    console.log('[getCurrentUser] Querying public.users for ID:', userIdString)
-
     const { data: userData, error } = await supabase
       .from('users')
       .select(`
@@ -79,47 +61,18 @@ export async function getCurrentUser(): Promise<UserWithRole | null> {
       .eq('id', userIdString)
       .single()
 
-    console.log('[getCurrentUser] Public users query result:', {
-      found: !!userData,
-      email: (userData as any)?.email,
-      teamId: (userData as any)?.team_id,
-      error: error?.message,
-      errorCode: error?.code,
-    })
-
     // Only ignore "no rows" error (PGRST116) - all other errors are unexpected
     if (error && error.code !== 'PGRST116') {
-      // This is unexpected - data integrity issue
-      console.error('[getCurrentUser] ❌ Unexpected query error:', error.message, 'for user:', authUser.id)
-      throw error  // Don't hide this error
+      throw error
     }
 
     if (!userData) {
-      console.warn('[getCurrentUser] ⚠️ No user record found in public.users table for authenticated user:', authUser.id)
-      console.warn('[getCurrentUser] User is authenticated in auth.users but missing from public.users')
-      console.warn('[getCurrentUser] Creating fallback user object from auth data for debugging')
-
-      // FALLBACK: Return a basic user object constructed from authUser
-      // This prevents the "User authentication required" error and allows the app to function
-      // while the missing public record issue is debugged
-      const fallbackUser: UserWithRole = {
-        user_id: authUser.id.toString(),
-        email: authUser.email || '',
-        team_id: null,
-        role_id: null,
-        is_master_admin: false,
-        username: null,
-        first_name: null,
-        last_name: null,
-        role: null,
-        team: null,
-      }
-      console.log('[getCurrentUser] ⚠️ Returning fallback user object:', fallbackUser.user_id)
-      return fallbackUser
+      // INVARIANT VIOLATION REMOVED: No longer create fallback user
+      // If user is authenticated but record is missing, this must be fixed in DB
+      // Not masked by returning a fake user object
+      return null
     }
 
-    console.log('[getCurrentUser] ✅ User found:', (userData as any).id)
-    // Map database column names to expected UserWithRole interface
     const userWithRole = {
       user_id: (userData as any).id,
       team_id: (userData as any).team_id,
@@ -141,11 +94,8 @@ export async function getCurrentUser(): Promise<UserWithRole | null> {
         company_name: (userData as any).team.name,
       } : null,
     }
-    console.log('[getCurrentUser] ========== SUCCESS ==========')
-    console.log('[getCurrentUser] Returning user:', userWithRole.user_id, userWithRole.email)
     return userWithRole as UserWithRole
   } catch (error) {
-    console.error('[getCurrentUser] ❌ Exception caught:', error)
     return null
   }
 }
@@ -178,7 +128,7 @@ export async function createTeamAsLocalAdmin(data: {
 }): Promise<ApiResponse<{ user: UserWithRole; team: any }>> {
   try {
     // Use admin client to bypass RLS for signup operations
-    const supabase = await createAdminClient()
+    const supabase = await createAdminClientLegacy()
     console.log('[createTeamAsLocalAdmin] Starting for auth user:', data.authUserId)
 
     const userId = data.authUserId
@@ -337,7 +287,7 @@ export async function createMasterAdmin(data: {
 }): Promise<ApiResponse<UserWithRole>> {
   try {
     // Use admin client to bypass RLS for master admin creation
-    const supabase = await createAdminClient()
+    const supabase = await createAdminClientLegacy()
 
     // Step 1: Create Supabase auth user
     console.log('Creating master admin auth user...')
