@@ -51,7 +51,6 @@ export async function middleware(request: NextRequest) {
     console.error('[Middleware] Auth error:', authError.message);
   }
 
-  console.log('[Middleware] Forwarding cookies:', response.cookies.getSetCookie().length, 'cookie headers');
   console.log('[Middleware] Available cookies after auth:', request.cookies.getAll().map(c => c.name));
 
   // Log auth status for debugging

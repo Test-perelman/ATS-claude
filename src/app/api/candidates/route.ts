@@ -6,10 +6,9 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
-import { getCurrentUser } from '@/lib/supabase/auth-server'
+import { createUserClient } from '@/lib/supabase/user-server'
 import { getTeamContext } from '@/lib/utils/team-context'
 import { checkPermission } from '@/lib/utils/permissions'
-import { createServerClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 
 /**
@@ -29,40 +28,88 @@ export async function GET(request: NextRequest) {
       console.log(`[API GET /candidates]   - ${c.name}: ${c.value.length} bytes`)
     })
 
-    // 1. Authenticate - support both cookies and Bearer token
-    let user = await getCurrentUser()
+    // 1. Authenticate using server client with cookies
+    console.log('[GET /candidates] Creating server client with cookies...')
+    const supabase = await createUserClient()
 
-    // If no user from cookies and we have a Bearer token, try to use the session API
-    if (!user) {
-      const authHeader = request.headers.get('authorization')
-      if (authHeader?.startsWith('Bearer ')) {
-        console.log('[GET /candidates] No user from cookies, checking /api/auth/session with token...')
-        try {
-          const sessionResponse = await fetch(`${request.nextUrl.origin}/api/auth/session`, {
-            method: 'GET',
-            headers: {
-              'Authorization': authHeader,
-              'Content-Type': 'application/json',
-            },
-          })
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+    console.log('[GET /candidates] Auth user found:', authUser?.id || 'NONE')
 
-          const sessionData = await sessionResponse.json()
-          if (sessionData.data?.user) {
-            user = sessionData.data.user
-            console.log('[GET /candidates] User authenticated via token:', user.user_id)
-          }
-        } catch (err) {
-          console.error('[GET /candidates] Token session check failed:', err)
-        }
-      }
-    }
-
-    if (!user) {
+    if (authError || !authUser) {
+      console.log('[GET /candidates] ❌ FAILED: No authenticated user')
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
       )
     }
+
+    // Query user record from database
+    const { data: userData, error: queryError } = await supabase
+      .from('users')
+      .select(`
+        id,
+        team_id,
+        role_id,
+        email,
+        is_master_admin,
+        created_at,
+        updated_at,
+        role:roles (
+          id,
+          name,
+          is_admin
+        ),
+        team:teams (
+          id,
+          name
+        )
+      `)
+      .eq('id', authUser.id)
+      .single()
+
+    if (queryError && queryError.code !== 'PGRST116') {
+      console.error('[GET /candidates] Query error:', queryError.message)
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    if (!userData) {
+      console.log('[GET /candidates] ❌ FAILED: No user record found')
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
+    const user = {
+      user_id: (userData as any).id,
+      team_id: (userData as any).team_id,
+      role_id: (userData as any).role_id,
+      email: (userData as any).email,
+      username: null,
+      first_name: null,
+      last_name: null,
+      is_master_admin: (userData as any).is_master_admin,
+      status: 'active' as const,
+      role: (userData as any).role
+        ? {
+            role_id: (userData as any).role.id,
+            role_name: (userData as any).role.name,
+            is_admin_role: (userData as any).role.is_admin,
+          }
+        : null,
+      team: (userData as any).team
+        ? {
+            team_id: (userData as any).team.id,
+            team_name: (userData as any).team.name,
+            company_name: (userData as any).team.name,
+          }
+        : null,
+    }
+
+    console.log('[GET /candidates] ✅ User authenticated:', user.user_id)
 
     // 2. Get team context
     const searchParams = request.nextUrl.searchParams
@@ -88,8 +135,6 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       )
     }
-
-    const supabase = await createServerClient()
 
     // Build query with filters
     let query = supabase
@@ -208,37 +253,15 @@ export async function POST(request: NextRequest) {
     console.log('[POST /candidates] ========== AUTHENTICATION CHECK ==========')
     console.log('[POST /candidates] Time:', new Date().toISOString())
 
-    // Check for Authorization header as fallback
-    const authHeader = request.headers.get('authorization')
-    console.log('[POST /candidates] Auth header present:', !!authHeader)
+    // Create server client with cookies
+    console.log('[POST /candidates] Creating server client with cookies...')
+    const supabase = await createUserClient()
 
-    let user = await getCurrentUser()
-    console.log('[POST /candidates] getCurrentUser() result:', user ? `User ${user.user_id}` : 'NULL - THIS IS THE PROBLEM')
+    const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+    console.log('[POST /candidates] Auth user found:', authUser?.id || 'NONE')
 
-    // If no user from cookies and we have a Bearer token, try to use the session API
-    if (!user && authHeader?.startsWith('Bearer ')) {
-      console.log('[POST /candidates] Attempting token-based auth...')
-      try {
-        const sessionResponse = await fetch(`${request.nextUrl.origin}/api/auth/session`, {
-          method: 'GET',
-          headers: {
-            'Authorization': authHeader,
-            'Content-Type': 'application/json',
-          },
-        })
-
-        const sessionData = await sessionResponse.json()
-        if (sessionData.data?.user) {
-          user = sessionData.data.user
-          console.log('[POST /candidates] User authenticated via token:', user.user_id)
-        }
-      } catch (err) {
-        console.error('[POST /candidates] Token session check failed:', err)
-      }
-    }
-
-    if (!user) {
-      console.log('[POST /candidates] ❌ FAILED: getCurrentUser() returned null')
+    if (authError || !authUser) {
+      console.log('[POST /candidates] ❌ FAILED: No authenticated user')
       console.log('[POST /candidates] ========== END ==========')
       return NextResponse.json(
         { success: false, error: 'User authentication required. Please log in again.' },
@@ -246,7 +269,73 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log('[POST /candidates] User authenticated:', user.user_id)
+    // Query user record from database
+    const { data: userData, error: queryError } = await supabase
+      .from('users')
+      .select(`
+        id,
+        team_id,
+        role_id,
+        email,
+        is_master_admin,
+        created_at,
+        updated_at,
+        role:roles (
+          id,
+          name,
+          is_admin
+        ),
+        team:teams (
+          id,
+          name
+        )
+      `)
+      .eq('id', authUser.id)
+      .single()
+
+    if (queryError && queryError.code !== 'PGRST116') {
+      console.error('[POST /candidates] Query error:', queryError.message)
+      return NextResponse.json(
+        { success: false, error: 'User authentication required. Please log in again.' },
+        { status: 401 }
+      )
+    }
+
+    if (!userData) {
+      console.log('[POST /candidates] ❌ FAILED: No user record found')
+      return NextResponse.json(
+        { success: false, error: 'User authentication required. Please log in again.' },
+        { status: 401 }
+      )
+    }
+
+    const user = {
+      user_id: (userData as any).id,
+      team_id: (userData as any).team_id,
+      role_id: (userData as any).role_id,
+      email: (userData as any).email,
+      username: null,
+      first_name: null,
+      last_name: null,
+      is_master_admin: (userData as any).is_master_admin,
+      status: 'active' as const,
+      role: (userData as any).role
+        ? {
+            role_id: (userData as any).role.id,
+            role_name: (userData as any).role.name,
+            is_admin_role: (userData as any).role.is_admin,
+          }
+        : null,
+      team: (userData as any).team
+        ? {
+            team_id: (userData as any).team.id,
+            team_name: (userData as any).team.name,
+            company_name: (userData as any).team.name,
+          }
+        : null,
+    }
+
+    console.log('[POST /candidates] ✅ User authenticated:', user.user_id)
 
     // Ensure user_id is a string (fallback handling for type safety with auth ID mismatch)
     const userId = String(user.user_id)
@@ -293,8 +382,6 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-
-    const supabase = await createServerClient()
 
     console.log('[POST /candidates] Inserting candidate:', {
       firstName: data.firstName,
