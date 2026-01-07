@@ -182,8 +182,8 @@ export default function LoginPage() {
             </Link>
           </p>
           <p className="mt-2">
-            <Link href="/admin/login" className="text-blue-600 hover:underline">
-              Admin login
+            <Link href="/auth/admin-setup" className="text-purple-600 hover:underline">
+              Admin Setup
             </Link>
           </p>
         </div>

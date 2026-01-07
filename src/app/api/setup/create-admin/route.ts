@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 
+const SETUP_SECRET = 'PERELMAN';
+
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json();
-    
+    const { email, password, secret } = await request.json();
+
+    if (secret !== SETUP_SECRET) {
+      return NextResponse.json({ error: 'Invalid secret key' }, { status: 403 });
+    }
+
     if (!email || !password) {
       return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
     }
