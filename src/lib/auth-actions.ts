@@ -49,6 +49,17 @@ export async function signUp(email: string, password: string) {
     // Determine if this is the first user (becomes Master Admin)
     const isFirstUser = !existingUsers || existingUsers.length === 0;
 
+    // Check if user record already exists
+    const { data: existingUser, error: checkUserError } = await (adminSupabase.from('users') as any)
+      .select('id')
+      .eq('email', email.trim().toLowerCase())
+      .single();
+
+    if (existingUser) {
+      // User already exists - likely from a previous failed signup
+      return { error: 'Email already registered. Please log in instead.' };
+    }
+
     // Create user record
     const { error: userError } = await (adminSupabase.from('users') as any)
       .insert({
