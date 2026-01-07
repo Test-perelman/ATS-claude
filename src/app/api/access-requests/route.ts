@@ -1,114 +1,88 @@
-import { requestTeamAccess } from '@/lib/supabase/auth-server';
-import { getPendingAccessRequests } from '@/lib/api/teams';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireCurrentUser } from '@/lib/supabase/user-server';
+import { createAdminClient } from '@/lib/supabase/server';
 
 /**
- * Access Requests Endpoint
- * POST: Create a new access request (AUTHENTICATED USER ONLY)
- * GET: Get pending access requests (ADMIN ONLY)
- *
- * INVARIANT: Both methods require authentication
- * Enforced via requireCurrentUser() as first executable line
+ * POST /api/access-requests
+ * Create a new team access request
+ * Authenticated users only
  */
-
 export async function POST(request: NextRequest) {
   try {
-    // INVARIANT: Require authenticated user
+    // Require authentication
     const user = await requireCurrentUser();
 
     const body = await request.json();
+    const { requested_team_id } = body;
 
-    const { email, firstName, lastName, companyEmail, reason, requestedTeamId } = body;
-
-    // Validate required fields
-    if (!email || !firstName || !lastName || !companyEmail) {
+    if (!requested_team_id) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { success: false, error: 'Team ID is required' },
         { status: 400 }
       );
     }
 
-    const result = await requestTeamAccess({
-      email,
-      firstName,
-      lastName,
-      companyEmail,
-      reason,
-      requestedTeamId,
+    const adminSupabase = await createAdminClient();
+
+    // Check if team exists
+    const { data: team, error: teamError } = await adminSupabase
+      .from('teams')
+      .select('id')
+      .eq('id', requested_team_id)
+      .single();
+
+    if (teamError || !team) {
+      return NextResponse.json(
+        { success: false, error: 'Team not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check for existing pending request
+    const { data: existingRequest, error: checkError } = await adminSupabase
+      .from('team_access_requests')
+      .select('id')
+      .eq('requested_team_id', requested_team_id)
+      .eq('email', user.email)
+      .eq('status', 'pending')
+      .single();
+
+    if (existingRequest) {
+      return NextResponse.json(
+        { success: false, error: 'You already have a pending request for this team' },
+        { status: 400 }
+      );
+    }
+
+    // Create access request
+    const { data: accessRequest, error: createError } = await adminSupabase
+      .from('team_access_requests')
+      .insert({
+        email: user.email,
+        requested_team_id,
+        auth_user_id: user.user_id,
+        status: 'pending',
+      })
+      .select()
+      .single();
+
+    if (createError) {
+      console.error('Error creating access request:', createError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to create access request' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: accessRequest,
     });
-
-    if ('error' in result && result.error) {
-      return NextResponse.json({ error: result.error }, { status: 400 });
-    }
-
-    if (!('data' in result) || !result.data) {
-      return NextResponse.json({ error: 'Failed to create access request' }, { status: 400 });
-    }
-
+  } catch (error: any) {
+    console.error('API error:', error);
     return NextResponse.json(
-      {
-        success: true,
-        message: 'Access request submitted successfully',
-        data: result.data.request,
-      },
-      { status: 201 }
-    );
-  } catch (error) {
-    // requireCurrentUser() throws 401 if not authenticated
-    if (error instanceof Error && (error as any).status === 401) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Create access request error:', error);
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    // INVARIANT: Require authenticated user (will validate admin role below)
-    const user = await requireCurrentUser();
-
-    // INVARIANT: Admin-only endpoint
-    if (!user.is_master_admin) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
-    }
-
-    // Only return pending requests - for admin dashboard
-    const result = await getPendingAccessRequests();
-
-    if ('error' in result && result.error) {
-      return NextResponse.json({ error: result.error }, { status: 400 });
-    }
-
-    return NextResponse.json(
-      {
-        success: true,
-        data: result.data,
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    // requireCurrentUser() throws 401 if not authenticated
-    if (error instanceof Error && (error as any).status === 401) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-    console.error('Get access requests error:', error);
-    return NextResponse.json(
-      { error: 'An unexpected error occurred' },
-      { status: 500 }
+      { success: false, error: error.message || 'An unexpected error occurred' },
+      { status: error.status || 500 }
     );
   }
 }

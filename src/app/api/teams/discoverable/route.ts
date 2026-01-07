@@ -1,72 +1,61 @@
+import { NextRequest, NextResponse } from 'next/server';
+
 /**
  * GET /api/teams/discoverable
- *
- * List discoverable teams for new users (v2)
- *
- * This endpoint returns teams that allow new users to request access.
- * Used in the "Join Team" flow during signup.
- *
- * No authentication required (public endpoint, for signup flow)
+ * Get all discoverable teams (public)
+ * No authentication required - returns teams marked as discoverable
  */
-
-import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@/lib/supabase/server'
-
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createServerClient()
+    // Create admin client to bypass RLS for reading discoverable teams
+    const { createAdminClient } = await import('@/lib/supabase/server');
+    const supabase = await createAdminClient();
 
-    // Query discoverable teams with metadata
-    const { data: teams, error } = await (supabase.from('team_settings') as any)
-      .select(`
-        team_id,
-        description,
-        teams!inner(
-          id,
-          name
+    // Get all discoverable teams with member counts
+    const { data: teams, error: teamsError } = await supabase
+      .from('teams')
+      .select(
+        `
+        id,
+        name,
+        created_at,
+        team_settings:team_settings (
+          description,
+          is_discoverable
+        ),
+        team_members:team_memberships (
+          id
         )
-      `)
-      .eq('is_discoverable', true)
-      .order('teams(name)', { ascending: true })
-
-    if (error) {
-      console.error('[discoverable-teams] Query error:', error)
-      return NextResponse.json(
-        { error: 'Failed to fetch teams' },
-        { status: 500 }
+      `
       )
+      .eq('team_settings.is_discoverable', true);
+
+    if (teamsError) {
+      console.error('Error fetching teams:', teamsError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch teams' },
+        { status: 500 }
+      );
     }
 
-    // Get member count for each team
-    const teamsWithCount = await Promise.all(
-      (teams || []).map(async (teamSettings: any) => {
-        const { count } = await supabase
-          .from('team_memberships')
-          .select('*', { count: 'exact' })
-          .eq('team_id', teamSettings.team_id)
-          .eq('status', 'approved')
+    // Transform response
+    const formattedTeams = (teams || []).map((team: any) => ({
+      id: team.id,
+      name: team.name,
+      description: team.team_settings?.[0]?.description || null,
+      member_count: team.team_members?.length || 0,
+      created_at: team.created_at,
+    }));
 
-        return {
-          id: teamSettings.teams.id,
-          name: teamSettings.teams.name,
-          description: teamSettings.description || null,
-          memberCount: count || 0,
-        }
-      })
-    )
-
-    return NextResponse.json(
-      {
-        success: true,
-        data: teamsWithCount,
-      },
-      { status: 200 }
-    )
+    return NextResponse.json({
+      success: true,
+      data: formattedTeams,
+    });
   } catch (error) {
-    console.error('[discoverable-teams] Error:', error)
+    console.error('API error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'An unexpected error occurred' },
       { status: 500 }
-    )
+    );
   }
 }
