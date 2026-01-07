@@ -15,6 +15,22 @@ export async function GET(request: NextRequest) {
   try {
     console.log('[API /session] ========== AUTHENTICATION CHECK ==========')
 
+    // Log incoming cookies
+    const incomingCookies = request.cookies.getAll();
+    const cookieHeader = request.headers.get('cookie');
+    const debugInfo = {
+      cookieCount: incomingCookies.length,
+      cookieNames: incomingCookies.map(c => c.name),
+      rawCookieHeader: cookieHeader ? cookieHeader.substring(0, 100) : null,
+    };
+
+    console.log('[API /session] Incoming cookies:', incomingCookies.map(c => c.name).join(', '), `(${incomingCookies.length} total)`);
+    console.log('[API /session] Raw Cookie header:', cookieHeader?.substring(0, 100) + (cookieHeader?.length ? '...' : ' (none)'));
+    incomingCookies.forEach(c => {
+      const val = c.value.substring(0, 50);
+      console.log(`  [API /session]   ${c.name}: ${val}${c.value.length > 50 ? '...' : ''}`);
+    });
+
     // Create properly scoped server client with cookies
     console.log('[API /session] Creating server client...')
     const supabase = await createUserClient()
@@ -34,7 +50,7 @@ export async function GET(request: NextRequest) {
     if (!authUser) {
       console.log('[API /session] ❌ No authenticated user in session')
       return NextResponse.json(
-        { success: true, data: null },
+        { success: true, data: null, debug: { cookieCount: incomingCookies.length, rawCookieHeader: cookieHeader?.substring(0, 100) } },
         { status: 200 }
       )
     }

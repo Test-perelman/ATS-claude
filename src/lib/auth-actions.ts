@@ -5,9 +5,15 @@ import { redirect } from 'next/navigation';
 import { randomUUID } from 'crypto';
 
 // ============================================================================
-// SIGN UP
+// SIGN UP - Multi-Tenancy Flow
 // ============================================================================
 
+/**
+ * STEP 1: User creates auth account
+ * Two paths:
+ * 1. First user ever = becomes Master Admin (no team)
+ * 2. Subsequent users = create user record, then select team or create team_access_request
+ */
 export async function signUp(email: string, password: string) {
   const supabase = await createClient();
 
@@ -25,64 +31,48 @@ export async function signUp(email: string, password: string) {
     return { error: 'Failed to create user' };
   }
 
-  // Step 2: Create user record + team + role using admin client
+  // Step 2: Create user record using admin client
   try {
     const { createAdminClient } = await import('@/lib/supabase/server');
     const adminSupabase = await createAdminClient();
 
-    // Generate UUIDs for team and admin role
-    const teamId = randomUUID();
-    const roleId = randomUUID();
+    // Check if ANY users exist in the system
+    const { data: existingUsers, error: checkError } = await (adminSupabase.from('users') as any)
+      .select('id')
+      .limit(1);
 
-    // Create team for this user
-    const { error: teamError, data: teamData } = await (adminSupabase.from('teams') as any)
-      .insert({
-        id: teamId,
-        name: `${email.split('@')[0]}'s Team`,
-      })
-      .select();
-
-    if (teamError) {
-      console.error('Failed to create team:', JSON.stringify(teamError));
-      return { error: `Signup failed: ${teamError.message || 'Could not create team'}` };
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('Failed to check existing users:', checkError);
+      return { error: 'Signup failed. Please try again.' };
     }
 
-    // Create admin role for the team
-    const { error: roleError } = await (adminSupabase.from('roles') as any)
-      .insert({
-        id: roleId,
-        team_id: teamId,
-        name: 'Admin',
-        is_admin: true,
-      })
-      .select();
+    // Determine if this is the first user (becomes Master Admin)
+    const isFirstUser = !existingUsers || existingUsers.length === 0;
 
-    if (roleError) {
-      console.error('Failed to create admin role:', JSON.stringify(roleError));
-      return { error: `Signup failed: ${roleError.message || 'Could not create admin role'}` };
-    }
-
-    // Update user record and assign to team with admin role (use UPSERT since auto-created)
+    // Create user record
     const { error: userError } = await (adminSupabase.from('users') as any)
-      .upsert({
+      .insert({
         id: data.user.id,
         email: email.trim().toLowerCase(),
-        is_master_admin: false,
-        team_id: teamId,
-        role_id: roleId,
-      })
-      .select();
+        is_master_admin: isFirstUser, // First user = Master Admin
+        team_id: null, // Master Admin has no team
+        role_id: null, // Master Admin has no role
+      });
 
     if (userError) {
       console.error('Failed to create user record:', JSON.stringify(userError));
       return { error: `Signup failed: ${userError.message || 'Could not create user record'}` };
     }
+
+    return {
+      success: true,
+      data,
+      isMasterAdmin: isFirstUser,
+    };
   } catch (err) {
     console.error('Signup error:', err);
     return { error: 'Signup failed. Please try again.' };
   }
-
-  return { success: true, data };
 }
 
 // ============================================================================
@@ -90,20 +80,31 @@ export async function signUp(email: string, password: string) {
 // ============================================================================
 
 export async function signIn(email: string, password: string) {
+  console.log('[signIn] Starting login for:', email);
+
   const supabase = await createClient();
+
+  console.log('[signIn] Created Supabase client, calling signInWithPassword...');
 
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
+  console.log('[signIn] Auth response - error:', error?.message, 'user:', data.user?.email);
+
   if (error) {
+    console.error('[signIn] Auth error:', error.message);
     return { error: error.message };
   }
 
   if (!data.user) {
+    console.error('[signIn] No user returned from signInWithPassword');
     return { error: 'Failed to sign in' };
   }
+
+  console.log('[signIn] User authenticated:', data.user.id, data.user.email);
+  console.log('[signIn] Session data:', { session: !!data.session, accessToken: !!data.session?.access_token });
 
   // Ensure user record exists in database
   try {
@@ -120,6 +121,7 @@ export async function signIn(email: string, password: string) {
 
     // If user record doesn't exist, create it with team + role
     if (!existingUser) {
+      console.log('[signIn] User record does not exist, creating...');
       const { createAdminClient } = await import('@/lib/supabase/server');
       const adminSupabase = await createAdminClient();
 
@@ -162,15 +164,20 @@ export async function signIn(email: string, password: string) {
 
           if (createError) {
             console.error('[signIn] Failed to create user record:', createError);
+          } else {
+            console.log('[signIn] User record created successfully');
           }
         }
       }
+    } else {
+      console.log('[signIn] User record already exists');
     }
   } catch (err) {
     console.error('[signIn] Failed to validate/create user record:', err);
     // Continue anyway - user auth is valid
   }
 
+  console.log('[signIn] Login complete, redirecting to /dashboard...');
   redirect('/dashboard');
 }
 

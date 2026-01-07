@@ -191,6 +191,15 @@ export const TopNavigation: React.FC = () => {
                   <span>Settings</span>
                 </Link>
 
+                <Link
+                  href="/debug"
+                  className="flex items-center space-x-3 px-4 py-2 text-sm text-cyan-600 hover:bg-cyan-50 transition-colors border-t border-purple-100 mt-1 pt-2"
+                  onClick={() => setShowProfileMenu(false)}
+                >
+                  <span>🧪</span>
+                  <span>Auth Debug (Extreme)</span>
+                </Link>
+
                 {/* Logout Button */}
                 <button
                   onClick={handleLogout}

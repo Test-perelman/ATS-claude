@@ -15,8 +15,15 @@ export async function middleware(request: NextRequest) {
   // API routes should not redirect - they should just refresh the session
   const isApiRoute = pathname.startsWith('/api');
 
-  console.log(`[Middleware] Processing ${request.method} ${pathname}`);
-  console.log('[Middleware] Request cookies:', request.cookies.getAll().map(c => c.name));
+  // [MW-IN] MANDATORY TRACE
+  console.log('[MW-IN]', {
+    url: request.url,
+    method: request.method,
+    cookies: request.cookies.getAll().map(c => ({
+      name: c.name,
+      length: c.value.length
+    }))
+  });
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,21 +50,21 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // Refresh session and update cookies in response
-  console.log('[Middleware] Calling supabase.auth.getUser()...');
+  // [MW-SUPABASE] MANDATORY TRACE
+  console.log('[MW-SUPABASE] getUser START');
   const { data: { user }, error: authError } = await supabase.auth.getUser();
 
   if (authError) {
-    console.error('[Middleware] Auth error:', authError.message);
-  }
-
-  console.log('[Middleware] Available cookies after auth:', request.cookies.getAll().map(c => c.name));
-
-  // Log auth status for debugging
-  if (user) {
-    console.log('[Middleware] ✅ User authenticated:', user.id, user.email);
+    console.log('[MW-SUPABASE] getUser ERROR', {
+      message: authError.message,
+      status: (authError as any).status
+    });
   } else {
-    console.log('[Middleware] ❌ No authenticated user');
+    console.log('[MW-SUPABASE] getUser RESULT', {
+      userExists: !!user,
+      userId: user?.id,
+      userEmail: user?.email
+    });
   }
 
   // For API routes, just return the response with refreshed session cookies
@@ -94,6 +101,11 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
   }
+
+  // [MW-OUT] MANDATORY TRACE
+  console.log('[MW-OUT]', {
+    setCookie: response.headers.get('set-cookie')
+  });
 
   return response;
 }

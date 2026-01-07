@@ -19,48 +19,34 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Use browser client for login - this properly sets cookies in the browser
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      // Call the login API endpoint which properly sets auth cookies
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // CRITICAL: Include cookies in request/response
+        body: JSON.stringify({ email, password }),
       });
 
-      if (authError) {
-        setError(authError.message);
-        return;
-      }
+      console.log('[Login] Response status:', response.status);
 
-      if (!data.user) {
-        setError('Failed to sign in');
-        return;
-      }
-
-      console.log('[Login] Auth successful, user:', data.user.email);
-
-      // CRITICAL: Wait for Supabase session to be fully established in cookies
-      // The auth tokens need time to be written to localStorage and cookies
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      console.log('[Login] Waiting complete, checking session...');
-
-      // Now verify the session was actually set by checking the session
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      console.log('[Login] Session check - error:', sessionError?.message, 'has session:', !!sessionData?.session);
-
-      if (!sessionData?.session) {
-        setError('Session was not established. Please try again.');
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.error || 'Login failed');
         setLoading(false);
         return;
       }
 
-      console.log('[Login] Session verified, redirecting to dashboard...');
+      const data = await response.json();
+      console.log('[Login] Login successful for:', data.user?.email);
 
-      // Now it's safe to redirect - the session exists and middleware should see it
+      // Wait a moment for cookies to be set
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Redirect to dashboard
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
       console.error('[Login] Error:', err);
-    } finally {
       setLoading(false);
     }
   };

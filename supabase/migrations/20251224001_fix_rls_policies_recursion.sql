@@ -29,17 +29,23 @@ RETURNS BOOLEAN AS $$
 $$ LANGUAGE sql STABLE SECURITY DEFINER;
 
 -- Now recreate policies - they can call the SECURITY DEFINER functions safely
-CREATE POLICY users_master_admin ON users
-  USING (is_master_admin(auth.user_id()))
-  WITH CHECK (is_master_admin(auth.user_id()));
+-- Only create if auth schema is available (will be true in production Supabase)
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'auth') THEN
+    CREATE POLICY users_master_admin ON users
+      USING (is_master_admin(auth.uid()::TEXT))
+      WITH CHECK (is_master_admin(auth.uid()::TEXT));
 
-CREATE POLICY users_own_team ON users
-  USING (team_id = get_user_team_id(auth.user_id()))
-  WITH CHECK (FALSE);
+    CREATE POLICY users_own_team ON users
+      USING (team_id = get_user_team_id(auth.uid()::TEXT))
+      WITH CHECK (FALSE);
 
-CREATE POLICY users_own_profile ON users
-  USING (id = auth.user_id())
-  WITH CHECK (id = auth.user_id());
+    CREATE POLICY users_own_profile ON users
+      USING (id = auth.uid()::TEXT)
+      WITH CHECK (id = auth.uid()::TEXT);
+  END IF;
+END $$;
 
 -- Grant permissions
 GRANT EXECUTE ON FUNCTION get_user_team_id(TEXT) TO authenticated;

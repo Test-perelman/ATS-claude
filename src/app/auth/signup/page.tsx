@@ -66,8 +66,10 @@ export default function SignupPage() {
         setError(result.error);
       } else {
         setSuccess(true);
+        // Redirect based on user type
+        const redirectPath = (result as any).isMasterAdmin ? '/master-admin/teams' : '/team-discovery';
         setTimeout(() => {
-          router.push('/onboarding');
+          router.push(redirectPath);
         }, 1000);
       }
     } catch (err) {

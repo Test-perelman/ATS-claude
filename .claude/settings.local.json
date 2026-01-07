@@ -176,9 +176,33 @@
       "Bash(dir d:Perelman-ATS-claude)",
       "Bash(tree:*)",
       "Bash(node test_rls_isolation.js:*)",
-      "Bash(node test_login_comprehensive.js:*)"
+      "Bash(node test_login_comprehensive.js:*)",
+      "Bash(python3:*)",
+      "Bash(ls -la \"d:\\\\Perelman-ATS-claude\\\\src\\\\app\"\" | grep -E \"auth)",
+      "Bash(login \")",
+      "Bash(ss:*)",
+      "Bash(pkill:*)",
+      "Bash(Get-Process)",
+      "Bash(Where-Object {$_ProcessName -like \"*node*\"})",
+      "Bash(Stop-Process -Force -ErrorAction SilentlyContinue)",
+      "Bash(Start-Sleep -Seconds 3)",
+      "Bash(Write-Output \"Processes killed, waiting for port to free up...\")",
+      "Bash(wait:*)",
+      "Bash(powershell -Command \"Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Write-Output ''Killed node processes''\")",
+      "Bash(node apply_rls_fix.js:*)",
+      "Bash(docker volume:*)",
+      "Bash(supabase init:*)",
+      "Bash(timeout 120 supabase start:*)",
+      "Bash(supabase start:*)",
+      "Bash(timeout 60 supabase start:*)",
+      "Bash(supabase unlink:*)",
+      "Bash(timeout 300 supabase start:*)",
+      "Bash(supabase stop:*)",
+      "Bash(timeout 180 supabase db reset:*)",
+      "Bash(timeout 240 supabase start:*)"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "bash_command_allow_hook": "always"
 }
