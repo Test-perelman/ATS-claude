@@ -15,7 +15,7 @@ CREATE OR REPLACE FUNCTION is_membership_approved(user_id UUID, team_id UUID) RE
   SELECT EXISTS (
     SELECT 1 FROM team_memberships
     WHERE team_memberships.user_id = user_id::TEXT
-      AND team_memberships.team_id = $2
+      AND team_memberships.team_id = team_id
       AND team_memberships.status = 'approved'
   )
 $$ LANGUAGE sql STABLE SECURITY DEFINER;
