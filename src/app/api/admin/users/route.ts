@@ -1,38 +1,72 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { requireCurrentUser } from '@/lib/supabase/user-server';
+import { createAdminClient } from '@/lib/supabase/server';
 
-// ============================================================================
-// GET: List users (Master Admin only)
-// ============================================================================
-
+/**
+ * GET /api/admin/users
+ * List all users (Master Admin only)
+ */
 export async function GET(req: NextRequest) {
-  const supabase = await createClient();
+  try {
+    const user = await requireCurrentUser();
+    const searchParams = req.nextUrl.searchParams;
+    const teamId = searchParams.get('teamId');
 
-  // Check master admin
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const adminSupabase = await createAdminClient();
 
-  // Note: users table has column "id", not "user_id"
-  const profileResult = await supabase
-    .from('users')
-    .select('is_master_admin')
-    .eq('id', user.id)
-    .single() as any;
-  const profile = profileResult?.data as { is_master_admin: boolean } | null;
+    // Verify master admin
+    const { data: userData, error: userError } = await adminSupabase
+      .from('users')
+      .select('is_master_admin')
+      .eq('id', user.user_id)
+      .single();
 
-  if (!profile?.is_master_admin) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (userError || !userData?.is_master_admin) {
+      return NextResponse.json(
+        { success: false, error: 'Only Master Admin can view all users' },
+        { status: 403 }
+      );
+    }
+
+    // Build query
+    let query = adminSupabase
+      .from('users')
+      .select(`
+        id,
+        email,
+        team_id,
+        role_id,
+        is_master_admin,
+        created_at,
+        teams:teams(id, name),
+        role:roles(id, name, is_admin)
+      `);
+
+    if (teamId) {
+      query = query.eq('team_id', teamId);
+    }
+
+    const { data: users, error } = await query.order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching users:', error);
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch users' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: users || [],
+    });
+  } catch (error: any) {
+    console.error('API error:', error);
+    return NextResponse.json(
+      { success: false, error: error.message || 'An unexpected error occurred' },
+      { status: error.status || 500 }
+    );
   }
-
-  // List all users
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  return NextResponse.json(data);
 }
 
 // ============================================================================
