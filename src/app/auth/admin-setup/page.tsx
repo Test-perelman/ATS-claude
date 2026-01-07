@@ -110,4 +110,4 @@ export default function AdminSetupPage() {
       </div>
     </div>
   );
-}
+}// force rebuild Thu, Jan  8, 2026 12:40:52 AM
