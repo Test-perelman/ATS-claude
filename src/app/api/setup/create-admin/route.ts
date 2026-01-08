@@ -16,9 +16,25 @@ export async function POST(request: NextRequest) {
     }
 
     const adminSupabase = await createAdminClient();
+    const normalizedEmail = email.toLowerCase();
 
+    // Delete existing user with this email if exists
+    const { data: existingUsers } = await adminSupabase.auth.admin.listUsers();
+    const existingUser = existingUsers?.users?.find(u => u.email?.toLowerCase() === normalizedEmail);
+
+    if (existingUser) {
+      // Delete from public.users first
+      await adminSupabase.from('users').delete().eq('id', existingUser.id);
+      // Delete from auth.users
+      await adminSupabase.auth.admin.deleteUser(existingUser.id);
+    }
+
+    // Also clean up any orphan public.users with this email
+    await adminSupabase.from('users').delete().eq('email', normalizedEmail);
+
+    // Create new auth user
     const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
-      email,
+      email: normalizedEmail,
       password,
       email_confirm: true,
     });
@@ -27,9 +43,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: authError.message }, { status: 400 });
     }
 
-    const { error: userError } = await adminSupabase.from('users').insert({
+    // Create public.users record
+    const { error: userError } = await adminSupabase.from('users').upsert({
       id: authData.user.id,
-      email: email.toLowerCase(),
+      email: normalizedEmail,
       is_master_admin: true,
       team_id: null,
       role_id: null,
@@ -39,10 +56,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: userError.message }, { status: 400 });
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: 'Admin user created. You can now login.',
-      credentials: { email, password }
+      credentials: { email: normalizedEmail, password }
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
